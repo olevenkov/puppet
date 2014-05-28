@@ -1,0 +1,84 @@
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+	ServerName	test-external.nature.com
+	ServerAlias	192.168.88.41
+	DocumentRoot /mnt/fs/Web/NPG/
+
+	Setenv VLOG /var/www/test-external.nature.com/logs
+	ErrorLog /var/www/test-external.nature.com/logs/error_log
+	#LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	TransferLog /var/www/test-external.nature.com/logs/access_log
+	AllowEncodedSlashes on
+
+	RewriteEngine on
+	Include conf/redirects.conf
+       
+       #temporary:
+       RewriteRule ^/cerberus(.*) http://localhost:7080/cerberus$1 [L,P]		
+       RewriteRule \.(jar|sbml|pdb|sdf|jdx|cif|cdx|cml|mol|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rss|RSS|rdf|RDF|sbml|SBML|ico|svg)$ - [L]
+	# Preserve hostname when proxying to tomcat
+	ProxyPreserveHost on
+	              # Send everything else to Jetty 
+        RewriteRule ^/(.*) http://localhost:7080/$1 [P] 
+                    # And set reverse proxy correctly 
+        ProxyPassReverse / http://localhost:7080/ 
+        <Location />
+                AuthType Basic
+                AuthName "NPG Development - External"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 170.224.106          # NJ DC - IBM
+                Allow from 199.168.13           # Reston DC
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+		Allow from 122.184.53.192       # ATT Team - IT-10442
+                Allow from 202.54.243.228       # ATT Team
+                # ----- Misc
+                Allow from 69.253.44.235
+                Allow from 66.228.83.114        # Thoughtbot's
+                Allow from 66.228.83.115        # Thoughtbot's
+                Allow from 66.228.83.116        # Thoughtbot's
+                Allow from 66.228.83.117        # Thoughtbot's
+                Allow from 66.228.83.118        # Thoughtbot's
+                Allow from 207.218.230.114      # Thoughtbot
+                Allow from 64.131.191.145       # caitlin from home
+                Allow from 68.162.253           # Thoughtbot Boston
+                Allow from 216.254.85.209       # Thoughtbot NYC
+                Allow from 216.64.169.240       # WebTrends - IT-3383
+                Allow from 99.179.165.138       # WebTrends
+                Allow from 203.200.189.6        # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+                Allow from 208.85.175.134       # NPG Eclipse
+                Require valid-user
+                Satisfy Any
+        </Location>
+
+
+</VirtualHost>
+
