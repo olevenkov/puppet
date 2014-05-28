@@ -1,0 +1,13 @@
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+	ServerName staging-bts-wp.nature.com
+	
+	RewriteEngine On
+	AllowEncodedSlashes on
+	ProxyPreserveHost On
+
+	RewriteRule ^/(.*)$	http://localhost:6666/$1 [P,L]
+</VirtualHost>
+
+	
