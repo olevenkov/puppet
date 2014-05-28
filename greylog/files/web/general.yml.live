@@ -1,0 +1,20 @@
+general:
+  external_hostname: "logs.npgsrv.com"
+  date_format: "%d.%m.%Y - %H:%M:%S"
+  allow_deleting: false
+  allow_version_check: false
+  hide_message_stats: true
+
+subscriptions:
+  from: subscriptions@logs.npgsrv.com
+  subject: "[logs] Subscription"
+
+streamalarms:
+  from: alarms@logs.npgsrv.com
+  subject: "[logs] Stream alarm!"
+
+hoptoad:
+  enabled: false
+
+realtime:
+  enabled: false

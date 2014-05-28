@@ -1,0 +1,2 @@
+Host github.com
+  IdentityFile /home/greylog/.ssh/github/id_rsa

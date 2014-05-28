@@ -1,0 +1,8 @@
+# Settings for ldap base user authentication
+ldap:
+  enabled: true
+  host: it-ldap1.nature.com
+  encryption: :start_tls
+  port: 389
+  base: ou=People,dc=nature,dc=com
+

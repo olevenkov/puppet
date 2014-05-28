@@ -1,0 +1,8 @@
+import org.graylog2.messagehandlers.gelf.GELFMessage
+
+rule "Drop debug messages"
+  when
+    m : GELFMessage( level >= 7 )
+  then
+    m.setFilterOut(true);
+end

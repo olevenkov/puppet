@@ -1,0 +1,20 @@
+general:
+  external_hostname: "staging-logs.npgsrv.com"
+  date_format: "%d.%m.%Y - %H:%M:%S"
+  allow_deleting: false
+  allow_version_check: false
+  hide_message_stats: true
+
+subscriptions:
+  from: subscriptions@staging-logs.npgsrv.com
+  subject: "[staging-logs] Subscription"
+
+streamalarms:
+  from: alarms@staging-logs.npgsrv.com
+  subject: "[staging-logs] Stream alarm!"
+
+hoptoad:
+  enabled: false
+
+realtime:
+  enabled: false

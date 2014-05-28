@@ -1,0 +1,11 @@
+export JAVA_HOME=/usr/java/latest
+export PATH=$JAVA_HOME/bin:$PATH
+
+export RBENV_ROOT=/usr/local/rbenv
+export PATH="$RBENV_ROOT/bin:$PATH"
+
+eval "$(rbenv init -)"
+
+rails_env="production"
+export RAILS_ENV=$rails_env
+export RACK_ENV=$rails_env

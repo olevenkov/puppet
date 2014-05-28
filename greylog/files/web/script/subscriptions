@@ -1,0 +1,10 @@
+#!/bin/bash
+source ~/.bash_profile
+
+CURRENT_RELEASE=/home/greylog/apps/web/current
+LOG_FILE=$CURRENT_RELEASE/log/subscriptions.log
+
+touch $LOG_FILE
+
+cd $CURRENT_RELEASE
+bundle exec rake subscriptions:send --trace >> $LOG_FILE 2>&1

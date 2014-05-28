@@ -1,0 +1,29 @@
+rootLogger: INFO, console, file
+logger:
+  action: WARN
+  com.amazonaws: WARN
+  index.search.slowlog: TRACE, index_search_slow_log_file
+
+additivity:
+  index.search.slowlog: false
+
+appender:
+  console:
+    type: console
+    layout:
+      type: consolePattern
+      conversionPattern: "[%d{ISO8601}][%-5p][%-25c] %m%n"
+
+  file:
+    type: file
+    file: ${path.logs}/${cluster.name}.log
+    layout:
+      type: pattern
+      conversionPattern: "[%d{ISO8601}][%-5p][%-25c] %m%n"
+
+  index_search_slow_log_file:
+    type: file
+    file: ${path.logs}/${cluster.name}_index_search_slowlog.log
+    layout:
+      type: pattern
+      conversionPattern: "[%d{ISO8601}][%-5p][%-25c] %m%n"

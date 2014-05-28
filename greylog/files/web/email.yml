@@ -1,0 +1,5 @@
+production:
+  via: smtp
+  address: babylon.nature.com
+  port: 25
+

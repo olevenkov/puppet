@@ -1,0 +1,4 @@
+path.data: /data/elasticsearch/
+transport.tcp.port: 9300
+http.port: 9200
+
