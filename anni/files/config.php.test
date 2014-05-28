@@ -1,0 +1,164 @@
+<?php 
+if (!file_exists('/tmp/curi-test')) mkdir('/tmp/curi-test');
+
+Config::set('LOG_FILE', '/tmp/curi-test/logs/curi2-' . date('Y-m-d') . '.log');
+Config::set('PRODUCTION', false);
+
+
+  // API USER
+  'api' => array('pass' => md5(API_PASS),'type' => ADMIN)
+));
+
+if ($_SERVER['HTTP_HOST'] == 'anni') {
+	Config::set('CURI', 'http://localhost:3000/npg/');	
+}
+else {
+	Config::set('CURI', 'http://curi.npd.nature.com/npg/');
+}
+
+Config::set('MARKLOGIC_URL', 'http://staging-www.nature.com/');
+Config::set('MARKLOGIC_COLLECTION', 'annotations-test');
+Config::set('MARKLOGIC_ENV', 'dev');
+Config::set('MARKLOGIC_USER', 'curi1');
+Config::set('MARKLOGIC_PASS', '**********');
+
+Config::set('FTP_HOST','test-fs.nature.com');
+Config::set('FTP_PATH','/home/anni/dev');
+Config::set('FTP_USER','anni');
+Config::set('FTP_PASS','**********');
+
+Config::set('MARKLOGIC_LIVE_AUTH', 'curi1:elephant456');
+
+ini_set('upload_tmp_dir', sys_get_temp_dir() . '/curi2/upload/');
+
+Config::set('TYPES', array(
+  'files' => 'Files',
+  'documents' => 'Documents',
+  'clients' => 'Clients',
+));
+    
+Config::set('SEARCH_SOURCES', array(
+  'chemical' => array(
+    'Previous', 
+    'PubChem', 
+    'ChemSpider', 
+    'CHEBI', 
+    'DrugBank', 
+    'NtoS',
+    ),
+  'protein' => array(
+    'Previous', 
+    'UniProt', 
+    'EntrezGene',
+    ),
+  ));
+
+Config::set('DB', 'curi');
+Config::set('TITLE', 'CURI');
+Config::set('VISIBLE_SEPARATOR', ' ### ');
+
+Config::set('CACHE_DOMAINS_WHITELIST', array(
+  'www.chemspider.com',
+  'www.ebi.ac.uk',
+  'pubchem.ncbi.nlm.nih.gov',
+  'www.surechem.org',
+  'opsin.ch.cam.ac.uk',
+  '129.128.185.122', // drugbank images
+  'staging-www.nature.com',
+  ));
+
+Config::set('ANNOTATORS', array(
+  'surechem-chemistry' => array('SureChem', 'Chemistry', true),
+  'luxid-biology' => array('Luxid', 'BER', true)
+ ));
+
+Config::set('JOURNALS', array(
+  'nchem' => array(
+    'export-format' => 'curi2',
+    'send-files-to-staging' => false,
+    'import-notifications' => array('jp@antz29.com'),
+    'annotated-notifications' => array('jp@antz29.com'),
+    'export-notifications' => array('jp@antz29.com'),
+    ),
+  'nsmb' => array(
+    'export-format' => 'curi2',
+    'send-files-to-staging' => false,
+    'import-notifications' => array('jp@antz29.com'),
+    'annotated-notifications' => array('jp@antz29.com'),
+    'export-notifications' => array('jp@antz29.com'),
+    ),
+  'nchembio' => array(
+    'export-format' => 'curi2',
+    'send-files-to-staging' => false,
+    'import-notifications' => array('jp@antz29.com'),
+    'annotated-notifications' => array('jp@antz29.com'),
+    'export-notifications' => array('jp@antz29.com'),
+    ),
+  'ncomms' => array(
+    'export-format' => 'curi2',
+    'send-files-to-staging' => false,
+    'import-notifications' => array('jp@antz29.com'),
+    'annotated-notifications' => array('jp@antz29.com'),
+    'export-notifications' => array('jp@antz29.com'),
+    ),
+  'nmat' => array(
+    'export-format' => 'curi2',
+    'send-files-to-staging' => false,
+    'import-notifications' => array('jp@antz29.com'),
+    'annotated-notifications' => array('jp@antz29.com'),
+    'export-notifications' => array('jp@antz29.com'),
+    ),
+  'nature' => array(
+    'export-format' => 'curi2',
+    'send-files-to-staging' => false,
+    'import-notifications' => array('jp@antz29.com'),
+    'annotated-notifications' => array('jp@antz29.com'),
+    'export-notifications' => array('jp@antz29.com'),
+    ),
+  'nrd' => array(
+    'export-format' => 'curi2',
+    'send-files-to-staging' => false,
+    'import-notifications' => array('jp@antz29.com'),
+    'annotated-notifications' => array('jp@antz29.com'),
+    'export-notifications' => array('jp@antz29.com'),
+    )
+));
+
+Config::set('DTDS', array(
+  '-//NPG//DTD XML Article//EN' => array(
+    'join' => array('b', 'i', 'super', 'un', 'ov', 'du', 'italic', 'sup', 'inf', 'f', 'bold', 'sansser', 'typewrit', 'smallcap', 'roman', 'sub', 'sc', 'bi'),
+    'sections' => array(
+      'fm/atl', // title
+      'fm/abs', // abstract
+      'bdy', // body
+      'bm/objects/table', // table
+      'bm/objects/fig', // figure captions
+      'bm/objects/scheme', // scheme captions
+      'bm/objects/compound',
+      ),    
+    'blank' => array(
+      'bm/objects/compound/node()[not(local-name() = "label") and not(local-name() = "name") and not(local-name = "chemical-formula") and not(@property = "http://ns.nature.com/compounds/synthesis")]',
+      ),
+    'metadata' => array(
+      'title' => 'fm/atl',
+      'doi' => 'pubfm/doi',
+      'jtitle' => 'pubfm/jtl',
+      'year' => 'fm/hst/pubdate/@year',
+      'volume' => 'pubfm/vol',
+      'issue' => 'pubfm/iss',
+      ),
+    ),
+  
+  '-//NPGSJ//DTD full length article DTD version 7.0 XML//EN' => array(
+    'join' => array('sup', 'inf', 'b', 'formula', 'it', 'du', 'ssf', 'ty', 'supinf', 'infsup', 'und', 'dund', 'sth', 'ovr', 'dovr', 'vect', 'italic', 'scp'),
+    'sections' => array(
+      'fm/placeholder/atlgrp/atl', // title
+      'fm/header/abstract', // abstract
+      'body/arttext', // body
+      'bm/objects/table', // table
+      'bm/objects/fig/legend', // figure captions
+      'bm/objects/scheme/legend', // scheme captions
+      )
+    ),
+    
+  ));
