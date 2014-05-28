@@ -1,0 +1,21 @@
+#Header unset Last-Modified
+Header unset ETag
+FileETag None
+
+#ExpiresActive On
+
+#Default expires immediately
+#ExpiresDefault A0
+
+# Force no caching for protected or dynamic files
+#<FilesMatch "\.(html|htm|HTML|HTM|pdf|PDF)$">
+#ExpiresActive Off
+#Header set Cache-Control "private, no-cache, no-store, proxy-revalidate, no-transform"
+#Header set Pragma "no-cache"
+#</FilesMatch>
+
+# Set up 10 minutes caching on commonly updated files
+#<FilesMatch "\.(css|xml|txt|js|jpg|jpeg|gif|png|rss)$">
+#ExpiresDefault A600
+#Header append Cache-Control "proxy-revalidate"
+#</FilesMatch>

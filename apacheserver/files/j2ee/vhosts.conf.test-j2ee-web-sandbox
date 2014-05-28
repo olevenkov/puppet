@@ -1,0 +1,23 @@
+###
+# Managed by Puppet
+# All modifications have to be made through puppet
+###
+
+#
+# This Apache mainly serves SciAm on port 443 directly (without varnish). This vhosts.conf file catches stray non-HTTPS queries
+# and redirect them to port 443
+#
+
+NameVirtualHost *:81
+
+<VirtualHost *:81>
+        ServerName 65.199.186.23
+        RewriteEngine On
+        RewriteRule ^(.*)$ - [F]
+</VirtualHost>
+
+<VirtualHost *:81>
+        ServerName test-secure.scientificamerican.com
+        RewriteEngine On
+        RewriteRule ^(.*)$ https://test-secure.scientificamerican.com$1 [R,L]
+</VirtualHost>

@@ -1,0 +1,10 @@
+##Managed by puppet, change on puppetmaster
+
+RewriteEngine On
+
+SetEnvIf NPG_SRC_ADDR value HAS_ADDR  #Check to see if they already have a header
+
+RewriteCond %{REMOTE_ADDR} (.*)
+RewriteRule .* - [E=R_A:%1]
+
+RequestHeader add NPG_SRC_ADDR %{R_A}e env=!HAS_ADDR

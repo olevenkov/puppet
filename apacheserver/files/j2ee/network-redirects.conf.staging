@@ -1,0 +1,120 @@
+
+# Everything in here should be a 301 permanent redirect
+#
+
+#DEPLOY-211 related
+	RewriteMap  lowercase int:tolower
+        #RewriteCond %{REQUEST_URI} ([A-Z0-9]+)
+	RewriteRule ^/people/(.*)/blog/posts.rss http://blogs.nature.com/${lowercase:$1}/atom.xml [R=301,L]
+        RewriteRule ^/people/(.*)/blog/(.*) http://blogs.nature.com/${lowercase:$1}/$2 [R=301,L]
+        RewriteRule ^/people/(.*)/blog http://blogs.nature.com/${lowercase:$1} [R=301,L]
+        #RewriteCond %{REQUEST_URI} ([a-z0-9]+)
+        #RewriteRule ^/people/(.*)/blog/(.*) http://blogs.nature.com/$1/$2 [R=301,L]
+        #RewriteRule ^/people/(.*)/blog http://blogs.nature.com/$1 [R=301,L]
+
+        RewriteRule ^/hubs/(.*)/blog/test-title(.*) http://blogs.nature.com/${lowercase:$1}/test-title$2 [R=301,L]
+	RewriteRule ^/hubs/(.*)/blog/posts.rss http://blogs.nature.com/${lowercase:$1}/atom.xml [R=301,L]
+        RewriteRule ^/hubs/(.*)/blog http://blogs.nature.com/${lowercase:$1} [R=301,L]
+        RewriteRule ^/hubs/(.*)/blog/(.*) http://blogs.nature.com/${lowercase:$1}/$2 [R=301,L]
+
+# The former hub homepages
+##  RewriteRule    ^/boston$    hubs/boston    [R=301,L]
+##  RewriteRule    ^/london$    hubs/london    [R=301,L]
+
+# Group membershps
+##  RewriteRule ^/groups/([^/]+)/members$    groups/$1/group_memberships    [R=301,L]
+
+# All these must happen for boston and london
+  # boston/events      -> /hubs/boston/events
+  # boston/events/feed -> /hubs/boston/events.rss
+##  RewriteRule ^/(boston|london)/events$         hubs/$1/events        [R=301,L]
+##  RewriteRule ^/(boston|london)/events/feed$    hubs/$1/events.rss    [R=301,L]
+
+  # boston/forum  -> /hubs/boston/forum
+  # boston/jobs   -> /hubs/boston/jobs
+  # boston/events -> /hubs/boston/events
+  # boston/people -> /hubs/boston/people
+##  RewriteRule ^/(boston|london)/(forum|jobs|events|people)$    hubs/$1/$2    [R=301,L]
+
+  # boston/news   -> /hubs/boston/blog
+##  RewriteRule ^/(boston|london)/news$    hubs/$1/blog    [R=301,L]
+
+  # boston/forums -> /hubs/boston
+  # boston/groups   -> /hubs/boston
+##  RewriteRule ^/(boston|london)/(forums|groups)$    hubs/$1    [R=301,L]
+
+  # boston/group/:keyword   -> /groups/:keyword
+##  RewriteRule ^/(boston|london)/group/([^/]+)$    groups/$2    [R=301,L]
+
+  # boston/news/articles/:yyyy/:mm/:dd/:keyword -> Matt/Corie blog article
+##  RewriteRule ^/boston/news/articles/(\d{4})/(\d{2})/(\d{2})/([^/]+)$    people/U66E7CD1A/blog/$1/$2/$3/$4    [R=301,L]
+##  RewriteRule ^/london/news/articles/(\d{4})/(\d{2})/(\d{2})/([^/]+)$    people/matt/blog/$1/$2/$3/$4         [R=301,L]
+
+  # boston/news/:article_type/:yyyy/:mm/:dd/:keyword -> Matt/Corie blog article
+##  RewriteRule ^/boston/news/([^/]+)/(\d{4})/(\d{2})/(\d{2})/([^/]+)$    people/U66E7CD1A/blog/$2/$3/$4/$5    [R=301,L]
+##  RewriteRule ^/london/news/([^/]+)/(\d{4})/(\d{2})/(\d{2})/([^/]+)$    people/matt/blog/$2/$3/$4/$5         [R=301,L]
+
+  # boston /:locality/news/blog/:name/:year/:month/:day/:title_url
+##  RewriteRule ^/(london|boston)/news/blog/(matt|U66E7CD1A)/(\d{4})/(\d{2})/(\d{2})/([^/]+)$    people/$2/blog/$3/$4/$5/$6    [R=301,L]
+
+# Blog urls
+  # /blogs/user/:user_keyword => /people/:user_keyword/blog
+##  RewriteRule ^/blogs/user/([^/]+)$    people/$1/blog    [R=301,L]
+
+  # /blogs/feed => /blogs/posts.rss
+##  RewriteRule ^/blogs/feed$    blogs/posts.rss    [R=301,L]
+
+  # /blogs/user/:user_keyword/:year/:month/:day/:post_keyword -> /people/:user_keyword/blog/:year/:month/:day/:post_keyword
+##  RewriteRule ^/blogs/user/([^/]+)/(\d{4})/(\d{2})/(\d{2})/([^/]+)$    people/$1/blog/$2/$3/$4/$5    [R=301,L]
+
+# User urls
+  # /profile/:user_keyword => /people/:user_keyword
+##  RewriteRule ^/profile/([^/]+)/network(.+)$    people/$1/friendships$2    [R=301,L]
+##  RewriteRule ^/profile/(.+)$                   people/$1                  [R=301,L]
+
+# Forum urls
+  # /forum/:keyword => /groups/:keyword/forum
+##  RewriteRule ^/forum/([^/]+)$    groups/$1/forum    [R=301,L]
+
+# Group urls
+  # /groups/:keyword/notice/list => /groups/:keyword/forum/topics
+##  RewriteRule ^/groups/([^/]+)/notice/list$    groups/$1/forum/topics    [R=301,L]
+
+  # /group/:keyword => /groups/:keyword
+##  RewriteRule ^/group/([^/]+)$    groups/$1    [R=301,L]
+
+  # /forums/:keyword/:topic_id => /groups/:keyword/forum/topics/:topic_id
+##  RewriteRule ^/forums/([^/]+)/(\d+)$    groups/$1/forum/topics/$2    [R=301,L]
+
+# FEEDS
+  # forums/:keyword/feed -> groups/:keyword/forum/topics.rss
+##  RewriteRule ^/forums/([^/]+)/feed$    groups/$1/forum/topics.rss    [R=301,L]
+
+  # :locality/forums/:keyword/feed -> groups/:keyword/forum/topics.rss
+##  RewriteRule ^/(boston|london)/forums/([^/]+)/feed$    groups/$2/forum/topics.rss    [R=301,L]
+
+  # forums/:keyword/:auth_token/feed -> groups/:keyword/forum/topics.rss
+##  RewriteRule ^/forums/([^/]+)/([^/]+)/feed$    groups/$1/forum/topics.rss    [R=301,L]
+
+  # blogs/feed/:keyword -> people/:keyword/blog/posts.rss
+##  RewriteRule ^/blogs/feed/([^/]+)$    people/$1/blog/posts.rss    [R=301,L]
+
+  # groups/feed -> groups.rss
+##  RewriteRule ^/groups/feed$    groups.rss    [R=301,L]
+
+  # groups/:keyword/topics.rss -> groups/:keyword/forum/topics.rss
+##  RewriteRule ^/groups/([^/]+)/topics.rss$    groups/$1/forum/topics.rss    [R=301,L]
+
+  # posts/feed -> blogs/posts.rss
+##  RewriteRule ^/posts/feed$    blogs/posts.rss    [R=301,L]
+
+  # :network_auth_token/me.xml?activities=replies -> me/replies.xml?network_auth_token=:network_auth_token
+  # :network_auth_token/me.xml?activities=topics  -> me/topics.xml?network_auth_token=:network_auth_token
+##  RewriteCond %{QUERY_STRING}  ^activities=(replies|topics)$
+##  RewriteRule ^/([a-z0-9]{40})/me.xml$    me/%1.xml?network_auth_token=$1    [R=301,L]
+
+  # :network_auth_token/me.xml -> me.xml?network_auth_token=:network_auth_token
+##  RewriteRule ^/([a-z0-9]{40})/me.xml$    me.xml?network_auth_token=$1    [R=301,L]
+
+  # tags/:name.xml -> tags/:name.rss
+  #RewriteRule ^/tags/([^\.]+).xml$    tags/$1.rss    [R=301,L]

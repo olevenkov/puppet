@@ -1,0 +1,127 @@
+NameVirtualHost 192.168.88.189:443
+NameVirtualHost 192.168.88.163:443
+NameVirtualHost 192.168.88.167:443
+
+
+<VirtualHost 192.168.88.189:443>
+        ServerName      test-secure.nature.com
+        DocumentRoot    /mnt/fs/Web/NPG
+
+        ErrorDocument 500 /common/access/generic_error.html
+        ErrorDocument 501 /server-error.html
+        ErrorDocument 502 /server-error.html
+        ErrorDocument 503 /server-error.html
+        AccessFileName  .htaccess
+        Setenv VLOG /var/www/test-www.nature.com/logs
+        ErrorLog /var/www/test-www.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/test-www.nature.com/logs/access_log
+        AllowEncodedSlashes on
+
+	SSLEngine On
+        SSLCertificateKeyFile /etc/httpd/conf/ssl/naturecom/naturecom.key
+        SSLCertificateFile /etc/httpd/conf/ssl/naturecom/_.nature.com.crt
+        SSLCertificateChainFile /etc/httpd/conf/ssl/naturecom/gd_bundle.crt
+
+
+        AddType text/csv        .csv
+
+        ExpiresActive On
+        ExpiresDefault "access plus 10 years"
+
+        Alias /logsxml "/usr/local/jetty-npg/logsxml"
+        ScriptAlias /cgi-bin/ "/var/www/cgi-bin/"
+
+        <Directory "/usr/local/jetty-npg/logsxml">
+          AllowOverride None
+          Options Indexes
+          Order allow,deny
+          Allow from all
+        </Directory>
+
+        <Directory "/mnt/fs/Web/NPG/view/builds">
+          #ExpiresDefault               "access plus 10 years"
+          ExpiresByType text/css        "access plus 10 years"
+          ExpiresByType text/js         "access plus 10 years"
+        </Directory>
+
+        <Directory "/var/www/test-www.nature.com">
+          AllowOverride All
+          Options None
+          Order allow,deny
+          Allow from all
+        </Directory>
+
+        <Directory "/var/www/cgi-bin">
+                Options ExecCGI
+                Allow from all
+        </Directory>
+
+        <Directory "/mnt/fs/web/NPG">
+          AllowOverride All
+          Options FollowSymLinks
+          Order allow,deny
+          Allow from all
+        </Directory>
+
+	#-------- MAIN BODY
+        Include conf.d/nature.com.conf
+
+</VirtualHost>
+
+
+<VirtualHost 192.168.88.163:443>
+        ServerName      test-secure.palgrave-journals.com
+        DocumentRoot    /mnt/fs/Web/palgrave
+        ErrorLog        /var/www/test-secure.palgrave-journals.com/logs/error_log
+        CustomLog       /var/www/test-secure.palgrave-journals.com/logs/access_log combined
+        Include         conf/palgrave_redirects.conf
+
+	SSLEngine on
+        SSLCipherSuite HIGH:MEDIUM
+        SSLProtocol all -SSLv2
+        SSLCertificateKeyFile /etc/httpd/conf/ssl/palgrave/_.palgrave-journals.com.key
+        SSLCertificateFile /etc/httpd/conf/ssl/palgrave/palgrave-journals.com.crt
+        SSLCertificateChainFile /etc/httpd/conf/ssl/palgrave/gd_bundle.crt
+
+        AllowEncodedSlashes on
+        RewriteEngine on
+
+        #Magic ju-ju to inject NPG_SRC_ADDR and avoid confusing access control - restored by JH
+        RewriteEngine on
+        RewriteCond %{REMOTE_ADDR} (.*)
+        RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+
+        #----------- MAIN BODY
+        Include conf.d/palgrave-journals.com.conf
+
+</VirtualHost>
+
+
+<VirtualHost 192.168.88.167:443>
+        ServerName      test-secure.palgraveconnect.com
+        DocumentRoot    /mnt/fs/Web/palgrave/
+        ErrorLog        /var/www/test-secure.palgraveconnect.com/logs/error_log
+        CustomLog       /var/www/test-secure.palgraveconnect.com/logs/access_log combined
+        Include         conf/palgraveconnect_redirects.conf
+
+	SSLEngine on
+        SSLCipherSuite HIGH:MEDIUM
+        SSLProtocol all -SSLv2
+        SSLCertificateKeyFile /etc/httpd/conf/ssl/palgrave/_.palgrave-journals.com.key
+        SSLCertificateFile /etc/httpd/conf/ssl/palgrave/palgrave-journals.com.crt
+        SSLCertificateChainFile /etc/httpd/conf/ssl/palgrave/gd_bundle.crt
+
+        RewriteEngine On
+
+        RewriteCond %{REMOTE_ADDR} (.*)
+        RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+
+        #---------- MAIN BODY
+        Include conf.d/palgraveconnect.com.conf
+
+</VirtualHost>

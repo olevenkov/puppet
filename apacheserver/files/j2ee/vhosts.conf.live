@@ -1,0 +1,3191 @@
+##
+## Managed by Puppet
+##
+
+
+NameVirtualHost *:80
+
+# Defualt Vhost to see what traffic is falling through
+#<VirtualHost *:80>
+#	ServerName default.nature.com
+#	DocumentRoot /var/www/default.nature.com/htdocs
+#	ErrorLog /var/www/default.nature.com/logs/error_log
+#	LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+#	TransferLog /var/www/default.nature.com/logs/access_log
+#
+#	RewriteEngine On
+#	RewriteRule (.*) http://www.nature.com/$1 [R]
+#</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.nature.com 
+        ServerAlias nature.com origin.www.nature.com
+        ServerAlias search.nature.com
+        DocumentRoot /mnt/fs/Web/NPG
+	ErrorDocument 500 /server-error.html
+	ErrorDocument 501 /server-error.html
+	ErrorDocument 502 /server-error.html
+	ErrorDocument 503 /server-error.html
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/nature.com/logs
+        #SetEnvIf Remote_Addr "::1" dummy
+        ErrorLog /var/www/nature.com/logs/error_log
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/nature.com/logs/access_log
+        #CustomLog /var/www/nature.com/logs/access_log Combined env=!dummy
+
+	CookieTracking on
+	CookieName SaneID
+	CookieExpires "1 day"
+	CookieDomain .nature.com
+
+		#IT-6172
+#	<Location "/news/">
+#		RequestHeader unset NPG_SRC_ADDR
+#		RequestHeader add NPG_SRC_ADDR "77.67.57.1"
+#	</Location>
+
+#	LogFormat "HostHeader:%{Host}i:RemoteHost:%h:NPG_SRC_ADDR:%{NPG_SRC_ADDR}i:X-Forwarded-for:%{X-Forwarded-For}i:Referer:%{Referer}i" hostheaderlog
+#	CustomLog /tmp/hostheader.log hostheaderlog
+#	LogFormat "%h \"%{NPG_SRC_ADDR}i\" \"%{X-Forwarded-For}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+#	TransferLog /var/www/nature.com/logs/tfer_log_full
+
+#	LogFormat "%{Accept-Encoding}i  %h %t" headerlog
+#	CustomLog /var/www/nature.com/logs/accept_encoding.log headerlog
+
+	#IT-11523 - COMMENTING BLOCK
+	#Commented out for IT-11534 10/20/2011 smm
+	# RewriteRule ^/commenting      -      [F]
+
+		#Set npg_src_addr if missing
+	Include conf/set_header.conf
+
+	Include conf/redirects.conf
+	Include conf/newsredirects.conf
+	Include conf/rssredirects.conf
+	Include conf/rdfredirects.conf
+        AllowEncodedSlashes on
+        ProxyPreserveHost on  # uncommented 4/2007 smm
+
+	AddType application/vnd.openxmlformats-officedocument.spreadsheetml.sheet .xlsx
+	AddType text/application/x-research-info-systems        .ris
+	AddType chemical/x-cdx                                  cdx
+	#AddType application/xml sbml
+	#AddType application/sbml+xml            sbml
+	AddType	text/csv	.csv
+
+
+    RewriteEngine on
+
+        #Bypass Jetty for publicized relaunch URL
+    RewriteRule ^/rediscover/ - [L]
+        #Bypass Jetty for hosted fonts
+    RewriteRule ^/webfonts/ - [L]
+        #Bypass Jetty for kidigital ipad app (Glenn 4/2011)
+    RewriteRule ^/kidigital - [L]
+
+    RewriteRule ^/accesscontrol - [F,L]
+    #RewriteRule ^/mobileapps(.*) - [F,L]
+	RewriteRule ^/cgi-taf(.*) http://www.nature.com/index.html [R,L] #- [F]
+	RewriteRule (.*)\.taf http://www.nature.com/index.html [R,L] #- [F]
+	RewriteRule ^/akamai-sureroute-test-object.htm - [L]
+	RewriteRule (.*)/.pdf$ $1/index.html [R,L]
+	RewriteRule ^/nature-events/pdf/(.*).pdf - [L]
+    #RewriteRule ^/api/xmlrpc	http://npgj2ee8:8080/api/xmlrpc [P,L]
+    RewriteRule ^/rest/verify/(.*)$ http://localhost:7080/api/verify/$1 [P,L]
+    #RewriteRule ^/api/rest/(.*)	http://npgj2ee8:8080/api/rest/$1 [P,L]
+
+		#Catch jsessionids for users refusing cookies
+	RewriteRule ^(/.*;JSESSIONID=.*)$ $1 [T=jserv-servlet]
+
+    	#####JOBS BOX ###
+        ## Please don't use this anymore
+        ## Go to the BigIP and apply the BlockJobsBoxes irule to the 192.168.10.75 VIP at
+        ##   https://199.168.13.98/tmui/Control/jspmap/tmui/locallb/virtual_server/properties.jsp?name=nature_192.168.10.75_80
+        #########
+
+    # Naturejobs Reports - IT-8173
+    RewriteCond %{REQUEST_URI} ^/naturejobs/science/system/sales_support_reports/(.*)
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^199.168.13.*$
+    RewriteCond %{REMOTE_ADDR} !^199.168.13.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+    RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.1$
+    RewriteCond %{REMOTE_ADDR} !^195.138.194.1$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4$
+    RewriteCond %{REMOTE_ADDR} !^31.221.45.4$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.7$
+    RewriteCond %{REMOTE_ADDR} !^195.138.194.7$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4$
+    RewriteCond %{REMOTE_ADDR} !^31.221.45.4$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^194.129.50.164$
+    RewriteCond %{REMOTE_ADDR} !^194.129.50.164$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+    RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+    RewriteCond %{REMOTE_ADDR} !^172.26.*$
+    RewriteRule ^/naturejobs/science/system/sales_support_reports/(.*) - [F]
+
+    # Naturejobs
+    RewriteRule ^/naturejobs$ /naturejobs/science/ [R=301,L]
+    RewriteRule ^/naturejobs/$ /naturejobs/science/ [R=301,L]
+    RewriteRule ^/naturejobs/index.html$ /naturejobs/science/ [R=301,L]
+    RewriteRule ^/naturejobs/science$ /naturejobs/science/ [R=301,L]
+    RewriteRule ^/naturejobs/science/welcome/?$ /naturejobs/science/ [R=301,L]
+    RewriteRule ^/naturejobs/science/system/(.*) /mnt/fs/Web/NPG/naturejobs/shared/system/$1 [L]
+    RewriteRule ^/naturejobs/science(.*) http://localhost:8080/naturejobs/science$1 [P,L]
+    RewriteRule ^/naturejobs/graduatesurvey(.*) http://localhost:8080/naturejobs/graduatesurvey$1 [P,L]
+
+    RewriteRule ^/isn/network(.*) http://www.isn-online.org/isn/network$1 [R=301,L]
+
+    # Draper facade for Open Innovation Challenges.
+    RewriteRule ^/draper/(.+)$ http://localhost:7380/draper/$1 [P,L]
+
+    # Protocol Exchange
+    #RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+    #RewriteRule ^/protocolexchange$ /procotolexchange/ [R,L]
+    #RewriteRule ^/protocolexchange(.*) http://localhost:7380/protocolexchange$1 [P,L]
+    # Protocol Exchange
+    #RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+    #RewriteRule ^/protocolexchange/(.*) http://localhost:7380/protocolexchange/$1 [P,L]
+    RewriteRule ^/protocolexchange/?$ http://localhost:7380/protocolexchange/index.html [P,L]
+    RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+    RewriteRule ^/protocolexchange/(.+)$ http://localhost:7380/protocolexchange/$1 [P,L]
+
+    #####  BDJ Jobs 
+    RewriteCond /home/bdjjobs/apps/bdjjobs/current/public/%{REQUEST_FILENAME} !-f
+    RewriteRule ^/bdjjobs/(.*) http://localhost:9918/bdjjobs/$1 [P,L]
+    RewriteRule ^/bdjjobs/? http://localhost:9918/bdjjobs [P,L]
+    <Location /bdjjobs>
+      ExpiresActive Off
+    </Location>
+
+    #### Added for Polopoly static files ####
+    RewriteRule ^/polopoly_fs/(.+)$ http://192.168.10.96/polopoly_fs/$1 [P,L]
+
+    RewriteRule ^/search/(.*).html http://localhost:7080/search/$1.html [P,L]
+    RewriteRule ^/search/versioninfo(.*) http://localhost:7080/mlsearch-web/versioninfo$1 [P,L]
+    RewriteRule ^/search/adv_search(.*) http://localhost:7080/mlsearch-web/search/executeSearch$1 [P,L]
+    RewriteRule ^/search/laban/adv_search(.*) http://localhost:7080/mlsearch-web/laban/search/executeSearch$1 [P,L]
+    RewriteRule ^/sciam/search/adv_search(.*) http://localhost:7080/mlsearch-web/sciam/search/executeSearch$1 [P,L]
+    RewriteRule ^/sciam/search(.*) http://localhost:7080/mlsearch-web/sciam/search$1 [P,L]
+    RewriteRule ^/laban/search(.*) http://localhost:7080/mlsearch-web/laban/search$1 [P,L]
+    RewriteRule ^/search(.*) http://localhost:7080/mlsearch-web/search$1 [P,L]
+
+	RewriteRule ^/server-error(.*) - [L]
+	RewriteCond %{HTTP_HOST} ^origin.www.nature.com$ [NC]
+	RewriteRule ^(.*)$ http://www.nature.com$1 [R,L]
+  RewriteCond %{HTTP_HOST} ^www.nature.com.edgesuite.net$ [NC]
+  RewriteRule ^(.*)$ http://www.nature.com$1 [R,L]
+	RewriteCond %{HTTP_HOST} ^199\.168\.13\.75$ [NC]
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^208.85.175.2
+    RewriteCond %{REMOTE_ADDR} !^208.85.175.2
+	RewriteRule ^(.*)$ http://www.nature.com$1 [R,L]
+
+        # BDJE
+        #RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+        #RewriteRule ^/bdje/(.*) http://localhost:7380/bdje/$1 [P,L]
+        #RewriteRule ^/bdje/? http://localhost:7380/bdje [P,L]
+        RewriteRule ^/bdje/(.*) http://www.nature.com/bdjjobs/subcategories/show?subcategory=Education+\%26+Training [R,L,noescape] 
+        RewriteRule ^/bdje/?$  http://www.nature.com/bdjjobs/subcategories/show?subcategory=Education+\%26+Training [R,L,noescape]
+
+
+        #RewriteCond /home/bdje/apps/bdje/current/public/%{REQUEST_FILENAME} !-f
+
+        RewriteRule ^/bdjeducation/(.*) http://www.nature.com/bdjjobs/subcategories/show?subcategory=Education+\%26+Training [R,L,noescape]
+        RewriteRule ^/bdjeducation/? http://www.nature.com/bdjjobs/subcategories/show?subcategory=Education+\%26+Training [R,L,noescape]
+        <Location /bdjeducation>
+          ExpiresActive Off
+        </Location>
+
+
+    # Naturejobs Salary Survey - DEPLOY-329
+    RewriteRule ^/naturejobs/salary/survey/search/(.*) http://localhost:7380/naturejobs/salary/survey/search/$1 [P,L]
+    RewriteRule ^/naturejobs/salary/survey/search/? http://localhost:7380/naturejobs/salary/survey/search [P,L]
+
+        ########################################POLOPOLY News START#############################
+
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^199.168.13.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^199.168.13.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^65.199.186.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^65.199.186.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^195.138.194.1$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^195.138.194.1$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4$ [OR]
+    RewriteCond %{REMOTE_ADDR} !^31.221.45.4$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^195.138.194.7$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^195.138.194.7$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^194.129.50.164$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^194.129.50.164$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.4.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.4.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.10.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.10.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.88.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.88.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^10.1.1.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^10.1.1.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^172.26.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^172.26.*$
+    RewriteRule ^/news-new/index.html http://192.168.10.96/news-new/ [P,L]
+
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^199.168.13.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^199.168.13.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^65.199.186.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^65.199.186.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^195.138.194.1$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^195.138.194.1$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4$ [OR]
+    RewriteCond %{REMOTE_ADDR} !^31.221.45.4$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^195.138.194.7$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^195.138.194.7$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^194.129.50.164$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^194.129.50.164$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.4.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.4.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.10.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.10.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.88.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.88.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^10.1.1.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^10.1.1.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^172.26.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^172.26.*$
+    RewriteRule ^/news-new/(.*) http://192.168.10.96/news-new/$1 [P,L]
+
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^199.168.13.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^199.168.13.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^65.199.186.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^65.199.186.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^195.138.194.1$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^195.138.194.1$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4$ [OR]
+    RewriteCond %{REMOTE_ADDR} !^31.221.45.4$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^195.138.194.7$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^195.138.194.7$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^194.129.50.164$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^194.129.50.164$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.4.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.4.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.10.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.10.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.88.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.88.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^10.1.1.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^10.1.1.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^172.26.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^172.26.*$
+    RewriteRule ^/polopoly_(.*) http://192.168.10.96/polopoly_$1 [P,L]
+
+        ########################################################################################
+
+
+	
+	RewriteCond %{REQUEST_URI}  !^/news/rss/(.*)
+	RewriteCond %{REQUEST_URI}  !^/nindia/rss/(.*)
+	RewriteCond %{REQUEST_URI}  !^/nmiddleeast/rss/(.*)
+	RewriteCond %{REQUEST_URI}  !^/natureevents/(.*).(rss|xml)
+	RewriteCond %{REQUEST_URI} !^/access-info-api/(.*)
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|wmv|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl|svg|icb)$ - [L]
+	RewriteRule ^/survey/(.*) - [L]
+    RewriteRule ^/server-status     - [L]
+	Alias /big_monitor/ /var/www/nature.com/htdocs/big_monitor/
+    RewriteRule ^/big_monitor(.*) - [L]	
+
+		 # Preserve hostname when proxying to tomcat
+	ProxyPreserveHost on
+
+
+	RewriteRule ^/npg/$ /npg_/index_npg.html [R]
+	RewriteRule ^/npg/index.html$ /npg_/index_npg.html [R]
+    ########################################POLOPOLY NATURE PHYSICS RELAUNCH START#############################
+    #How to submit - page
+    RewriteRule ^/nphys/authors/submit/index.html   http://192.168.10.96/nphys/guide-to-authors/how-to-submit  [P,L]
+    RewriteRule ^/nphys/authors/submit/ http://192.168.10.96/nphys/guide-to-authors/how-to-submit  [P,L]
+    RewriteRule ^/nphys/authors/submit http://192.168.10.96/nphys/guide-to-authors/how-to-submit  [P,L]
+    RewriteRule ^/nphys/guide-to-authors/how-to-submit/ http://192.168.10.96/nphys/guide-to-authors/how-to-submit [P,L]
+    RewriteRule ^/nphys/guide-to-authors/how-to-submit http://192.168.10.96/nphys/guide-to-authors/how-to-submit [P,L]
+  
+    #Content types - page
+    RewriteRule ^/nphys/authors/article_types/index.html http://192.168.10.96/nphys/guide-to-authors/content-types  [P,L]
+    RewriteRule ^/nphys/authors/article_types http://192.168.10.96/nphys/guide-to-authors/content-types  [P,L]
+    RewriteRule ^/nphys/guide-to-authors/content-types/ http://192.168.10.96/nphys/guide-to-authors/content-types  [P,L]
+    RewriteRule ^/nphys/guide-to-authors/content-types http://192.168.10.96/nphys/guide-to-authors/content-types  [P,L]
+  
+  
+  
+  
+    #editorial process - page
+    RewriteRule ^/nphys/authors/ed_process/index.html http://192.168.10.96/nphys/guide-to-authors/editorial-process  [P,L]
+    RewriteRule ^/nphys/authors/ed_process http://192.168.10.96/nphys/guide-to-authors/editorial-process  [P,L]
+    RewriteRule ^/nphys/authors/ed_process/ http://192.168.10.96/nphys/guide-to-authors/editorial-process  [P,L]
+    RewriteRule ^/nphys/guide-to-authors/editorial-process/ http://192.168.10.96/nphys/guide-to-authors/editorial-process  [P,L]
+    RewriteRule ^/nphys/guide-to-authors/editorial-process http://192.168.10.96/nphys/guide-to-authors/editorial-process  [P,L]
+    
+    RewriteRule ^/nphys/about/about_eds/index.html http://192.168.10.96/nphys/guide-to-authors/about-the-editors  [P,L]
+    RewriteRule ^/nphys/about/about_eds http://192.168.10.96/nphys/guide-to-authors/about-the-editors  [P,L]
+    RewriteRule ^/nphys/about/about_eds/ http://192.168.10.96/nphys/guide-to-authors/about-the-editors  [P,L]
+    RewriteRule ^/nphys/guide-to-authors/about-the-editors/ http://192.168.10.96/nphys/guide-to-authors/about-the-editors  [P,L]
+    RewriteRule ^/nphys/guide-to-authors/about-the-editors http://192.168.10.96/nphys/guide-to-authors/about-the-editors  [P,L]
+  
+  
+    RewriteRule ^/nphys/contact/index.html http://192.168.10.96/nphys/contact-the-journal  [P,L]
+    RewriteRule ^/nphys/contact http://192.168.10.96/nphys/contact-the-journal  [P,L]
+    RewriteRule ^/nphys/contact/ http://192.168.10.96/nphys/contact-the-journal  [P,L]
+    RewriteRule ^/nphys/contact-the-journal/ http://192.168.10.96/nphys/contact-the-journal  [P,L]
+    RewriteRule ^/nphys/contact-the-journal http://192.168.10.96/nphys/contact-the-journal  [P,L]
+  
+    RewriteRule ^/nphys/site/index.html http://192.168.10.96/nphys/about-this-site  [P,L]
+    RewriteRule ^/nphys/site/ http://192.168.10.96/nphys/about-this-site  [P,L]
+    RewriteRule ^/nphys/site http://192.168.10.96/nphys/about-this-site  [P,L]
+    RewriteRule ^/nphys/about-this-site/ http://192.168.10.96/nphys/about-this-site  [P,L]
+    RewriteRule ^/nphys/about-this-site http://192.168.10.96/nphys/about-this-site  [P,L]
+ 
+    #Guide to authors - page
+    RewriteRule ^/nphys/authors/index.html http://192.168.10.96/nphys/guide-to-authors   [P,L]
+    RewriteRule ^/nphys/authors/ http://192.168.10.96/nphys/guide-to-authors   [P,L]
+    RewriteRule ^/nphys/authors http://192.168.10.96/nphys/guide-to-authors   [P,L]
+    RewriteRule ^/nphys/guide-to-authors/ http://192.168.10.96/nphys/guide-to-authors   [P,L]
+    RewriteRule ^/nphys/guide-to-authors http://192.168.10.96/nphys/guide-to-authors   [P,L]
+  
+    RewriteRule ^/nphys/index.html http://192.168.10.96/nphys/  [P,L]
+    RewriteRule ^/nphys$ http://192.168.10.96/nphys/  [P,L]
+    ########################################POLOPOLY NATURE PHYSICS RELAUNCH ENDS#############################
+
+	#NATUREEVENTS
+        RewriteRule ^/nature-events/?$ /natureevents/science
+        RewriteCond /home/natureevents/apps/natureevents/current/public/%{REQUEST_FILENAME} !-f
+        RewriteRule ^/natureevents/?$ /natureevents/science
+        RewriteRule ^/natureevents/science/?$ http://localhost:9918/natureevents/science/index.html [P,L]
+        RewriteRule ^/natureevents/(.*) http://localhost:9918/natureevents/$1 [P,L]
+
+
+
+	        #ISN search
+	#RewriteRule ^/isn/search/(.*) http://www.nature.com/isnsearch/$1 [L,R=301]
+	RewriteRule ^/isn/search(.*) http://www.isn-online.org/isn/search$1 [L,R=301]
+		 # Clean up URLs
+	RewriteRule ^/news/index_old.html http://localhost:7080/xb3/news/index.html [P,L]
+        RewriteRule ^/news/foxtrot/svc/(.*) http://localhost:7080/foxtrot/svc/$1 [P,L]
+	RewriteRule ^/news/$ /news/index.html [R]
+	RewriteRule ^/news/webfeeds/$ /news/webfeeds/index.html [N]
+	RewriteRule ^/news/2006/061009/pf/061009-14_pf.html http://www.nature.com/news/2006/061015/full/news061009-14.html [R,L]
+	RewriteRule ^/news/2006/061009/pf/061009-7_pf.html http://www.nature.com/news/2006/061011/full/news061009-7.html [R,L]
+	RewriteRule ^/news/about/aboutus.html http://www.nature.com/news/about-us.html [R,L]
+	RewriteRule ^/news/archive$ http://www.nature.com/news/archive/date/index.html [R,L]
+	RewriteRule ^/news/archive/$ http://www.nature.com/news/archive/date/index.html [R,L]
+	RewriteRule ^/news/archive/date$ http://www.nature.com/news/archive/date/index.html [R,L]
+	RewriteRule ^/news/archive/date/$ http://www.nature.com/news/archive/date/index.html [R,L]
+	RewriteRule ^/news/archive/date/([0-9]+)$ http://www.nature.com/news/archive/date/$1/index.html [R,L]
+	RewriteRule ^/news/specials/financialcrisis/index.html http://www.nature.com/news/specials/recessionwatch/index.html [R,L]
+	RewriteRule ^/news/specials$ http://www.nature.com/news/specials/index.html [R,L]
+	RewriteRule ^/news/specials/$ http://www.nature.com/news/specials/index.html [R,L]
+	RewriteRule ^/news/specials/([0-9a-zA-Z]+)$ http://www.nature.com/news/specials/$1/index.html [R,L]
+	RewriteRule ^/news/opinion$ http://www.nature.com/news/opinion/index.html [R,L]
+	RewriteRule ^/news/opinion/$ http://www.nature.com/news/opinion/index.html [R,L]
+	RewriteRule ^/news/news-features$ http://www.nature.com/news/news-features/index.html [R,L]
+	RewriteRule ^/news/news-features/$ http://www.nature.com/news/news-features/index.html [R,L]
+	RewriteRule ^/news/archive/subject$ http://www.nature.com/news/archive/subject/index.html [R,L]
+	RewriteRule ^/news/archive/subject/$ http://www.nature.com/news/archive/subject/index.html [R,L]
+	RewriteRule ^/news/archive/category$ http://www.nature.com/news/archive/category/index.html [R,L]
+	RewriteRule ^/news/archive/category/$ http://www.nature.com/news/archive/category/index.html [R,L]
+	RewriteRule ^/news/(.*)/$ /news/$1/index.html [R,N]
+
+        RewriteRule ^/news/(.*) http://localhost:7080/xb3/news/$1 [P,L]
+
+    RewriteCond %{REQUEST_URI} ^/ecommerce/debug\.action
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^199.168.13.*$
+    RewriteCond %{REMOTE_ADDR} !^199.168.13.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+    RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.1$
+    RewriteCond %{REMOTE_ADDR} !^195.138.194.1$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.7$
+    RewriteCond %{REMOTE_ADDR} !^195.138.194.7$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^194.129.50.164$
+    RewriteCond %{REMOTE_ADDR} !^194.129.50.164$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4$
+    RewriteCond %{REMOTE_ADDR} !^31.221.45.4$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+    RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+    RewriteCond %{REMOTE_ADDR} !^172.26.*$
+    RewriteRule ^/ecommerce/debug\.action - [F]
+
+
+    RewriteCond %{REQUEST_URI} ^/ecommerce/debug/(.*)
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^199.168.13.*$
+    RewriteCond %{REMOTE_ADDR} !^199.168.13.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+    RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.1$
+    RewriteCond %{REMOTE_ADDR} !^195.138.194.1$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+    RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.7$
+    RewriteCond %{REMOTE_ADDR} !^195.138.194.7$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^194.129.50.164$
+    RewriteCond %{REMOTE_ADDR} !^194.129.50.164$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+    RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+    RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+    RewriteCond %{REMOTE_ADDR} !^172.26.*$
+    RewriteRule ^/ecommerce/debug/(.*) - [F]
+
+
+    ## IT-6933 ##
+    #RewriteRule ^/nature-newbio/(.*) http://localhost:7080/xb3/nature-newbio/$1 [P,L]
+    #RewriteRule ^/nature-physci/(.*) http://localhost:7080/xb3/nature-physci/$1 [P,L]
+    RewriteRule  ^/nature-newbio/foxtrot/svc/mailafriend/(.*) http://localhost:7080/$1 [P,L]
+    RewriteRule  ^/nature-newbio/journal/(.*) http://localhost:7080/xb3/nature-newbio/journal/$1 [P,L]
+    RewriteRule  ^/nature-physci/foxtrot/svc/mailafriend/(.*) http://localhost:7080/$1 [P,L]
+    RewriteRule  ^/nature-physci/journal/(.*) http://localhost:7080/xb3/nature-physci/journal/$1 [P,L] 
+
+
+
+        RewriteCond %{REMOTE_ADDR} ^65.199.186.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^65.199.186.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^108.203.169.225 [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^108.203.169.225 [OR]
+        RewriteCond %{REMOTE_ADDR} ^192.168.88.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.88.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^192.168.10.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.10.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^192.168.12.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.12.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^192.168.13.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.13.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^166.111.120.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^166.111.120.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^219.127.212.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^219.127.212.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^210.151.240.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^210.151.240.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^202.54.243.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^202.54.243.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^124.39.14.174 [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^124.39.14.174 [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^10.1.1.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^10.1.1.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^31.221.45.4$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^31.221.45.4$
+        RewriteRule ^/rest/(.*)$ http://localhost:7080/api/$1 [P,L]
+
+	      RewriteCond %{REQUEST_URI} ^/api/(.*)$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186
+        RewriteCond %{REMOTE_ADDR} !^192.168.88
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88
+        RewriteCond %{REMOTE_ADDR} !^192.168.10
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10
+        RewriteCond %{REMOTE_ADDR} !^192.168.12
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12
+        RewriteCond %{REMOTE_ADDR} !^166.111.120
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^166.111.120
+        RewriteCond %{REMOTE_ADDR} !^219.127.212
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^219.127.212
+        RewriteCond %{REMOTE_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+	      RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/api/(.*)$ - [F]
+        #RewriteRule ^/api/(.*)$ http://localhost:7080/api/$1 [P,L]
+
+        RewriteCond %{REQUEST_URI} ^/services/gateway\.jsp
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^137.187.67.181
+        RewriteCond %{REMOTE_ADDR} !^137.187.67.181
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.143.21.106
+        RewriteCond %{REMOTE_ADDR} !^128.143.21.106
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^18.92.0.50
+        RewriteCond %{REMOTE_ADDR} !^18.92.0.50
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.6.150.6
+        RewriteCond %{REMOTE_ADDR} !^128.6.150.6
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.6.150.7
+        RewriteCond %{REMOTE_ADDR} !^128.6.150.7
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^198.202.75.60
+        RewriteCond %{REMOTE_ADDR} !^198.202.75.60
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^198.202.75.*$
+        RewriteCond %{REMOTE_ADDR} !^198.202.75.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^18.9.62.70
+        RewriteCond %{REMOTE_ADDR} !^18.9.62.70
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243.228
+        RewriteCond %{REMOTE_ADDR} !^202.54.243.228
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^198.202.75.*$
+	RewriteCond %{REMOTE_ADDR} !^198.202.75.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.6.20.*$
+        RewriteCond %{REMOTE_ADDR} !^128.6.20.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.6.150.6
+        RewriteCond %{REMOTE_ADDR} !^128.6.150.6
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.143.16.65
+        RewriteCond %{REMOTE_ADDR} !^128.143.16.65
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.6.150.*$
+        RewriteCond %{REMOTE_ADDR} !^128.6.150.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.6.239.*$
+        RewriteCond %{REMOTE_ADDR} !^128.6.239.*$
+        RewriteRule ^/services/gateway\.jsp - [F]
+
+#IT-10625
+        RewriteCond %{REQUEST_URI} ^/appsstatus
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186
+        RewriteCond %{REMOTE_ADDR} !^192.168.88
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88
+        RewriteCond %{REMOTE_ADDR} !^192.168.10
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10
+        RewriteCond %{REMOTE_ADDR} !^192.168.12
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12
+        RewriteCond %{REMOTE_ADDR} !^166.111.120
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^166.111.120
+        RewriteCond %{REMOTE_ADDR} !^219.127.212
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^219.127.212
+        RewriteCond %{REMOTE_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{REMOTE_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/appsstatus - [F]
+#IT-12696
+        RewriteCond %{REQUEST_URI} ^/athensstatus
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186
+        RewriteCond %{REMOTE_ADDR} !^192.168.88
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88
+        RewriteCond %{REMOTE_ADDR} !^192.168.10
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10
+        RewriteCond %{REMOTE_ADDR} !^192.168.12
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12
+        RewriteCond %{REMOTE_ADDR} !^166.111.120
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^166.111.120
+        RewriteCond %{REMOTE_ADDR} !^219.127.212
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^219.127.212
+        RewriteCond %{REMOTE_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{REMOTE_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/athensstatus - [F]
+
+#IT-13704
+        RewriteCond %{REQUEST_URI} ^/ArticleAccess\.html
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{REMOTE_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/athensstatus - [F]
+
+#IT-13704
+        RewriteCond %{REQUEST_URI} ^/ArticleAccess\.html
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186
+        RewriteCond %{REMOTE_ADDR} !^192.168.88
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88
+        RewriteCond %{REMOTE_ADDR} !^192.168.10
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10
+        RewriteCond %{REMOTE_ADDR} !^192.168.12
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12
+        RewriteCond %{REMOTE_ADDR} !^166.111.120
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^166.111.120
+        RewriteCond %{REMOTE_ADDR} !^219.127.212
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^219.127.212
+        RewriteCond %{REMOTE_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{REMOTE_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/ArticleAccess.html - [F]
+
+
+
+
+
+#        RewriteCond %{REQUEST_URI} ^/versioninfo
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+#        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+#        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+#        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+#        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+#        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+#        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+#        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+#        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^137.187.67.181
+#        RewriteCond %{REMOTE_ADDR} !^137.187.67.181
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.143.21.106
+#        RewriteCond %{REMOTE_ADDR} !^128.143.21.106
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^18.92.0.50
+#        RewriteCond %{REMOTE_ADDR} !^18.92.0.50
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.6.150.6
+#        RewriteCond %{REMOTE_ADDR} !^128.6.150.6
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^128.6.150.7
+#        RewriteCond %{REMOTE_ADDR} !^128.6.150.7
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^198.202.75.60
+#        RewriteCond %{REMOTE_ADDR} !^198.202.75.60
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^198.202.75.*$
+#        RewriteCond %{REMOTE_ADDR} !^198.202.75.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243.228
+#        RewriteCond %{REMOTE_ADDR} !^202.54.243.228
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^198.202.75.*$
+#        RewriteCond %{REMOTE_ADDR} !^198.202.75.*$
+#        RewriteRule ^/versioninfo - [F]
+#
+	RewriteCond %{REQUEST_URI} ^/GetWebOrderDetails(.*)
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^170.224.101.*$
+        RewriteCond %{REMOTE_ADDR} !^170.224.101.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+	RewriteCond %{REMOTE_ADDR} !^65.199.186.166$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.166$
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	RewriteCond %{HTTP_USER_AGENT} ^.*internal\ dummy\ connection.*$ [NC]
+	RewriteRule .* - [F,L]
+
+        #<Location /press-site>
+        #    AuthType Basic
+        #    AuthName "Press Site"
+        #    AuthUserFile /etc/httpd/conf/pe.passwd
+        #    order deny,allow
+        #    Deny from all
+        #    Allow from 127.0.0.1
+        #    Allow from 192.168
+        #    Allow from 172.25
+        #    Allow from 172.26
+        #    Allow from 65.199.186.2
+        #    Allow from 195.138.194.1
+        #    Allow from 195.138.194.7
+        #    Require valid-user
+        #    Satisfy any
+        #</Location>
+
+
+
+	RewriteCond %{REQUEST_URI} ^/jpt_payment_service(.*)
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^125.103.228.204
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^125.103.228.205 
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^125.103.228.206
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^125.103.228.214
+	RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+	RewriteCond %{REMOTE_ADDR} !^172.26.6.89
+	RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+	RewriteRule ^/jpt_payment_service(.*) - [F]
+
+
+	# webapps-plus APIs
+	RewriteCond %{REQUEST_URI} ^/charleston_collection(.*)
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+	RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteRule ^/charleston_collection(.*) - [F]
+
+	RewriteCond %{REQUEST_URI} ^/charleston_document(.*)
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteRule ^/charleston_document(.*) - [F]
+
+#        RewriteCond %{REQUEST_URI} ^/accesscontrol(.*)
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+#        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+#        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+#        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+#        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+#        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+#        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+#        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+#        RewriteRule ^/accesscontrol(.*) - [F]
+
+
+        RewriteCond %{REQUEST_URI} ^/commenting/(.*)
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^127.0.0.1$
+        RewriteRule ^/commenting/(.*) - [F]
+
+
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$ 
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^2.2.2.*$
+        RewriteCond %{REMOTE_ADDR} !^2.2.2.*$ 
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.160.132.97
+        RewriteCond %{REMOTE_ADDR} !^122.160.132.97
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.160.132.98
+        RewriteCond %{REMOTE_ADDR} !^122.160.132.98 
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$ 
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$ 
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^172.25.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243.228
+        RewriteCond %{REMOTE_ADDR} !^202.54.243.228
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^59.160.109.9
+        RewriteCond %{REMOTE_ADDR} !^59.160.109.9
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.160.227.17
+        RewriteCond %{REMOTE_ADDR} !^122.160.227.17
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.201.138.2
+        RewriteCond %{REMOTE_ADDR} !^65.201.138.2
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.242.181.*$
+        RewriteCond %{REMOTE_ADDR} !^65.242.181.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^66.228.83.75
+        RewriteCond %{REMOTE_ADDR} !^66.228.83.75
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^208.252.89.33
+        RewriteCond %{REMOTE_ADDR} !^208.252.89.33
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^203.26.59.4
+        RewriteCond %{REMOTE_ADDR} !^203.26.59.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240.82
+        RewriteCond %{REMOTE_ADDR} !^210.151.240.82
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^220.241.153.225
+        RewriteCond %{REMOTE_ADDR} !^220.241.153.225
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^62.41.85.*$
+        RewriteCond %{REMOTE_ADDR} !^62.41.85.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^80.176.64.*$
+        RewriteCond %{REMOTE_ADDR} !^80.176.64.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^61.246.62.130
+	RewriteCond %{REMOTE_ADDR} !^61.246.62.130
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^96.57.111.85
+	RewriteCond %{REMOTE_ADDR} !^96.57.111.85
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^81.142.82.58
+	RewriteCond %{REMOTE_ADDR} !^81.142.82.58
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.184.53.192
+	RewriteCond %{REMOTE_ADDR} !^122.184.53.192
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^208.59.201.*$
+	RewriteCond %{REMOTE_ADDR} !^208.59.201.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.64.21.36
+	RewriteCond %{REMOTE_ADDR} !^202.64.21.36
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.64.21.35
+	RewriteCond %{REMOTE_ADDR} !^202.64.21.35
+        RewriteRule ^/webadmin(.*) - [F]
+
+	RewriteCond %{REQUEST_URI} ^/contentstore_query(.*)
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.12.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+	RewriteCond %{REMOTE_ADDR} !^65.199.186.*$ 
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$ 
+	RewriteCond %{REMOTE_ADDR} !^71.75.252.99 
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^71.75.252.99 
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteRule ^/contentstore_query(.*) - [F]
+
+	RewriteCond %{REQUEST_URI} ^/contentstore_uploader(.*)
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteRule ^/contentstore_uploader(.*) - [F]
+
+        RewriteCond %{REQUEST_URI} ^/admin/(.*)$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186
+        RewriteCond %{REMOTE_ADDR} !^192.168.88
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88
+        RewriteCond %{REMOTE_ADDR} !^192.168.10
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10
+        RewriteCond %{REMOTE_ADDR} !^192.168.12
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12
+        RewriteCond %{REMOTE_ADDR} !^166.111.120
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^166.111.120
+        RewriteCond %{REMOTE_ADDR} !^219.127.212
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^219.127.212
+        RewriteCond %{REMOTE_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/admin/(.*)$ - [F]
+
+	RewriteCond %{REQUEST_URI} ^/mobileapps/admin/(.*)$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.1
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.1
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+        RewriteCond %{REMOTE_ADDR} !^192.168.88
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88
+        RewriteCond %{REMOTE_ADDR} !^192.168.10
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10
+        RewriteCond %{REMOTE_ADDR} !^192.168.12
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12
+	RewriteCond %{REMOTE_ADDR} !^172.25
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25
+	RewriteCond %{REMOTE_ADDR} !^172.26
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26
+        RewriteCond %{REMOTE_ADDR} !^166.111.120
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^166.111.120
+        RewriteCond %{REMOTE_ADDR} !^219.127.212
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^219.127.212
+        RewriteCond %{REMOTE_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/mobileapps/admin/(.*)$ - [F]
+
+
+	RewriteCond %{REQUEST_URI} ^/jitterbug/(.*)$
+	RewriteCond %{REMOTE_ADDR} !^208.85.175
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^208.85.175
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186
+        RewriteCond %{REMOTE_ADDR} !^192.168.88
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88
+        RewriteCond %{REMOTE_ADDR} !^192.168.10
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10
+        RewriteCond %{REMOTE_ADDR} !^192.168.6
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.6
+        RewriteCond %{REMOTE_ADDR} !^192.168.12
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12
+        RewriteCond %{REMOTE_ADDR} !^199.168.13
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^199.168.13
+        RewriteCond %{REMOTE_ADDR} !^172.25
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25
+        RewriteCond %{REMOTE_ADDR} !^172.26
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26
+        RewriteCond %{REMOTE_ADDR} !^166.111.120
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^166.111.120
+        RewriteCond %{REMOTE_ADDR} !^219.127.212
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^219.127.212
+        RewriteCond %{REMOTE_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/jitterbug/(.*)$ - [F]
+
+    RewriteCond %{REQUEST_URI} ^/natureevents/science/kawaii/(.*)$
+    RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteRule ^/natureevents/science/kawaii/(.*)$ - [F]
+
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^2.2.2.*$
+        RewriteCond %{REMOTE_ADDR} !^2.2.2.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^172.25.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        RewriteRule ^/press-site(.*) - [F]
+
+
+	
+	#Nature nindia
+	RewriteRule ^/nindia/archive$ http://www.nature.com/nindia/archive/date/index.html [R,L]
+        RewriteRule ^/nindia/archive/$ http://www.nature.com/nindia/archive/date/index.html [R,L]
+        RewriteRule ^/nindia/archive/date$ http://www.nature.com/nindia/archive/date/index.html [R,L]
+        RewriteRule ^/nindia/archive/date/$ http://www.nature.com/nindia/archive/date/index.html [R,L]
+        RewriteRule ^/nindia/archive/date/([0-9]+)$ http://www.nature.com/nindia/archive/date/$1/index.html [R,L]
+	RewriteRule ^/nindia/ourpicks$ http://www.nature.com/nindia/ourpicks/index.html [R,L]
+        RewriteRule ^/nindia/ourpicks/$ http://www.nature.com/nindia/ourpicks/index.html [R,L]
+	RewriteRule ^/nindia/jobs$ http://www.nature.com/nindia/jobs/index.html [R,L]
+        RewriteRule ^/nindia/jobs/$ http://www.nature.com/nindia/jobs/index.html [R,L]
+	RewriteRule ^/nindia/events$ http://www.nature.com/nindia/events/index.html [R,L]
+        RewriteRule ^/nindia/events/$ http://www.nature.com/nindia/events/index.html [R,L]
+	RewriteRule ^/nindia/archive/subject$ http://www.nature.com/nindia/archive/subject/index.html [R,L]
+        RewriteRule ^/nindia/archive/subject/$ http://www.nature.com/nindia/archive/subject/index.html [R,L]
+        RewriteRule ^/nindia/archive/category$ http://www.nature.com/nindia/archive/category/index.html [R,L]
+        RewriteRule ^/nindia/archive/category/$ http://www.nature.com/nindia/archive/category/index.html [R,L]
+
+	RewriteRule ^/nindia/(.*)/$ /nindia/$1/index.html [R,N]
+
+
+	RewriteRule ^/nindia/(.*) http://localhost:7080/xb3/nindia/$1 [P,L]
+	
+	#Nature Middle East
+	RewriteRule ^/nmiddleeast/$ /nmiddleeast/index.html [N]
+	RewriteRule ^/nmiddleeast/(.*) http://localhost:7080/xb3/nmiddleeast/$1 [P,L]
+
+
+		#Nature Archive
+	 RewriteRule ^/nature/(.*)/$ /nature/$1/index.html [N]
+        #RewriteRule ^/nature/journal/v(\d)(\d?)/(.*) http://localhost:7080/xb3/nature/journal/v$1$2/$3 [P,L]
+
+                #Vol 150-159
+        #RewriteRule ^/nature/journal/v1([0-5])(\d)/(.*) http://localhost:7080/xb3/nature/journal/v1$1$2/$3 [P,L]
+
+                #Vol 160-164
+        #RewriteRule ^/nature/journal/v16([0-4])/(.*) http://localhost:7080/xb3/nature/journal/v16$1/$2 [P,L]
+        #Special/static pages
+       #RewriteRule ^/nature/journal/listdecades.html(.*) http://localhost:7080/xb3/nature/journal/listdecades.html$1 [P,L]
+       RewriteRule ^/nature/archive/1869archive/(.*) http://localhost:7080/nature/journal/listdecades.html [P,L]
+       #RewriteRule ^/nature/journal/currentdecade.html(.*) http://localhost:7080/xb3/nature/journal/currentdecade.html$1 [P,L]
+       #RewriteRule ^/nature/journal/currentdecade.xml(.*) http://localhost:7080/xb3/nature/journal/currentdecade.xml$1 [P,L]
+
+                # end Nature 1869 Archive
+    ### ADDED for DEPLOY-545 #####
+    
+    # v1-99
+    #RewriteRule ^/nature/journal/v(\d)(\d?)/n([0-9]+)/index.html http://localhost:7080/xb3/nature/journal/v$1$2/n$3/index.html [P,L]
+    #RewriteRule ^/nature/journal/v(\d)(\d?)/n([0-9]+)/abs/(.*) http://localhost:7080/xb3/nature/journal/v$1$2/n$3/abs/$4 [P,L]
+       
+    #Vol 100-159
+    #RewriteRule ^/nature/journal/v1([0-5])(\d)/n([0-9]+)/index.html http://localhost:7080/xb3/nature/journal/v1$1$2/n$3/index.html [P,L]
+    #RewriteRule ^/nature/journal/v1([0-5])(\d)/n([0-9]+)/abs/(.*) http://localhost:7080/xb3/nature/journal/v1$1$2/n$3/abs/$4 [P,L]
+    
+    #Vol 160-164
+    #RewriteRule ^/nature/journal/v16([0-4])/n([0-9]+)/index.html http://localhost:7080/xb3/nature/journal/v16$1/n$2/index.html [P,L]
+    #RewriteRule ^/nature/journal/v16([0-4])/n([0-9]+)/abs/(.*) http://localhost:7080/xb3/nature/journal/v16$1/n$2/abs/$3 [P,L]
+
+    ### END DEPLOY-545 #####
+
+
+        RewriteRule ^/nsu/([^/]+)/([^.]+)\..*$ http://www.nature.com/doifinder/10.1038/news$2
+	RewriteRule ^/w3c/p3p.xml$ - [L]
+	RewriteRule ^/scifoo/(.*)$ - [L]
+        #IT-3145
+        #RewriteRule ^/oai/(.*) http://127.0.0.1:7080/oai/$1 [P,L]
+        ProxyPreserveHost On
+        #ProxyPass /oai  http://127.0.0.1:7080/oai
+        #ProxyPassReverse /oai http://127.0.0.1:7080/oai
+        ProxyPass /oai  http://localhost:7080/oai
+        ProxyPassReverse /oai http://localhost:7080/oai
+        #OpenSearch
+        ProxyPass /opensearch http://localhost:7080/opensearch
+        ProxyPassReverse /opensearch http://localhost:7080/opensearch
+
+	#IT-9945
+        RewriteRule ^/openurl(.*)       http://localhost:7480/openurl$1 [P,L]
+
+
+                # Send everything else to Jetty 
+        RewriteRule ^/(.*) http://localhost:7080/$1 [P] 
+                    # And set reverse proxy correctly 
+        ProxyPassReverse / http://localhost:7080/ 
+
+
+        <Directory "/mnt/fs/Web/NPG">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+        <Location /naturejobs/salary/survey/search>
+                ExpiresActive Off
+        </Location>
+        <Location /naturejobs/science/login>
+            ExpiresActive Off
+        </Location>
+
+        # Force PDF download - IT-11096
+        <Location /nrn/journal/v10/n4/extref>
+            ForceType application/octet-stream
+            Header set Content-Disposition attachment
+        </Location>
+
+        #<Location /protocolexchange>
+        #    ExpiresActive Off
+        #    AuthType Basic
+        #    AuthName "Protocol Exchange"
+        #    AuthUserFile /etc/httpd/conf/pe.passwd
+        #    order deny,allow
+        #    Deny from all
+        #    Allow from 127.0.0.1
+        #    Allow from 192.168
+        #    Allow from 172.25
+        #    Allow from 172.26
+        #    Allow from 65.199.186.2
+        #    Allow from 195.138.194.1
+        #    Allow from 195.138.194.7
+        #    Require valid-user
+        #    Satisfy any
+        #</Location>
+
+	#<Location /natureevents>
+	#	AuthType Basic
+        #        AuthName "Nature Events"
+        #        AuthUserFile /etc/httpd/conf/events.passwd
+        #        order deny,allow
+        #        Deny from all
+	#	Require valid-user
+	#	Satisfy any
+	#</Location>
+
+<Location /natureevents/science>
+    ExpiresActive Off
+</Location> 
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.palgrave-journals.com
+        ServerAlias palgrave-journals.com 
+        DocumentRoot /mnt/fs/Web/palgrave
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/palgrave-journals.com/logs
+        ErrorLog /var/www/palgrave-journals.com/logs/error_log
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        ###LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/palgrave-journals.com/logs/access_log
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .palgrave-journals.com
+
+        AllowEncodedSlashes on
+        Include conf/palgrave_redirects.conf
+	ProxyPreserveHost on
+
+        RewriteEngine on
+	#RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|rss|RSS|rdf|RDF)$ - [L]
+	RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl|bib|BIB)$ - [L]
+        #RewriteRule \.(jar|pdb|sdf|jdx|cif|cml|mol|cdx|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rss|RSS|rdf|RDF|sbml|SBML|ico)$ - [L]
+
+	#Catch jsessionids for users refusing cookies
+#        RewriteRule ^(/.*;jsessionid=.*)$ $1 [T=jserv-servlet]
+	RewriteRule ^(.*);jsessionid(.*)$ $1 [R]
+        #RewriteRule ^(/.*);jsessionid=.*$ $1
+
+        #RewriteLog "/var/log/rw.log"
+        RewriteRule ^/$ /pal/index.html [R,L]
+        RewriteRule ^/index.html$ /pal/index.html [R,L]
+        RewriteRule ^/search/versioninfo(.*) http://localhost:7280/mlsearch-palweb/versioninfo$1 [P,L]
+        RewriteRule ^/search/(.*).html http://localhost:7280/search/$1.html [P,L]
+        RewriteRule ^/search/adv_search(.*) http://localhost:7280/mlsearch-palweb/search/executeSearch$1 [P,L]
+        RewriteRule ^/search(.*) http://localhost:7280/mlsearch-palweb/search$1 [P,L]
+        RewriteRule ^/iaor/search/adv_search(.*) http://localhost:7280/mlsearch-palweb/iaor/search/executeSearch$1 [P,L]
+        RewriteRule ^/iaor/search(.*) http://localhost:7280/mlsearch-palweb/iaor/search$1 [P,L]
+
+#IT-13704
+        RewriteCond %{REQUEST_URI} ^/ArticleAccess\.html
+        RewriteCond %{REMOTE_ADDR} !^65.199.186
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186
+        RewriteCond %{REMOTE_ADDR} !^192.168.88
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88
+        RewriteCond %{REMOTE_ADDR} !^192.168.10
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10
+        RewriteCond %{REMOTE_ADDR} !^192.168.12
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.12
+        RewriteCond %{REMOTE_ADDR} !^166.111.120
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^166.111.120
+        RewriteCond %{REMOTE_ADDR} !^219.127.212
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^219.127.212
+        RewriteCond %{REMOTE_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^210.151.240
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^172.25.*$
+        RewriteCond %{REMOTE_ADDR} !^202.54.243
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^202.54.243
+        RewriteCond %{REMOTE_ADDR} !^124.39.14.174
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^124.39.14.174
+        RewriteCond %{REMOTE_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^122.184.53.192
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^10.1.1
+        RewriteCond %{REMOTE_ADDR} !^127.0.0.1
+        RewriteRule ^/ArticleAccess.html - [F]
+
+	RewriteRule ^/(.*) http://localhost:7280/$1 [P,L]
+
+        <Directory "/var/www/palgrave-journals.com/htdocs">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+	ProxyPassReverse / http://localhost:7280/
+</VirtualHost>
+
+<VirtualHost *:80>
+        ServerName secure.palgrave-journals.com
+        ServerAlias secure.palgrave-journals.com
+        DocumentRoot /mnt/fs/Web/palgrave
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/secure.palgrave-journals.com/logs
+        ErrorLog /var/www/secure.palgrave-journals.com/logs/error_log
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        ###LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/secure.palgrave-journals.com/logs/access_log
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .palgrave-journals.com
+
+
+        AllowEncodedSlashes on
+        #Include conf/palgrave_redirects.conf
+        ProxyPreserveHost on
+
+
+        RewriteEngine on
+        #RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|rss|RSS|rdf|RDF)$ - [L]
+        #RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L]
+        RewriteRule \.(jar|pdb|sdf|jdx|cif|cml|mol|cdx|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rss|RSS|rdf|RDF|sbml|SBML|ico)$ - [L]
+
+        #RewriteLog "/var/log/rw.log"
+        RewriteRule ^/$ /pal/index.html [R,L]
+        RewriteRule ^/index.html$ /pal/index.html [R,L]
+        #RewriteRule ^/iaor/search/executeSearch(.*) http://localhost:7280/mlsearch-palweb/iaor_search.html$1 [P,L]
+        #RewriteRule ^/search/executeSearch(.*) http://localhost:7280/mlsearch-palweb/search.html$1 [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7280/nams/svc/shibbolethin [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7280/nams/svc/shibbolethin [P,L]
+        RewriteRule ^/(.*) http://localhost:7280/$1 [P,L]
+
+        <Directory "/var/www/secure.palgrave-journals.com/htdocs">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        ProxyPassReverse / http://localhost:7280/
+
+</VirtualHost>
+
+
+
+<VirtualHost *:80>
+        ServerName press.nature.com
+	ServerAlias	www.press.nature.com
+        DocumentRoot /mnt/fs/Web/NPG/press
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/press.nature.com/logs
+        ErrorLog /var/www/press.nature.com/logs/error_log
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/press.nature.com/logs/access_log
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .nature.com
+
+        AllowEncodedSlashes on
+        ProxyPreserveHost on
+        RewriteEngine on
+#RewriteRule (.*)\ (.*) $1$2
+
+	    RewriteRule ^/super/scripts/webtrends/webtrends.js$ - [L]
+	    RewriteRule \.wma$ - [L]
+	    RewriteRule ^/pdf/press_files/(.*) http://localhost:7080/pdf/press_files/$1 [P,L]
+	    RewriteRule ^/GetWebOrderDetails(.*) - [F]
+        RewriteRule ^/press/$ /press [R,N]
+        RewriteRule ^/$ /press [R,N]
+        RewriteRule ^/index.html /press [R,N]
+        RewriteRule ^/press(.*) http://localhost:7080/press$1 [P,L]
+        RewriteRule ^/npress(.*) http://localhost:7080/npress$1 [P,L]
+	    RewriteRule ^/nams(.*) http://localhost:7080/npress$1 [P,L]
+        RewriteRule ^/includes/(.*) http://localhost:7080/includes/$1 [P,L]
+        RewriteRule ^/templates/(.*) http://localhost:7080/templates/$1 [P,L]
+        RewriteRule ^/common/(.*) http://localhost:7080/common/$1 [P,L]
+	    RewriteRule (.*)/press_files/(.*) http://localhost:7080$1/press_files/$2 [P,L]
+        RewriteRule ^/(.*) http://press.nature.com/press [R]
+	    RewriteRule \.(css|CSS|wma|jpg|tif|docx|xlsx|doc|WMA|JPG|TIF|DOC|MP3|mp3|mov|MOV|xls|XLS|gif|GIF)$ - [L]
+
+
+        <Directory "/mnt/fs/Web/NPG/press">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+	<Location /press/admin>
+                AuthType Basic
+                AuthName "Press Site Admin"
+                AuthUserFile /etc/httpd/conf/press.passwd
+                Order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+		# ----- Additional entries taken from old rewriteconds
+		Allow from 192.168.10
+		Allow from 10.1.1
+		Allow from 2.2.2
+		Allow from 172.36
+		Allow from 172.37
+		Require valid-user
+                Satisfy Any
+	</Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName npg.nature.com
+        DocumentRoot /var/www/npg.nature.com/htdocs
+	ErrorDocument 404 /mnt/fs/Web/NPG/common/access/gateway_404.html
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/npg.nature.com/logs
+        ErrorLog /var/www/npg.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/npg.nature.com/logs/access_log
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .nature.com
+
+
+	AllowEncodedSlashes on
+	RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+
+	RewriteRule ^/index.html http://www.nature.com/npg [R]
+	#RewriteRule n^/npg/forms/t\.jsp - [F]
+	#RewriteRule ^/npg/forms/(.*).jsp - [F]
+
+	#RewriteRule ^/npg/servlet/ProcessForm http://10.1.1.40:8080/npg/servlet/ProcessForm [P,L]
+	RewriteRule ^/authornews http://npg.nature.com/npg/servlet/Content?data=xml/05_news.xml&style=xml/05_news.xsl [R]
+	RewriteRule ^/libraries/admin http://www.nature.com/nams/svc/mysiteaccount [R]
+	RewriteRule ^/libraries http://npg.nature.com/npg/servlet/Content?data=xml/07_home.xml&style=xml/07_home.xsl [R]
+	RewriteRule ^/recommend http://npg.nature.com/npg/servlet/Content?data=xml/08_recommend.xml&style=xml/08_recommend.xsl [R]
+	RewriteRule ^/librec http://npg.nature.com/npg/servlet/Content?data=xml/08_recommend.xml&style=xml/08_recommend.xsl [R]
+	RewriteRule ^/transfer http://npg.nature.com/npg/forms/05_author_transfer.jsp [R]
+	RewriteRule ^/adproduction http://npg.nature.com/npg/adprod/intro.jsp [R]
+	RewriteRule ^/authors http://npg.nature.com/npg/servlet/Content?data=xml/05_home.xml&style=xml/05_home.xsl [R]
+	RewriteRule ^/policies http://npg.nature.com/npg/servlet/Content?data=xml/05_policies.xml&style=xml/05_policies.xsl [R]
+	RewriteRule ^/corrections http://npg.nature.com/npg/servlet/Content?data=xml/05_policies.xml&style=xml/05_corrections.xsl [R]
+	Redirect /licenseFAQ http://npg.nature.com/npg/servlet/Content?data=xml/05_faq.xml&style=xml/05_faq.xsl
+	Redirect /licensefaq http://npg.nature.com/npg/servlet/Content?data=xml/05_faq.xml&style=xml/05_faq.xsl
+
+        Redirect /npg/forms/05_author_transfer.jsp http://npg.nature.com/npg/servlet/Content?data=xml/05_transfer.xml&style=xml/05_transfer.xsl
+	RedirectMatch /media/$ http://npg.nature.com/media/nature/index.html
+	RewriteRule ^/authors/contacts http://npg.nature.com/npg/servlet/Content?data=xml/05_contact.xml&style=xml/05_contact.xsl
+	RewriteRule ^/authors/permissions http://npg.nature.com/npg/servlet/Content?data=xml/05_news.xml&style=xml/05_news.xsl
+	RewriteRule ^/authors/policies http://npg.nature.com/npg/servlet/Content?data=xml/05_policies.xml&style=xml/05_policies.xsl
+	RewriteRule ^/authors/corrections http://npg.nature.com/npg/servlet/Content?data=xml/05_corrections.xml&style=xml/05_corrections.xsl
+	RewriteRule ^/authors/submissions http://npg.nature.com/npg/servlet/Content?data=xml/05_sub.xml&style=xml/05_sub.xsl
+	RewriteRule ^/authors/transfer http://npg.nature.com/npg/servlet/Content?data=xml/05_transfer.xml&style=xml/05_transfer.xsl
+	RewriteRule ^/authors/naturejournals/media http://npg.nature.com/npg/servlet/Content?data=xml/05_google.xml&style=xml/05_google.xsl
+	RewriteRule ^/authors/naturejournals http://npg.nature.com/npg/servlet/Content?data=xml/05_sister.xml&style=xml/05_sister.xsl
+	RewriteRule ^/authors/naturejournals/media http://npg.nature.com/npg/servlet/Content?data=xml/05_google.xml&style=xml/05_google.xsl
+	RewriteRule ^/referees http://www.nature.com/authors
+	RewriteRule ^/media/nature/index.html http://www.nature.com/advertising/index.html
+	RewriteRule ^/reprintsandpermissions http://www.nature.com/reprints/index.html
+	RewriteRule ^/libraries http://www.nature.com/libraries
+	RewriteRule ^/?([^/]+)/?$ http://www.nature.com/npg [L]
+
+	RewriteRule ^/includes/(.*) http://localhost:7080/includes/$1 [P,L]
+	RewriteRule ^/templates/(.*) http://localhost:7080/templates/$1 [P,L]
+	RewriteRule ^/common/(.*) http://localhost:7080/common/$1 [P,L]
+	RewriteRule ^/images/(.*) http://localhost:7080/images/$1 [P,L]
+	RewriteRule ^/npg/(.*) http://localhost:7080/npg/$1 [P,L]
+
+	#RewriteRule (.*) http://npg.nature.com/ [R,L]
+
+	<Directory "/var/www/npg.nature.com/htdocs">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName guide.labanimal.com
+	ServerAlias www.guide.labanimal.com
+        DocumentRoot /var/www/guide.labanimal.com/htdocs
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/guide.labanimal.com/logs
+        ErrorLog /var/www/guide.labanimal.com/logs/error_log
+        #LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+	LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/guide.labanimal.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .nature.com
+
+	AllowEncodedSlashes on
+	RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	RewriteRule (.*)/$ http://guide.labanimal.com$1/index.html [R]
+	RewriteRule ^/index.html http://guide.labanimal.com/guide/index.html [R]
+	RewriteRule ^/labanimaloffers http://www.labanimal.com/laban/laboffers/index.html
+	#RewriteRule ^/laban/search/executeSearch(.*) http://localhost:7080/mlsearch-labanweb/search.html$1 [P,L]
+	RewriteRule ^/laban/search/adv_search(.*) http://localhost:7080/mlsearch-labanweb/laban/search/executeSearch$1 [P,L]
+	RewriteRule ^/laban/search(.*) http://localhost:7080/mlsearch-labanweb/laban/search$1 [P,L]
+	RewriteRule ^/laban/(.*) http://localhost:7080/laban/$1 [P,L]
+	RewriteRule ^/guide(.*) http://localhost:7080/guide$1 [P,L]
+	RewriteRule ^/images/(.*) http://localhost:7080/images/$1 [P,L]
+	RewriteRule ^/common/(.*) http://localhost:7080/common/$1 [P,L]
+	RewriteRule ^/templates/(.*) http://localhost:7080/templates/$1 [P,L]
+	RewriteRule ^/includes/(.*) http://localhost:7080/includes/$1 [P,L]
+	RewriteRule (.*) http://guide.labanimal.com/guide/index.html [R]
+
+        <Directory "/var/www/guide.labanimal.com/htdocs">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName refams.nature.com
+        DocumentRoot /var/www/refams.nature.com/htdocs
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/refams.nature.com/logs
+        ErrorLog /var/www/refams.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/refams.nature.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .nature.com
+	AllowEncodedSlashes on
+
+	ProxyPreserveHost on
+	RewriteEngine on
+
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	RewriteRule ^/AMS(.*) http://localhost:7080/AMS$1 [P,L]
+
+
+
+        <Directory "/var/www/refams.nature.com/htdocs">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.jibs.net
+	ServerAlias jibs.net *.jibs.net
+        DocumentRoot /var/www/jibs.net/htdocs
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/jibs.net/logs
+        ErrorLog /var/www/jibs.net/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/jibs.net/logs/access_log
+	AllowEncodedSlashes on
+
+        <Directory "/var/www/jibs.net/htdocs">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+#Embo handled by BigIP now
+<VirtualHost *:80>
+        ServerName www.emboreports.org
+        ServerAlias emboreports.org
+        DocumentRoot /var/www/emboreports.org/htdocs
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/emboreports.org/logs
+        ErrorLog /var/www/emboreports.org/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/emboreports.org/logs/access_log
+	AllowEncodedSlashes on
+	RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	RewriteRule ^/index.html http://www.nature.com/embor/index.html [R]
+
+                # Send everything else to Jboss 
+	ProxyPass / http://localhost:7080/ 
+	ProxyPassReverse / http://localhost:7080/
+
+
+
+        <Directory "/var/www/emboreports.org/htdocs">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+#Embo handled by bigip now
+<VirtualHost *:80>
+        ServerName www.embojournal.org
+        ServerAlias embojournal.org
+        DocumentRoot /var/www/embojournal.org/htdocs
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/embojournal.org/logs
+        ErrorLog /var/www/embojournal.org/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/embojournal.org/logs/access_log
+	AllowEncodedSlashes on
+	RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	RewriteRule ^/index.html http://www.nature.com/emboj/index.html [R]
+
+                # Send everything else to Jboss 
+	ProxyPass / http://localhost:7080/ 
+	ProxyPassReverse / http://localhost:7080/
+
+        <Directory "/var/www/embojournal.org/htdocs">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+#BJcancer handled by BigIP
+<VirtualHost *:80>
+        ServerName www.bjcancer.com
+        ServerAlias bjcancer.com
+        DocumentRoot /var/www/bjcancer.com/htdocs
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/bjcancer.com/logs
+        ErrorLog /var/www/bjcancer.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/bjcancer.com/logs/access_log
+	AllowEncodedSlashes on
+	RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	RewriteRule ^/index.html http://www.nature.com/bjc/index.html [R]
+                # Send everything else to Jboss 
+	ProxyPass / http://localhost:7080/ 
+	ProxyPassReverse / http://localhost:7080/
+
+        <Directory "/var/www/bjcancer.com/htdocs">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80> 
+        ServerName www.labanimal.com
+        ServerAlias labanimal.com
+	DocumentRoot /mnt/fs/Web/NPG/
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/labanimal.com/logs
+        ErrorLog /var/www/labanimal.com/logs/error_log
+        #LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/labanimal.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .labanimal.com
+        AllowEncodedSlashes on
+
+        ProxyPreserveHost on
+        RewriteEngine on
+	#RewriteLog /tmp/labanimal.rw
+	#RewriteLogLevel 3
+
+        #DEPLOY-803
+        RewriteRule ^/foxtrot/svc/mailform(.*)$ http://www.labanimal.com/laban/foxtrot/svc/mailform [R,L]
+
+	RewriteRule ^/renew2011	http://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=RB1NW1&strmatchkey=#nmky# [R,L]
+	RewriteRule ^/renew0811 http://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=WB0801&strmatchkey=#nmky# [R,L]
+	RewriteRule ^/start081A	http://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=NZIBCA&strmatchkey=#nmky# [R,L]
+	RewriteRule ^/start081B	http://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=NZIBCB&strmatchkey=#nmky# [R,L]
+	RewriteRule ^/start081C	http://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=NZIBCC&strmatchkey=#nmky# [R,L]
+	RewriteRule ^/start081D	http://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=NZIBCD&strmatchkey=#nmky# [R,L]
+	RewriteRule ^/start081E	http://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=NZIBCE&strmatchkey=#nmky# [R,L]
+
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+        RewriteRule ^/la/renew08 https://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=R80201&strmatchkey=#nmky# [R]
+        RewriteRule ^/renewal08 https://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=R80601&strmatchkey=#nmky# [R]
+        RewriteRule ^/index.html http://www.labanimal.com/laban/index.html [R]
+        RewriteRule ^/offers http://www.labanimal.com/laban/offers/index.html [R]
+        RewriteRule ^/labanimaloffers http://www.labanimal.com/laban/laboffers/index.html [R]
+
+        RewriteRule ^/$ http://www.labanimal.com/laban/index.html [R,L]
+        RewriteRule (.*)/$ http://www.labanimal.com$1/index.html [R,L]
+	RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT)$ - [L] 
+
+	RewriteRule ^/laban/journal/(.*)/$ /laban/journal/$1/index.html [N]
+
+	#RewriteRule ^/laban/search/executeSearch(.*) http://localhost:7080/mlsearch-labanweb/search.html$1 [P,L]
+	#RewriteRule ^/search/laban/adv_search(.*) http://localhost:7080/mlsearch-web/laban/search/executeSearch$1 [P,L]
+	RewriteRule ^/laban/search/adv_search(.*) http://localhost:7080/mlsearch-labanweb/laban/search/executeSearch$1 [P,L]
+         RewriteRule ^/search/versioninfo(.*) http://localhost:7080/mlsearch-labanweb/versioninfo$1 [P,L]
+	RewriteRule ^/laban/search(.*) http://localhost:7080/mlsearch-labanweb/laban/search$1 [P,L]
+	
+	RewriteRule ^/laban/(.*) http://localhost:7080/laban/$1 [P,L]
+	RewriteRule ^/includes/(.*) http://localhost:7080/includes/$1 [P,L]
+	RewriteRule ^/guide/(.*) http://localhost:7080/guide/$1 [P,L]
+	RewriteRule ^/images/(.*) http://localhost:7080/images/$1 [P,L]
+	RewriteRule ^/common/(.*) http://localhost:7080/common/$1 [P,L]
+	RewriteRule ^/templates/(.*) http://localhost:7080/templates/$1 [P,L]
+	RewriteRule (.*) - [F]
+
+        <Directory "/mnt/fs/Web/NPG">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.feministreview.com
+        ServerAlias www.feminist-review.com
+	ServerAlias feministreview.com
+	ServerAlias feminist-review.com
+        DocumentRoot /var/www/feministreview.com/htdocs
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/feministreview.com/logs
+        ErrorLog /var/www/feministreview.com/logs/error_log
+	AllowEncodedSlashes on
+	RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/feministreview.com/logs/access_log
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .femininstreview.com
+        <Directory "/var/www/feministreview.com/htdocs">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.natureprotocols.com
+        ServerAlias natureprotocols.com
+        DocumentRoot /var/www/natureprotocols.com/htdocs
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/natureprotocols.com/logs
+        ErrorLog /var/www/natureprotocols.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/natureprotocols.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .natureprotocols.com
+        AllowEncodedSlashes on
+	RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	# Full rule to catch all static; to be implemented after more testing 
+	#ProxyPass / http://localhost:7080/ 
+	#ProxyPassReverse / http://localhost:7080/
+
+    #    <Directory "/var/www/natureprotocols.com/htdocs">
+    #            AllowOverride All
+    #            Options None
+    #            Order allow,deny
+    #            Allow from all
+    ##    </Directory>
+    #RewriteRule /(.*) http://blogs.nature.com/natureprotocols/$1 [P]
+
+    ###DEPLOY-422
+    # Home page 
+      RewriteRule ^/?$ http://www.nature.com/nprot/index.html [R,L] 
+
+      # Subject Browse Pages 
+      RewriteRule ^/(biochemistry_and_protein_analysis|cell_and_developmental_biology|cell_and_tissue_culture|chemical_modification|computational_and_theoretical_biology|genetic_analysis|genetic_modification|genomics_and_proteomics|imaging|immunological_techniques|isolation_purification_and_separation|microbiology_and_virology|model_organisms|nanotechnology|neuroscience|nucleic_acid_based_molecular_biology|pharmacology_and_toxicology|plant_biology|spectroscopy_and_structural_analysis|synthetic_chemistry)/?$ http://www.nature.com/protocolexchange/$1/ [R,L] 
+
+      # Search 
+      RewriteRule ^/search/?$ http://www.nature.com/protocolexchange/search [R,L] 
+      # Search without params 
+      RewriteRule ^/search/(.+)$ http://www.nature.com/protocolexchange/search/$1 [R,L] 
+
+      # Protocol pages / protocol abstract pages 
+      RewriteRule ^/(\d\d\d\d/\d\d/\d\d/.+\.php) http://www.nature.com/protocolexchange/$1 [R,L] 
+
+      # Everything Else 
+      RewriteRule ^/(.*) http://www.nature.com/nprot/index.html [R,L] 
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName xml.nature.com
+        ServerAlias xml.nature.com
+        DocumentRoot /mnt/fs/Web/addon/Autonomy_test
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/xml.nature.com/logs
+        ErrorLog /var/www/xml.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/xml.nature.com/logs/access_log
+        AllowEncodedSlashes on
+
+	
+	RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+		RewriteCond %{REMOTE_ADDR} ^192.168.4.42
+		RewriteCond %{REMOTE_ADDR} ^192.168.88.109
+		RewriteRule ^/nature/journal/v(\d)(\d?)/(.*) -   [F]
+		RewriteCond %{REMOTE_ADDR} ^192.168.4.42
+		RewriteCond %{REMOTE_ADDR} ^192.168.88.109
+		RewriteRule ^/nature/journal/v1([0-5])(\d)/(.*) -   [F]
+		RewriteCond %{REMOTE_ADDR} ^192.168.4.42
+		RewriteCond %{REMOTE_ADDR} ^192.168.88.109
+		RewriteRule ^/nature/journal/v16([0-4])/(.*) -   [F]
+
+        <Directory "/mnt/fs/Web/addon/Autonomy_test">
+                AllowOverride None
+                Options Indexes FollowSymLinks
+                IndexOptions FancyIndexing SuppressColumnSorting SuppressDescription
+                Order allow,deny
+                Allow from all
+        </Directory>
+        <Location />
+                AuthType Basic
+                AuthName "NPG XML Site"
+                AuthUserFile /etc/httpd/conf/xmlpasswd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+		Allow from 74.203.63.116
+		Allow from 74.203.63.123
+		Allow from 74.203.63.124
+		Allow from 165.193.73.250
+		Allow from 165.193.81.225 
+		Allow from 165.193.81.226
+		Allow from 165.193.81.227
+		Allow from 165.193.81.228
+		Allow from 165.193.81.229
+		Allow from 165.193.81.230
+		Allow from 165.193.81.231
+		Allow from 165.193.81.232
+		Allow from 165.193.81.233
+		Allow from 165.193.81.234
+		Allow from 165.193.81.235
+		Allow from 165.193.81.236
+		Allow from 165.193.81.237
+		Allow from 165.193.81.238
+			#SUP-1061
+		Allow from 128.119.246.90   
+		Allow from 128.119.246.74
+		Allow from 128.119.246.74
+		Allow from 199.4.155.10
+		Allow from 192.168.88
+                Require valid-user
+                Satisfy any
+        </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName palgravexml.nature.com
+        ServerAlias palgravexml.nature.com 
+        DocumentRoot /mnt/fs/Web/addon/Autonomy_paltest
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/palgravexml.nature.com/logs
+        ErrorLog /var/www/xml.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/palgravexml.nature.com/logs/access_log
+        AllowEncodedSlashes on
+        <Directory "/mnt/fs/Web/addon/Autonomy_paltest">
+                AllowOverride None
+                Options Indexes FollowSymLinks
+                IndexOptions FancyIndexing SuppressColumnSorting SuppressDescription
+                Order allow,deny
+                Allow from all
+        </Directory>
+        <Location />
+                AuthType Basic
+                AuthName "Palgrave XML Site"
+                AuthUserFile /etc/httpd/conf/xmlpasswd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                Allow from 74.203.63.116
+                Allow from 74.203.63.123
+                Allow from 74.203.63.124
+                Allow from 165.193.73.250
+                Allow from 165.193.81.225
+                Allow from 165.193.81.226
+                Allow from 165.193.81.227
+                Allow from 165.193.81.228
+                Allow from 165.193.81.229
+                Allow from 165.193.81.230
+                Allow from 165.193.81.231
+                Allow from 165.193.81.232
+                Allow from 165.193.81.233
+                Allow from 165.193.81.234
+                Allow from 165.193.81.235
+                Allow from 165.193.81.236
+                Allow from 165.193.81.237
+                Allow from 165.193.81.238
+                Require valid-user
+                Satisfy any
+        </Location>
+
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName secure.nature.com
+	#ServerAlias webadmin.nature.com
+        DocumentRoot /mnt/fs/Web/NPG
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/secure.nature.com/logs
+        ErrorLog /var/www/secure.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/secure.nature.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .nature.com
+        AllowEncodedSlashes on
+	ProxyPreserveHost on
+	RewriteEngine on
+#	RewriteLog /tmp/secure.rw.log
+#	RewriteLogLevel 2
+
+	# Serve a secure.nature.com specific robots.txt
+	RewriteRule ^/robots.txt /mnt/fs/Web/NPG/robots_secure.txt [L]
+	#RewriteRule ^/api/xmlrpc        http://npgj2ee8:8080/api/xmlrpc [P,L]
+
+
+        SSLEngine on
+        SSLCipherSuite ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP:+eNULL
+        SSLCertificateFile conf/ssl/securenat.crt
+        SSLCertificateKeyFile conf/ssl/securenat.key
+	# Full rule to catch all static; to be implemented after more testing 
+#       RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi)$ - [L] 
+        RewriteCond %{REMOTE_ADDR} ^65.199.186.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^65.199.186.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^192.168.88.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.88.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^192.168.4.42 [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.4.42 [OR]
+        RewriteCond %{REMOTE_ADDR} ^192.168.10.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.10.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^192.168.12.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.12.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^166.111.120.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^166.111.120.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^219.127.212.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^219.127.212.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^210.151.240.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^210.151.240.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^202.54.243.*$ [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^202.54.243.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^124.39.14.174 [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^124.39.14.174 [OR]
+        RewriteCond %{REMOTE_ADDR} ^68.39.154.79 [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^68.39.154.79 [OR]
+        RewriteCond %{HTTP:NPG_SRC_ADDR} ^10.1.1.*$ [OR]
+        RewriteCond %{REMOTE_ADDR} ^10.1.1.*$
+        RewriteRule ^/rest/(.*)$ http://localhost:7080/api/$1 [P,L]
+
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+
+        #SHIBBOLETH Access
+        RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7080/nams/svc/shibbolethin [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7080/nams/svc/shibbolethin [P,L]
+
+
+                # Send everything else to Jboss 
+#       RewriteRule ^/(.*) http://localhost:7080/$1 [P] 
+                    # And set reverse proxy correctly 
+#       ProxyPassReverse / http://localhost:7080/ 
+
+		# Send traffic which doesn't need to be secure back to www
+	RewriteRule ^/$ http://www.nature.com/ [R]
+	RewriteRule ^/nature(.*) http://www.nature.com/nature$1 [R]
+	RewriteRule ^/news(.*) http://www.nature.com/news$1 [R]
+	ProxyPass / http://localhost:7080/ 
+	ProxyPassReverse / http://localhost:7080/
+
+
+        <Directory "/mnt/fs/Web/NPG">
+                AllowOverride All
+                Options FollowSymLinks +ExecCGI
+                Order allow,deny
+                Allow from all
+        </Directory>
+        #ScriptAlias /cgi-bin/ /mnt/fs/Web/NPG/admin/cgi-bin/
+        #<Directory "/mnt/fs/Web/NPG/admin/cgi-bin">
+        #    AllowOverride None
+        #    Options FollowSymLinks Includes ExecCGI
+        #    Order allow,deny
+        #    Allow from all
+        #</Directory>
+#
+#       <Directory "/mnt/fs/Web/NPG/admin">
+#                AllowOverride All
+#                Options FollowSymLinks Includes ExecCGI
+#                Order allow,deny
+#                Allow from all
+#        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.isn-online.org
+        ServerAlias isn-online.org
+        ServerAlias isn-online.org-review
+        DocumentRoot /mnt/fs/Web/NPG
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/isn-online.org/logs
+        ErrorLog /var/www/isn-online.org/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/isn-online.org/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .isn-online.org
+        AllowEncodedSlashes on
+        RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	#RewriteRule ^/index.html http://www.nature.com/isn/index.html [R]
+
+	#ProxyPass / http://localhost:7080/
+	#ProxyPassReverse / http://localhost:7080/
+        #<Directory "/var/www/isn-online.org/htdocs">
+        #        AllowOverride All
+        #        Options None
+        #        Order allow,deny
+        #        Allow from all
+        #</Directory>
+        RewriteRule ^/robots.txt$ - [L]
+
+        RewriteRule ^/(ki|nrneph|isn\/kieditions|npg|npg_|webfeeds|help|info|news|naturejobs|naturedotcom|scitable|ncpcardio|search)/(.*) http://www.nature.com/$1/$2 [R,L]
+
+	RewriteRule ^/isn/join /isn/society/membership/index.html [R,L]
+        RewriteRule ^/isn/network(.*) http://192.168.10.75/isn/network$1 [P,L]
+	#RewriteRule ^/search/executeSearch(.*)  http://localhost:7080/isnsearch/$1 [P,L]
+        #RewriteRule ^/isn/search/(.*) http://localhost:7080/isnsearch/$1 [P,L]
+
+        #RewriteCond %{REQUEST_URI} ^/(isn|__chars|common|foxtrot|super|images)/(.*)
+	 RewriteCond %{REQUEST_URI} ^/(isn|__chars|common|foxtrot|nams|super|images)/(.*)
+        #RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|rdf)$ - [L]
+        RewriteRule \.(jar|pdb|sdf|jdx|cif|cml|mol|cdx|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rss|RSS|rdf|RDF|sbml|SBML|ico)$ - [L]
+
+        #RewriteCond %{REQUEST_URI} ^/(isn|__chars|common|foxtrot|super|images)/(.*)
+	 RewriteCond %{REQUEST_URI} ^/(isn|__chars|common|foxtrot|nams|super|images)/(.*)
+        RewriteRule ^/(.*) http://localhost:7080/$1 [P,L]
+
+                #Catch all
+        RewriteRule (.*) /isn/index.html [R,L]
+
+        ProxyPreserveHost On
+        #<Directory "/mnt/fs/Web/NPG">
+        #        AllowOverride All
+        #        Options FollowSymLinks +ExecCGI
+        #        Order allow,deny
+        #        Allow from all
+        #</Directory>
+
+
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName demo.nature.com
+        ServerAlias demo.nature.com
+        DocumentRoot /mnt/fs/Web/addon/DynaSearch/MetaS
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/demo.nature.com/logs
+        ErrorLog /var/www/demo.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/demo.nature.com/logs/access_log
+        AllowEncodedSlashes on
+
+        <Directory "/mnt/fs/Web/addon/DynaSearch/MetaS">
+                AllowOverride None
+                Options Indexes FollowSymLinks
+                IndexOptions FancyIndexing SuppressColumnSorting SuppressDescription
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        <Location />
+       	  Options Indexes
+       	  #IndexOptions FancyIndexing SuppressDescription
+   	  AuthType Basic
+   	  AuthName "demo.nature.com"
+   	  AuthUserFile /etc/httpd/conf/.htpasswd
+  	  Order deny,allow
+   	  Deny from all
+   	  Allow from 64.140.49
+   	  Allow from 65.98.224
+          Allow from 74.203.63.116
+          Allow from 74.203.63.123
+          Allow from 74.203.63.124
+          Allow from 165.193.73.250
+          Allow from 165.193.81.225
+          Allow from 165.193.81.226
+          Allow from 165.193.81.227
+          Allow from 165.193.81.228
+          Allow from 165.193.81.229
+          Allow from 165.193.81.230
+          Allow from 165.193.81.231
+          Allow from 165.193.81.232
+          Allow from 165.193.81.233
+          Allow from 165.193.81.234
+          Allow from 165.193.81.235
+          Allow from 165.193.81.236
+          Allow from 165.193.81.237
+          Allow from 165.193.81.238
+
+   	  Require valid-user
+   	  Satisfy any
+	</Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName mailart.nature.com
+        ServerAlias mailart.nature.com fastart.nature.com
+        DocumentRoot /mnt/fs/Web/mailart
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/mailart.nature.com/logs
+        ErrorLog /var/www/mailart.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/mailart.nature.com/logs/access_log
+
+        AllowEncodedSlashes on
+        <Directory "/mnt/fs/Web/mailart">
+                AllowOverride None
+                Options Indexes FollowSymLinks
+                IndexOptions FancyIndexing SuppressColumnSorting SuppressDescription
+                Order allow,deny
+                Allow from all
+        </Directory>
+        <Location />
+        Options Indexes
+        IndexOptions FancyIndexing SuppressColumnSorting SuppressDescription
+        </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.scibx.com
+        ServerAlias scibx.com scybex.com *.scybex.com  scybx.com *.scybx.com
+        #DocumentRoot /var/www/scibx.com
+        DocumentRoot /mnt/fs/Web/NPG
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/scibx.com/logs
+        ErrorLog /var/www/scibx.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/scibx.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .scibx.com
+        AllowEncodedSlashes on
+	ProxyPreserveHost on
+        RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+	        # Full rule to catch all static; to be implemented after more testing
+        #RewriteRule ^/scibx http://www.scibx.com/scibx-marketing/index.html [L]
+	#RewriteRule ^/index.html http://www.scibx.com/scibx-marketing/index.html [R,L]
+        RewriteCond %{HTTP_HOST} ^scybx.com$ [NC]
+        RewriteRule ^(.*)$ http://www.scibx.com$1 [R,L]
+        RewriteCond %{HTTP_HOST} ^scybex.com$ [NC]
+        RewriteRule ^(.*)$ http://www.scibx.com$1 [R,L]
+
+        RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi)$ - [L]
+
+        RewriteRule (.*)/$ http://www.scibx.com/scibx_main/index.html [R,L]
+        RewriteRule ^/scibx/(.*) http://www.scibx.com/scibx_main/index.html [R,L]
+        RewriteRule ^/scibx$ http://www.scibx.com/scibx_main/index.html [R,L]
+
+	RewriteRule ^/common/(.*) http://localhost:7080/common/$1 [P,L]
+	RewriteRule ^/includes/(.*) http://localhost:7080/includes/$1 [P,L]
+	RewriteRule ^/librec/(.*) http://localhost:7080/librec/$1 [P,L]
+	RewriteRule ^/scibx_main/(.*) http://localhost:7080/scibx_main/$1 [P,L]
+	RewriteRule ^/(.*) http://localhost:7080/scibx_main/$1 [P,L]
+	RewriteRule (.*) - [L]
+
+
+        <Directory "/mnt/fs/Web/NPG">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.neuroscience-gateway.org
+        ServerAlias neuroscience-gateway.org
+        DocumentRoot /mnt/fs/Web/NPG/aba
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/neuroscience-gateway.org/logs
+        ErrorLog /var/www/neuroscience-gateway.org/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/neuroscience-gateway.org/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .neuroscience-gateway.org
+        AllowEncodedSlashes on
+        RewriteEngine on
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+        # Full rule to catch all static; to be implemented after more testing
+        RewriteRule ^/$ http://www.neuroscience-gateway.org/index.shtml [R,L]
+        RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi)$ - [L]
+
+	ScriptAlias /cgi-bin/ /mnt/fs/Web/NPG/aba/cgi-bin/
+        <Directory "/mnt/fs/Web/NPG/aba/cgi-bin">
+            AllowOverride None
+            Options FollowSymLinks Includes ExecCGI
+            Order allow,deny
+            Allow from all
+        </Directory>
+
+        <Directory "/mnt/fs/Web/NPG/aba">
+                AllowOverride All
+                Options FollowSymLinks Includes ExecCGI
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.macmillanmedicalcommunications.com
+        ServerAlias macmillanmedicalcommunications.com
+        DocumentRoot /mnt/fs/Web/mmc
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/macmillanmedicalcommunications.com/logs
+        ErrorLog /var/www/macmillanmedicalcommunications.com/logs/error_log
+        #LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/macmillanmedicalcommunications.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .macmillanmedicalcommunications.com
+        AllowEncodedSlashes on
+        <Directory "/mnt/fs/Web/mmc/">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+        ProxyRequests Off
+
+        ProxyPassReverse /mmc http://localhost:7080/mmc/
+        RewriteEngine On
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+        #RewriteCond   %{REQUEST_URI} !.*\.(gif|png|jpg|css)$
+
+        RewriteCond    %{REQUEST_FILENAME}  -d
+        RewriteRule    ^(.+[^/])$           $1/  [R]
+        RewriteCond   %{REQUEST_URI} .*(\/)$
+        RewriteRule ^/(.*) http://localhost:7080/mmc/$1index.html [P]
+        RewriteCond   %{REQUEST_URI} .*\.(html)$
+        RewriteRule ^/(.*) http://localhost:7080/mmc/$1 [P]
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName www.natureeducation.com
+        DocumentRoot /mnt/fs/Web/NPG/natureeducation
+        Setenv VLOG /var/www/www.natureeducation.com/logs
+        ErrorLog /var/www/www.natureeducation.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+
+	TransferLog /var/www/www.natureeducation.com/logs/access_log
+
+        AllowEncodedSlashes on
+        <Directory "/mnt/fs/Web/NPG/natureeducation">
+                AllowOverride All
+                Options FollowSymLinks Includes 
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+<VirtualHost *:80>
+        ServerName      www.palgraveconnect.com
+        Setenv VLOG /var/www/www.palgraveconnect.com/logs
+        ErrorLog        /var/www/www.palgraveconnect.com/logs/error_log
+        LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog     /var/www/www.palgraveconnect.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .palgraveconnect.com
+
+        DocumentRoot /mnt/fs/Web/palgrave/
+
+	#P3P for IT-4073
+	Header append P3P 'CP="CAO DSP LAW IVA IVD HIS OUR UNR STP UNI COM"' 
+
+	RewriteEngine On
+	RewriteCond %{REQUEST_URI} ^/pc/info/processMailingList
+	RewriteCond %{HTTP_USER_AGENT} ScanAlert [NC]
+	RewriteRule ^/pc/info/processMailingList - [F]
+	
+	#RewriteCond %{REQUEST_URI} ^/pc/index_new\.html
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        #RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        #RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        #RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        #RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.3.*$
+        #RewriteCond %{REMOTE_ADDR} !^10.1.3.*$
+        #RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        #RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        #RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        #RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        #RewriteRule ^/pc/index_new.html - [F]
+        RewriteRule ^/pc/browse/processAdvancedsearchForm http://localhost:7280/pc/browse/processAdvancedsearchForm [P,L]
+
+  # DEPLOY-1132 Added the below Rewrite on 11-10-2012 haitsaadi
+        RewriteRule ^/crossdomain.xml$ /pc/crossdomain.xml [L]
+	#Serve static content directly
+        #RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml)$ - [L]
+#Deploy-1082 haitsaadi has removed PDF from below Rewrite on 06-08-2012
+	    #RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|cdx|mrc|PDF|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L] 
+	    RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|cdx|mrc|CDX|GIF|JPG|PNG|CSS|TXT|CGI|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L] 
+
+        #For shibboleth redirection - IT-8347
+        RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7280/pc/foxtrot/svc/shibbolethin [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7280/pc/foxtrot/svc/shibbolethin [P,L]
+
+        #Block requests we're not supposed to serve on this domain
+        #RewriteRule !^(/pc|/common|/browse|/index\.html|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /index.html [R,L]
+	    #RewriteRule !^(/pc|/common|/browse|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /pc/index.html [R,L]
+        RewriteRule !^(/pc|/cap|/pcadmin|/openurl|/common|/browse|/index\.html|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /index.html [R,L]
+
+        #IT-2691
+        #RewriteRule ^/pc/doifinder/(.*) /doifinder/$1 [R,L]
+        #RewriteRule ^/doifinder/(.*) http://localhost:7280/pc/doifinder/$1 [P,L]
+	    RewriteRule ^/doifinder/(.*) /pc/doifinder/$1 [R,L]
+
+        RewriteRule ^/$ http://localhost:7280/pc/index.html [P,L]
+        RewriteRule ^/index.html$ http://localhost:7280/pc/index.html [P,L]
+
+        #DEPLOY-594
+        RewriteRule ^/pcadmin(.*) http://localhost:7280/pcadmin$1 [P,L]
+
+        #Proxy common to jetty directly
+        RewriteRule ^/common/(.*) http://localhost:7280$1 [P,L]
+
+        #DEPLOY-369
+        RewriteRule ^/openurl(.*) http://localhost:7280/pc/openurl [P,L]
+	#DEPLOY-870
+	RewriteRule ^/cap(.*) http://localhost:7280/cap$1 [P,L]
+
+        #Proxy all else by prefixing it with /pc/
+        RewriteRule (.*) http://localhost:7280$1 [P,L]
+
+        ProxyPreserveHost on
+
+</VirtualHost>
+
+<VirtualHost *:80>
+	ServerName	webadmin.nature.com
+	DocumentRoot	/var/www/webadmin.nature.com/html
+	ErrorLog	/var/www/webadmin.nature.com/logs/error_log
+        LogFormat	"%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog	/var/www/webadmin.nature.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .nature.com
+
+	ScriptAlias	/cgi-bin/	"/var/www/cgi-bin/"
+
+	<Directory "/var/www/cgi-bin">
+		Options ExecCGI
+		Order allow,deny
+		Allow from all
+	</Directory>
+
+	<Directory "/var/www/webadmin.nature.com/html">
+		Options Indexes
+		Order allow,deny
+		Allow from all
+	</Directory>
+</VirtualHost>
+
+#IT-5286
+<VirtualHost *:80> 
+        ServerName www.sa-decade2.com
+        ErrorLog /var/www/www.sa-decade2.com/logs/error_log
+        CustomLog /var/www/www.sa-decade2.com/logs/access_log combined
+        DocumentRoot /mnt/fs/Web/sciam/decade2/site
+</VirtualHost>
+
+
+<VirtualHost *:80>
+  ServerName ns.nature.com
+  ServerAlias ns.nature.com
+
+  DocumentRoot /mnt/fs/Web/addon/namespace
+
+  Setenv VLOG /var/www/ns.nature.com/logs
+  ErrorLog /var/www/ns.nature.com/logs/error_log
+  LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+  TransferLog /var/www/ns.nature.com/logs/access_log
+
+  AllowEncodedSlashes on
+
+        ##IT-9277
+  AddType application/xml .xml
+  AddType application/atom+xml .atom
+  AddType application/rdf+xml .rdf
+  AddType application/rdf+xml .rss
+  AddType application/rdf+xml .owl
+  AddType text/turtle ttl
+  AddType text/rdf+n3;charset=utf-8 .n3 
+
+  DirectoryIndex index.html index.ttl index.rdf index.xml
+
+  RewriteEngine on
+    #IT-9326
+  RewriteCond %{REQUEST_URI} !^/(terms|docs)
+  RewriteRule ^/(.*) http://data.nature.com/ns/$1 [R=303,L]
+  RewriteRule (.*) - [L]
+#	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|wmv|swf|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl|svg|icb)$ - [L]
+  ProxyPreserveHost on
+
+	<Directory "/mnt/fs/Web/addon/namespace">
+    AllowOverride None
+    Options Indexes FollowSymLinks
+    IndexOptions FancyIndexing SuppressColumnSorting SuppressDescription
+    Order allow,deny
+    Allow from all
+  </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName      network.nature.com
+        ServerAlias     network-int.nature.com origin.network.nature.com
+        ErrorLog /var/www/network.nature.com/logs/error_log
+#        CustomLog /var/www/network.nature.com/logs/access_log combined
+	LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	Transferlog /var/www/network.nature.com/logs/access_log
+
+        DocumentRoot /mnt/fs/Web/NPG/nn
+
+        ExpiresActive on
+        ExpiresDefault  "access plus 0 days"
+        ExpiresByType image/gif "modification plus 60 minutes"
+        ExpiresByType image/jpeg "modification plus 60 minutes"
+        ExpiresByType image/png "modification plus 60 minutes"
+        ExpiresByType text/css "modification plus 60 minutes"
+        ExpiresByType application/x-javascript "modification plus 60 minutes"
+
+        Alias /system/gadgets /mnt/fs/Web/NPG/nn/uploaded_images/gadgets
+        Alias /system/user /mnt/fs/Web/NPG/nn/uploaded_images/user
+        Alias /system/group /mnt/fs/Web/NPG/nn/uploaded_images/group
+        Alias /system/hub /mnt/fs/Web/NPG/nn/uploaded_images/hub
+        Alias /system/screencast /mnt/fs/Web/NPG/nn/uploaded_images/screencast
+        Alias /system/photo /mnt/fs/Web/NPG/nn/uploaded_images/photo
+
+        Alias /style /mnt/fs/Web/NPG/nn/assets/style
+        Alias /scripts /mnt/fs/Web/NPG/nn/assets/scripts
+        Alias /gadgets /mnt/fs/Web/NPG/nn/gadgets
+
+        RewriteEngine On
+        RewriteRule ^/akamai-sureroute-test-object.htm - [L]
+        RewriteRule ^/google0fd56c7628e1190b.html - [L]
+        RewriteCond %{HTTP_HOST} ^origin.network.nature.com$ [NC]
+        RewriteRule ^(.*)$ http://network.nature.com$1 [R,L]
+        #RewriteLog              /var/www/network.nature.com/logs/rewrite_log
+	#RewriteLogLevel 2
+        ProxyPreserveHost on
+        # Include our redirects
+        Include conf/network-redirects.conf
+
+
+	
+	RewriteMap host_map txt:/etc/httpd/conf.d/vhosts/nature_network.hosts
+
+	RewriteRule /oauth/ ${host_map:java}/oauth/ [P,L]
+
+	RewriteRule ^/javascripts(.*) ${host_map:rails}/javascripts$1 [P,L]
+	RewriteRule ^/stylesheets(.*) ${host_map:rails}/stylesheets$1 [P,L]
+	RewriteRule ^/email-verification/([^/]+)$ ${host_map:java}/process-email-verification?keyword=$1 [P,L]
+	
+	RewriteCond /mnt/fs/Web/NPG/nn/assets%{REQUEST_URI} -f [OR]
+	RewriteCond /mnt/fs/Web/NPG/nn%{REQUEST_URI} -f
+	RewriteRule ^/(style|scripts|gadgets)/(.*) - [L]
+
+	RewriteCond %{REQUEST_URI} !^/system/user/(.*)
+	RewriteCond %{REQUEST_URI} !^/system/group/(.*)
+	RewriteCond %{REQUEST_URI} !^/system/gadgets/(.*)
+	
+	RewriteRule ^/super(.*) ${host_map:java}/super$1 [P,L]
+	RewriteRule ^/common(.*) ${host_map:java}/common$1 [P,L]
+	RewriteRule ^/config(.*) ${host_map:java}/config$1 [P,L]
+
+	RewriteCond /mnt/fs/Web/NPG/nn/assets%{REQUEST_URI}  !-f  
+	RewriteRule ^/images(.*) ${host_map:rails}/images$1 [P,L] 
+	RewriteRule ^/favicon.ico ${host_map:rails}/favicon.ico [P,L]
+
+	Alias /images /mnt/fs/Web/NPG/nn/assets/images
+
+	RewriteRule \.(ris|gif|jpg|jpeg|png|css|txt|cgi|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|JPEG|PNG|CSS|TXT|CGI|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rdf|RDF|sbml|SBML|ico)$ - [L]
+
+	# Permanent (301) Redirects to take care of existing URLs that have been miodified as part of redesign
+	RewriteRule ^/people/([^/]+)/profile$ /profile/$1 [R=301,L]
+
+	# Routing rules
+	RewriteRule ^/$ ${host_map:rails}/ [P,L]
+	RewriteRule ^/admin(.*) ${host_map:rails}/admin$1 [P,L]
+	RewriteRule ^/forums(.*) ${host_map:rails}/forums$1 [P,L]
+	RewriteRule ^/groups(.*) ${host_map:rails}/groups$1 [P,L]
+	RewriteRule ^/search(.*) ${host_map:rails}/search$1 [P,L]
+	RewriteRule ^/site/(.*) ${host_map:rails}/site/$1 [P,L]
+	RewriteRule /blog[s]?(.*) ${host_map:rails}/blogs$1 [P,L]
+	RewriteRule ^/hubs(.*) ${host_map:rails}/hubs$1 [P,L]
+	RewriteRule ^/affiliations(.*) ${host_map:rails}/affiliations$1 [P,L]
+	RewriteRule ^/tags(.*) ${host_map:rails}/tags$1 [P,L]
+	RewriteRule ^/people(.*) ${host_map:rails}/people$1 [P,L]
+	RewriteRule ^/me(.*) ${host_map:rails}/me$1 [P,L]
+	RewriteRule ^/invitations(.*) ${host_map:rails}/invitations$1 [P,L]
+	RewriteRule ^/test/error(/)?$  ${host_map:java}/error [P,L]
+
+	
+	# TCS Java application rules
+	########### For Static Resources, OpenSocial and OAuth (applicable accross all modules)
+	RewriteRule ^/social(.*) ${host_map:java}/social$1 [P,L]
+	RewriteRule ^/ifr(.*) ${host_map:java}/ifr$1 [P,L]
+	RewriteRule ^/user/(.*) ${host_map:java}/$1 [P,L]
+	########### For Registration and Sign-in/Sign-out
+	RewriteRule ^/login(/)?$  ${host_map:java}/login [P,L]
+	RewriteRule ^/do-login$  ${host_map:java}/do-login [P,L]
+	RewriteRule ^/logout(/)?$  ${host_map:java}/logout?cmd=closeXMPPCon [P,L]
+	RewriteRule ^/create-account(/)?$ ${host_map:java}/create-account [P,L]
+	RewriteRule ^/register(/)?$ ${host_map:java}/register [P,L]
+	RewriteRule ^/register-user$ ${host_map:java}/register-user [P,L]
+	RewriteRule ^/register-member$ ${host_map:java}/register-member [P,L]
+	RewriteRule ^/register-member-details$ ${host_map:java}/register-member-details [P,L]
+	########### For User Profile
+	RewriteRule ^/profile/me/(.*) ${host_map:java}/profile/$1 [P,L]
+	RewriteRule ^/profile/me$ ${host_map:java}/profile/viewProfile [P,L]
+	RewriteRule ^/profile/([^/]+)/education$ ${host_map:java}/profile/education?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/publication$ ${host_map:java}/profile/publication?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/work-experience$ ${host_map:java}/profile/work-experience?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/affiliation$ ${host_map:java}/profile/affiliation?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/web-activities$ ${host_map:java}/profile/web-activities?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/activities$ ${host_map:java}/profile/activities?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/connections$ ${host_map:java}/profile/contacts?userid=$1 [P,L]
+    RewriteRule ^/profile/([^/]+)/contacts$ ${host_map:java}/profile/contacts?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)$ ${host_map:java}/profile/viewProfile?userid=$1 [P,L]
+	########### For workbench and related Gadgets
+	RewriteRule ^/workbench(/)?$ ${host_map:java}/workbench/loadWorkbenchPage [P,L]
+	RewriteRule ^/workbench/([^/]+)/add-gadgets(/)?$ ${host_map:java}/workbench/add-gadgets?userid=$1 [P,L]
+	RewriteRule ^/workbench/([^/]+)/people-tracker(/)?$ ${host_map:java}/workbench/loadTrackingPage?userid=$1 [P,L]
+	RewriteRule ^/workbench/([^/]+)/people-tracker-feed/([^/]+)$ ${host_map:java}/workbench/getPeopleTrackerFeed?keyWords=$1&feedtype=$2 [P,L]
+	RewriteRule ^/workbench/([^/]+)/my-network/?(.*) ${host_map:java}/workbench/loadMyNetworkPage?userid=$1&displayTab=$2 [P,L]
+    RewriteRule ^/workbench/([^/]+)/my-contacts/?(.*) ${host_map:java}/workbench/loadMyNetworkPage?userid=$1&displayTab=$2 [P,L]
+	RewriteRule ^/workbench/([^/]+)/questions-answers(/)?$ ${host_map:java}/workbench/loadQAGadget?userid=$1 [P,L]
+	RewriteRule ^/loadCanvasPage(.*) ${host_map:java}/workbench/loadCanvasPage$1 [P,L]
+	RewriteRule ^/gadgets(.*) ${host_map:java}/gadgets$1 [P,L]
+	########### For Questions & Answers
+	RewriteRule ^/questions-answers(/)?$ ${host_map:java}/questions-answers/loadQAHomePage [P,L]
+	RewriteRule ^/questions-answers/search$ ${host_map:java}/questions-answers/searchQAHomePage [P,L]
+	RewriteRule ^/questions-answers/question/([^/]+)-([^/]+)$ ${host_map:java}/questions-answers/viewSingleQuestion?questionID=$2 [P,L]
+	RewriteRule ^/welcome/([^/]+)(/)?$ ${host_map:java}/loadSignedInPage?userid=$1 [P,L]
+	########### For Site Admin
+	RewriteRule ^/siteadmin/([^/]+)/fields(/)?$ ${host_map:java}/admin/fields?userid=$1 [P,L]
+	RewriteRule ^/siteadmin/([^/]+)/search-fields(/)?$ ${host_map:java}/admin/search-fields?userid=$1 [P,L]
+	RewriteRule ^/siteadmin/([^/]+)/upload-field(/)?$ ${host_map:java}/admin/upload-field?userid=$1 [P,L]
+	RewriteRule ^/siteadmin/([^/]+)/remap-field(/)?$ ${host_map:java}/admin/remap-field?userid=$1 [P,L]
+	RewriteRule ^/siteadmin/([^/]+)/gadgets(/)?$ ${host_map:java}/admin/gadgets?userid=$1 [P,L]
+	RewriteRule ^/siteadmin/([^/]+)/search-gadgets(/)?$ ${host_map:java}/admin/search-gadgets?userid=$1 [P,L]
+	RewriteRule ^/siteadmin/([^/]+)/questions-answers(/)?$ ${host_map:java}/admin/questions-answers?userid=$1 [P,L]
+	RewriteRule ^/siteadmin/([^/]+)(/)?$ ${host_map:java}/admin/loadSiteAdminPage?userid=$1 [P,L]
+
+
+
+	RewriteRule ^/(.*)$ ${host_map:rails}/$1 [P,L]
+
+
+</VirtualHost>
+
+<VirtualHost *:80>
+	ServerName doi.crossref.org
+	DocumentRoot /var/www/logs.nature.com/html
+	ErrorLog /tmp/doi-error_log
+	LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /tmp/doi-access_log
+	RewriteEngine On
+	RewriteRule (.*) - [F,L]
+</VirtualHost>
+
+<VirtualHost *:80>
+        ServerName logs.nature.com
+        ServerAlias logs.nature.com
+        DocumentRoot /var/www/logs.nature.com/html
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/logs.nature.com/logs
+        ErrorLog /var/www/logs.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/logs.nature.com/logs/access_log
+        AllowEncodedSlashes on
+#	Header add nodename "uname -n"
+
+	#Alias /logs /usr/local/jetty-npg/logs/
+        AddDefaultCharset       UTF-8
+        AddCharset              UTF-8   .html
+
+        DirectoryIndex  index.shtml
+
+	<Location />
+                AddHandler server-parsed .shtml
+                AddType text/html .shtml
+                Options +Includes +Indexes
+                IndexOptions FancyIndexing SuppressDescription SuppressColumnSorting
+                IndexOrderDefault Descending Date
+                AuthType Basic
+                AuthName "NPG Logs Site"
+                AuthUserFile /etc/httpd/conf/logspasswd
+                order deny,allow
+                Options Includes Indexes
+                #Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 2.2.2               # IT Internal
+	        Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                # ----- Offices
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+		Allow from 122.184.53.192	# MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Allow from 68.39.154.79        # Comcast Cable MikeB
+                Allow from 96.57.111.85         # Scott Home IP
+                Require valid-user
+                Satisfy all
+	</Location>
+
+</VirtualHost>
+
+<VirtualHost *:80>
+	ServerName partners.nature.com
+	DocumentRoot /mnt/fs/Web/partners.nature.com
+	Setenv VLOG /var/www/partners.nature.com/logs
+	ErrorLog /var/www/partners.nature.com/logs/error_log
+	LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	TransferLog /var/www/partners.nature.com/logs/access_log
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName      precedings.nature.com
+        DocumentRoot    /mnt/fs/Web/NPG/natureprecedings
+        ErrorLog        /var/www/precedings.nature.com/logs/error_log
+        CustomLog       /var/www/precedings.nature.com/logs/access_log common
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+
+        RewriteEngine on
+        # RewriteLog /var/log/httpd/natureprecedings-rw.log
+        # RewriteLogLevel 3
+        ProxyPreserveHost On
+
+        # Directly served by Apache otherwise its Java
+        #RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+        #RewriteRule ^/(.*) http://localhost:7380/$1 [P,L]
+	#
+        # all images, css etc are served by Apache
+        #RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF)$ - [L]
+
+	# Goes to passenger
+	RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+	RewriteRule ^(.*) http://localhost:9918$1 [P,L]
+
+        <Directory "/mnt/fs/Web/NPG/natureprecedings">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName      secure.palgraveconnect.com
+        Setenv VLOG /var/www/secure.palgraveconnect.com/logs
+        ErrorLog        /var/www/secure.palgraveconnect.com/logs/error_log
+        LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog     /var/www/secure.palgraveconnect.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day" 
+        CookieDomain .palgraveconnect.com
+        
+        DocumentRoot /mnt/fs/Web/palgrave/
+        
+        #P3P for IT-4073
+        Header append P3P 'CP="CAO DSP LAW IVA IVD HIS OUR UNR STP UNI COM"'
+        
+        RewriteEngine On
+        RewriteCond %{REQUEST_URI} ^/pc/info/processMailingList
+        RewriteCond %{HTTP_USER_AGENT} ScanAlert [NC]
+        RewriteRule ^/pc/info/processMailingList - [F]
+        
+        #RewriteCond %{REQUEST_URI} ^/pc/index_new\.html
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        #RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        #RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        #RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        #RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.3.*$
+        #RewriteCond %{REMOTE_ADDR} !^10.1.3.*$
+        #RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        #RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.*$
+        #RewriteCond %{REMOTE_ADDR} !^195.138.194.*$
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.39.154.79
+        #RewriteCond %{REMOTE_ADDR} !^68.39.154.79
+        #RewriteRule ^/pc/index_new.html - [F]
+        RewriteRule ^/pc/browse/processAdvancedsearchForm http://localhost:7280/pc/browse/processAdvancedsearchForm [P,L]
+
+        #Serve static content directly
+        #RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml)$ - [L]
+            RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|cdx|mrc|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L]
+
+        #For shibboleth redirection - IT-8347
+        RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7280/pc/foxtrot/svc/shibbolethin [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7280/pc/foxtrot/svc/shibbolethin [P,L]
+
+        #Block requests we're not supposed to serve on this domain
+        #RewriteRule !^(/pc|/common|/browse|/index\.html|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /index.html [R,L]
+            #RewriteRule !^(/pc|/common|/browse|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /pc/index.html [R,L]
+        RewriteRule !^(/pc|/openurl|/common|/browse|/index\.html|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /index.html [R,L]
+
+        #IT-2691
+        #RewriteRule ^/pc/doifinder/(.*) /doifinder/$1 [R,L]
+        #RewriteRule ^/doifinder/(.*) http://localhost:7280/pc/doifinder/$1 [P,L]
+            RewriteRule ^/doifinder/(.*) /pc/doifinder/$1 [R,L]
+
+        RewriteRule ^/$ http://localhost:7280/pc/index.html [P,L]
+        RewriteRule ^/index.html$ http://localhost:7280/pc/index.html [P,L]
+        #Proxy common to jetty directly
+        RewriteRule ^/common/(.*) http://localhost:7280$1 [P,L]
+
+        #DEPLOY-369
+        RewriteRule ^/openurl(.*) http://localhost:7280/pc/openurl [P,L]
+
+        #Proxy all else by prefixing it with /pc/
+        RewriteRule (.*) http://localhost:7280$1 [P,L]
+
+        ProxyPreserveHost on
+
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName      blogs.nature.com
+        DocumentRoot    /mnt/fs/Web/NPG/natureblogs
+        ErrorLog        /var/www/blogs.nature.com/logs/error_log
+        TransferLog       /var/www/blogs.nature.com/logs/access_log 
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+
+        RewriteEngine On
+        ProxyPreserveHost on
+
+        # all images, css etc are served by Apache
+        #RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF)$ - [L]
+
+        Redirect permanent /climatefeedback/2009/09/plan_b_for_copenhagen.html http://blogs.nature.com/climatefeedback/2009/09/plan_b_for_copenhagen_1.html
+        ###IT-12953 Mashery whitelist ######
+        RewriteCond %{REQUEST_URI} ^(/(blogs|posts|stories|papers)\.(json|rss))
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^199.168.13.*$
+	RewriteCond %{REMOTE_ADDR} !^199.168.13.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+	RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.1$
+	RewriteCond %{REMOTE_ADDR} !^195.138.194.1$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4
+	RewriteCond %{REMOTE_ADDR} !^31.221.45.4
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.7$
+	RewriteCond %{REMOTE_ADDR} !^195.138.194.7$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^194.129.50.164$
+	RewriteCond %{REMOTE_ADDR} !^194.129.50.164$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+	RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+	RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+	RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+	RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+	RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+	RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^107.22.159.*$
+        RewriteCond %{REMOTE_ADDR} !^107.22.159.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^75.101.137.168
+        RewriteCond %{REMOTE_ADDR} !^75.101.137.168
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^75.101.142.168
+        RewriteCond %{REMOTE_ADDR} !^75.101.142.168
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^75.101.146.168
+        RewriteCond %{REMOTE_ADDR} !^75.101.146.168
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^75.101.141.43
+        RewriteCond %{REMOTE_ADDR} !^75.101.141.43
+        RewriteCond %{REMOTE_ADDR} !^75.101.129.141
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^75.101.129.141
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^174.129.251.74
+        RewriteCond %{REMOTE_ADDR} !^174.129.251.74
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^174.129.251.80
+        RewriteCond %{REMOTE_ADDR} !^174.129.251.80
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^50.18.151.*$
+        RewriteCond %{REMOTE_ADDR} !^50.112.119.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^204.236.130.149
+        RewriteCond %{REMOTE_ADDR} !^204.236.130.149
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^204.236.130.201
+        RewriteCond %{REMOTE_ADDR} !^204.236.130.207
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.42.56.57
+        RewriteCond %{REMOTE_ADDR} !^65.42.56.57
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.42.56.39
+        RewriteCond %{REMOTE_ADDR} !^65.42.56.39
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^207.114.199.195
+        RewriteCond %{REMOTE_ADDR} !^207.114.199.195
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^207.114.199.201
+        RewriteCond %{REMOTE_ADDR} !^207.114.199.201
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.69.0.188
+        RewriteCond %{REMOTE_ADDR} !^68.69.0.188
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^68.69.0.196
+        RewriteCond %{REMOTE_ADDR} !^68.69.0.196
+        RewriteRule ^(/(blogs|posts|stories|papers)\.(json|rss)) - [F]
+
+
+        #RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+        RewriteRule ^/(.*) http://localhost:9918/$1 [P,L]
+
+        <Directory "/mnt/fs/Web/NPG/natureblogs">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+<VirtualHost *:80>
+        ServerName      external.nature.com
+        ServerAlias      external.nature.com
+        DocumentRoot /mnt/fs/web/NPG
+        ErrorDocument 500 /server-error.html
+        ErrorDocument 501 /server-error.html
+        ErrorDocument 502 /server-error.html
+        ErrorDocument 503 /server-error.html
+        AccessFileName .htaccess
+
+        Setenv VLOG /var/www/api.nature.com/logs
+        ErrorLog /var/www/api.nature.com/logs/error_log
+        LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/api.nature.com/logs/access_log
+        AllowEncodedSlashes on
+
+        ScriptAlias /cgi-bin/ /var/www/cgi-bin/
+        AddHandler cgi-script .cgi .pl
+
+        AddType text/application/x-research-info-systems        .ris
+        AddType application/text        .ris
+        AddType chemical/x-cdx                                  cdx
+        #AddType application/rdf+xml .rdf
+        AddType text/csv        .csv
+
+
+        <Directory "/mnt/fs/Web/addon/public_datasets">
+                AllowOverride None
+                Options Indexes FollowSymLinks
+                IndexOptions FancyIndexing SuppressColumnSorting SuppressDescription
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        Alias /downloads /mnt/fs/Web/addon/public_datasets
+        RewriteEngine on
+        RewriteRule ^/downloads(.*) - [L]
+
+	RewriteRule ^/cerberus(.*) http://localhost:7480/cerberus$1 [P,L]
+
+        RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|wmv|swf|docx|xlsx|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl|svg|icb)$ - [L]
+
+
+
+
+
+        # Preserve hostname when proxying to tomcat
+        ProxyPreserveHost on
+
+    RewriteRule ^/(.*) http://localhost:7480/$1 [P,L]
+
+
+        <Directory /mnt/fs/Web/NPG/cgi-bin/>
+                AllowOverride None
+                Options ExecCGI
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        <Directory "/mnt/fs/web/NPG">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName	data.nature.com
+        DocumentRoot	/mnt/fs/web/NPG
+        ErrorDocument 500 /server-error.html
+        ErrorDocument 501 /server-error.html
+        ErrorDocument 502 /server-error.html
+        ErrorDocument 503 /server-error.html
+
+        Setenv VLOG /var/www/data.nature.com/logs
+	ErrorLog /var/www/data.nature.com/logs/error_log
+        LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/data.nature.com/logs/access_log
+        AllowEncodedSlashes on
+
+        RewriteEngine on
+        <Directory "/mnt/fs/Web/addon/public_datasets">
+                AllowOverride None
+                Options Indexes FollowSymLinks
+                IndexOptions FancyIndexing SuppressColumnSorting SuppressDescription
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        Alias /downloads /mnt/fs/Web/addon/public_datasets
+
+        #RewriteRule ^/cerberus(.*) http://localhost:7480/cerberus$1 [P,L]
+        RewriteRule ^/view(.*) - [L]
+	RewriteRule ^/downloads(.*) - [L]
+        RewriteRule ^(.*) http://localhost:7480/cerberus$1 [P]
+        #RewriteCond %{REQUEST_URI}  !^/view/styles/(.*)
+        RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|wmv|swf|docx|xlsx|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl|svg|icb)$ - [L]
+        ProxyPreserveHost on
+
+        #RewriteRule ^(.*) http://localhost:7480/cerberus$1 [P]
+
+        <Directory /mnt/fs/Web/NPG/cgi-bin/>
+                AllowOverride None
+                Options ExecCGI
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        <Directory "/mnt/fs/web/NPG">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+
+</VirtualHost>
+<VirtualHost *:80>
+    ServerName my.nature.com
+    DocumentRoot /home/phoenix/apps/phoenix/current/public
+
+    Setenv VLOG /var/www/my.nature.com/logs
+    ErrorLog /var/www/my.nature.com/logs/error_log
+    LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+    TransferLog /var/www/my.nature.com/logs/access_log
+
+    CookieTracking on
+    CookieName SaneID
+    CookieExpires "1 day"
+    CookieDomain .nature.com
+    AddOutputFilterByType DEFLATE text/html application/json application/x-javascript text/css text/javascript
+
+    ModPagespeed                    on
+    ModPagespeedDomain              http://my.nature.com
+    ModPagespeedFileCachePath       "/var/www/mod_pagespeed/cache/"
+    ModPagespeedGeneratedFilePrefix "/var/www/mod_pagespeed/files/"
+
+    KeepAlive On
+    KeepAliveTimeout 5
+
+    ExpiresActive off
+    RewriteEngine On
+
+    AllowEncodedSlashes on
+    ProxyPreserveHost On
+
+    RewriteRule ^(/rss.*)$ http://127.0.0.1:9919$1 [P,L]
+    RewriteRule ^(/ontology.*)$ http://127.0.0.1:9919$1 [P,L]
+
+    RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ http://127.0.0.1:5100$1 [P,L]
+
+    <LocationMatch "^/assets/.*$">
+        # Use of ETag is discouraged when Last-Modified is present
+        Header unset ETag
+        FileETag None
+        # RFC says only cache for 1 year
+        ExpiresActive On
+        ExpiresDefault "access plus 1 year"
+    </LocationMatch>
+</VirtualHost>
+<VirtualHost *:80>
+        ServerName ps.naturejobs.com
+        #DocumentRoot /mnt/fs/Web/NPG
+        Setenv VLOG /var/www/ps.naturejobs.com/logs
+        ErrorLog /var/www/ps.naturejobs.com/logs/error_log
+        LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/ps.naturejobs.com/logs/access_log
+
+        ExpiresActive off
+        RewriteEngine On
+        AllowEncodedSlashes on
+        ProxyPreserveHost On
+
+        #RewriteRule ^/static-widgets/(.*) - [L]
+        RewriteRule ^(.*)$ http://127.0.0.1:8080$1 [P,L]
+
+
+</VirtualHost>
+
+
+<VirtualHost *:80>
+  ServerName media.nature.com
+  DocumentRoot /mnt/fs/Web/NPG
+  ErrorDocument 500 /server-error.html
+  ErrorDocument 501 /server-error.html
+  ErrorDocument 502 /server-error.html
+  ErrorDocument 503 /server-error.html
+  Setenv VLOG /var/www/media.nature.com/logs
+  ErrorLog /var/www/media.nature.com/logs/error_log
+  LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+  TransferLog /var/www/media.nature.com/logs/access_log
+
+    #Allow URLs like http://media.nature.com/download/nature/nature/podcast/v456/n7224/nature-2008-12-18.mp3
+    # But nothing else.
+  RewriteEngine On
+  RewriteRule ^/download/(.*) - [L]
+  RewriteRule ^/(.*) http://www.nature.com/$1 [R,L]
+</VirtualHost>
+
+
+<VirtualHost *:80>
+  ServerName curi.nature.com
+  Setenv VLOG /var/www/curi.nature.com/logs
+  ErrorLog /var/www/curi.nature.com/logs/error_log
+  LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+  TransferLog /var/www/curi.nature.com/logs/access_log
+
+  CookieTracking on
+  CookieName SaneID
+  CookieExpires "1 day"
+  CookieDomain .nature.com
+
+  ModPagespeed off
+  ModPagespeedFileCachePath /tmp/cache
+  ModPagespeedGeneratedFilePrefix /tmp/files
+
+  ExpiresActive off
+
+  ProxyPreserveHost on
+  RewriteEngine on
+
+  RewriteRule ^(.*)$ http://127.0.0.1:9919$1 [P,L]
+</VirtualHost>
+<VirtualHost *:80>
+        ServerName      www.admin.palgraveconnect.com
+        DocumentRoot    /mnt/fs/Web/palgrave/admin
+        ErrorLog        /var/www/www.admin.palgraveconnect.com/logs/error_log
+        CustomLog       /var/www/www.admin.palgraveconnect.com/logs/access_log combined
+
+        RewriteEngine On
+	ProxyPreserveHost on
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .palgraveconnect.com
+
+        RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|cdx|mrc|PDF|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L]
+
+
+        RewriteRule ^/capod(.*)$        http://localhost:7180/capod$1 [P,L]
+
+</VirtualHost>
+<VirtualHost *:80>
+        ServerName      xmlgateway.nature.com
+        DocumentRoot    /mnt/fs/Web/NPG
+        ErrorLog        /var/www/xmlgateway.nature.com/logs/error_log
+        CustomLog       /var/www/xmlgateway.nature.com/logs/access_log combined
+
+        RewriteEngine On
+        ProxyPreserveHost on
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+        RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|cdx|mrc|PDF|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L]
+
+	RewriteRule ^/gateway/resources/css/(.*) http://localhost:7190/gateway/resources/css//$1 [P,L]
+    	RewriteRule ^/gateway/resources/images/(.*) http://localhost:7190/gateway/resources/images//$1 [P,L]
+        RewriteRule ^/gateway/(.*)$        http://localhost:7190/$1 [P,L]
+
+</VirtualHost>
+

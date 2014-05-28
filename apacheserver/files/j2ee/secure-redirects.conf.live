@@ -1,0 +1,23 @@
+##Managed by puppet, change on puppetmaster
+
+Header append P3P 'CP="CAO DSP LAW IVA IVD HIS OUR UNR STP UNI COM"'
+
+RewriteCond %{HTTP_HOST} ^secure\.nature\.com$
+RewriteCond %{REQUEST_URI}      ^/subscribe
+RewriteRule ^/subscribe	http://status.nature.com
+RewriteCond %{HTTP_HOST} ^secure\.nature\.com$
+RewriteCond %{REQUEST_URI}      ^/store
+RewriteRule ^/store	http://status.nature.com
+
+RewriteCond %{HTTP_HOST} ^secure\.nature\.com$
+RewriteCond %{REQUEST_URI}      ^/laban/store
+RewriteRule ^/laban/store     http://status.nature.com
+
+RewriteCond %{HTTP_HOST} ^secure\.palgrave-journals\.com$
+RewriteCond %{REQUEST_URI}      ^/subscribe
+RewriteRule ^/subscribe http://status.nature.com
+
+RewriteCond %{HTTP_HOST} ^secure\.palgrave-journals\.com$
+RewriteCond %{REQUEST_URI}      ^/store
+RewriteRule ^/store     http://status.nature.com
+

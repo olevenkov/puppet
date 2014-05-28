@@ -1,0 +1,81 @@
+	#### Peters "hack" rules to enforce link policy, THIS WILL NOT GO LIVE! ###
+	#RewriteRule ^/$ /pc/index.html [R,L]
+	#RewriteRule !^(/pc|/common)(.*) /pc/index.html [R,L]
+	#RewriteRule  \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml)$ - [L]
+	#RewriteRule (.*) http://localhost:7280$1 [P,L]
+
+	RewriteRule ^/pc/browse/processAdvancedsearchForm http://localhost:7280/pc/browse/processAdvancedsearchForm [P,L]
+
+        RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L]
+
+        #Block requests we're not supposed to serve on this domain
+        RewriteRule !^(/pc|/common|/browse|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /pc/index.html [R,L]
+
+        #IT-2691
+        #RewriteRule ^/pc/doifinder/(.*) /doifinder/$1 [R,L]
+        #RewriteRule ^/doifinder/(.*) http://localhost:7280/pc/doifinder/$1 [P,L]
+
+	#DEPLOY-9
+	RewriteRule ^/doifinder/(.*) /pc/doifinder/$1 [R,L]
+
+        RewriteRule ^/$ http://localhost:7280/pc/index.html [P,L]
+        RewriteRule ^/index.html$ http://localhost:7280/pc/index.html [P,L]
+
+        #Proxy common to jetty directly
+        RewriteRule ^/common/(.*) http://localhost:7280$1 [P,L]
+
+        #Proxy all else by prefixing it with /pc/
+        RewriteRule (.*) http://localhost:7280$1 [P,L]
+
+	ProxyPreserveHost on
+
+	<Location />
+                AuthType Basic
+                AuthName "NPG Development Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 170.224.106          # NJ DC - IBM
+                Allow from 199.168.13           # Reston DC
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- Misc
+                Allow from 69.253.44.235
+                Allow from 66.228.83.114        # Thoughtbot's
+                Allow from 66.228.83.115        # Thoughtbot's
+                Allow from 66.228.83.116        # Thoughtbot's
+                Allow from 66.228.83.117        # Thoughtbot's
+                Allow from 66.228.83.118        # Thoughtbot's
+                Allow from 64.131.191.145       # caitlin from home
+                Allow from 68.162.253           # Thoughtbot Boston
+                Allow from 216.254.85.209       # Thoughtbot NYC
+                Allow from 202.54.243.228       # MPS IT-3004
+                Allow from 216.64.169.240       # WebTrends - IT-3383
+                Allow from 203.200.189.6        # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+
+                Require valid-user
+                Satisfy Any
+        </Location>

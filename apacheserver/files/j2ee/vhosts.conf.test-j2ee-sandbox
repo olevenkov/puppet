@@ -1,0 +1,912 @@
+# ========================
+# = Main test-www config =
+# ========================
+<VirtualHost *:80>
+  ServerName	test-www.nature.com	
+  ServerAlias	test-www-sandbox.nature.com
+  DocumentRoot	/mnt/fs/Web/NPG
+
+	ErrorDocument 500 /common/access/generic_error.html
+  ErrorDocument 501 /server-error.html
+  ErrorDocument 502 /server-error.html
+  ErrorDocument 503 /server-error.html
+  AccessFileName	.htaccess
+  Setenv VLOG /var/www/test-www.nature.com/logs
+  ErrorLog /var/www/test-www.nature.com/logs/error_log
+  LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+  TransferLog /var/www/test-www.nature.com/logs/access_log
+  AllowEncodedSlashes on
+
+	AddType text/csv	.csv
+
+	ExpiresActive On
+	ExpiresDefault "access plus 10 years"
+
+	Alias /logsxml "/usr/local/jetty-npg/logsxml"
+	ScriptAlias /cgi-bin/ "/var/www/cgi-bin/"
+
+  <Directory "/usr/local/jetty-npg/logsxml">
+    AllowOverride None
+    Options Indexes
+    Order allow,deny
+    Allow from all
+  </Directory>
+
+	<Directory "/mnt/fs/Web/NPG/view/builds">
+		#ExpiresDefault "access plus 10 years"
+		ExpiresByType text/css	"access plus 10 years"
+		ExpiresByType text/js	"access plus 10 years"
+	</Directory>
+
+  <Directory "/var/www/test-www.nature.com">
+    AllowOverride All
+    Options None
+    Order allow,deny
+    Allow from all
+  </Directory>
+
+	<Directory "/var/www/cgi-bin">
+		Options ExecCGI
+		Allow from all
+	</Directory>
+
+  <Directory "/mnt/fs/web/NPG">
+    AllowOverride All
+    Options FollowSymLinks
+    Order allow,deny
+    Allow from all
+  </Directory>
+
+  RewriteEngine on
+
+	########################################BUILD SERVER SPECIFIC CONFIG STARTS###########################
+    
+    # hudson+artifactory
+    RewriteRule ^/artifactory/content/groups/repo/org/powermock/(.*) http://powermock.googlecode.com/svn/repo/org/powermock/$1 [R]
+    RewriteRule ^/artifactory/content/groups/repo/org/eclipse/persistence(.*)$ http://mirror.cc.columbia.edu/pub/software/eclipse/rt/eclipselink/maven.repo/org/eclipse/persistence$1 [P,N]
+    RewriteRule ^/artifactory(.*) http://ci.nature.com/artifactory$1 [R]
+    RewriteRule ^/hudson(.*)$ http://ci.nature.com/hudson$1 [R]
+      
+  ########################################BUILD SERVER SPECIFIC CONFIG ENDS#############################
+
+	#Fake NPG_SRC_ADDR DO NOT DELETE
+  RewriteCond %{REMOTE_ADDR} (.*)
+  RewriteRule .* - [E=R_A:%1] 
+  RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+
+	#Allow /server-status   DO NOT DELETE
+	RewriteRule ^/server-status - [L]
+
+	# Nature API docs
+	RewriteRule ^/rest/docs/(.*) - [L]
+
+	RewriteRule /npg/ /npg_/index_npg.html
+  #ProxyPass /npg/index.html http://127.0.0.1:7080/npg/index_npg.html
+  #ProxyPassReverse /npg/index.html http://127.0.0.1:7080/npg/index_npg.html
+
+	# Don't send error page to Jetty
+	RewriteRule ^/common/access/generic_error.html - [L]
+
+
+	#AOTF redirects for IT-4816
+	# Use pass thru proxy
+  #	RewriteRule ^/.*/v[^/]+/n[^/]+/related/(authors|keywords)/(.*) /view/includes/global.related-content.html [PT] #?articleRef=$2 
+  #	RewriteRule ^/.*/most/(emailed|blogged|downloaded) /view/includes/global.most.html [PT,N]
+	RewriteRule ^/([^/]+)/journal/(v[^/]*)/(n[^/]*)/related/(authors|keywords)/(.*)\.html /view/includes/global.related-content.html?journal=$1&volume=$2&issue=$3&related=$4&article=$5 [R,N] 
+	RewriteRule ^/([^/]+)/most/(emailed|blogged|downloaded) /view/includes/global.most.html?journal=$1most=$2 [R,N]	
+	#end AOTF
+
+
+	RewriteRule /subscribe/ncpendmet /subscribe/nrendo [R]
+	RewriteRule /subscribe/ncpcardio /subscribe/nrcardio [R]
+	RewriteRule /subscribe/ncpneph /subscribe/nrneph [R]
+	RewriteRule /subscribe/ncponc /subscribe/nrclinonc [R]
+	RewriteRule /subscribe/ncprheum /subscribe/nrrheum [R]
+	RewriteRule /subscribe/ncpgasthep /subscribe/nrgastro [R]
+	RewriteRule /subscribe/ncpneuro /subscribe/nrneurol [R]
+	RewriteRule /subscribe/ncpuro /subscribe/nrurol [R]
+	RewriteRule ^/logsxml(.*) - [L]
+
+  # IT-5155
+	RewriteRule ^/naturejobs/science$ /naturejobs/science/ [R]
+	#RewriteRule ^/naturejobs/science/(.*) http://192.168.88.195/naturejobs/science/$1 [P,L]
+  RewriteRule ^/naturejobs/science/system/(.*) /mnt/fs/Web/NPG/naturejobs/shared/system/$1 [L]
+	RewriteRule ^/naturejobs/science/(.*) http://localhost:7380/naturejobs/science/$1 [P,L]
+
+	RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+
+
+  <Location /naturejobs/science/login>
+    ExpiresActive Off
+  </Location>
+
+	
+	# ====================
+	# = Nature Protocols =
+	
+  	RewriteRule ^/natureprotocols/(.*) http://localhost:7380/natureprotocols/$1 [P,L]
+  	<Location /natureprotocols>
+      ExpiresActive Off
+  	</Location>
+	# ====================
+
+	
+
+  # ========
+  # = Bdje =
+    RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+    RewriteRule ^/bdje/(.*) http://localhost:7380/bdje/$1 [P,L]
+    RewriteRule ^/bdje/? http://localhost:7380/bdje [P,L]
+  # ========
+  
+  # =================
+  # = Salary Survey =
+  #RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f  
+  RewriteRule ^/naturejobs/salary/survey/search/(.*) http://localhost:7380/naturejobs/salary/survey/search/$1 [proxy,last]
+  RewriteRule ^/naturejobs/salary/survey/search/? http://localhost:7380/naturejobs/salary/survey/search [proxy,last]
+
+  <Location /naturejobs/salary/survey/search>
+    ExpiresActive Off
+  </Location>
+
+  # =================
+
+
+  RewriteRule ^/server-error(.*) - [L]
+
+	RewriteRule ^/trends-term-viewer/(.*) http://localhost:8081/trends-term-viewer/$1 [P]
+	# Selenium
+	RewriteRule ^/selenium/core/(.*) - [L]
+	#added while working on REQ-290
+
+	#RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|css|pl)$ - [L]
+  RewriteCond %{REQUEST_URI} !^/news/rss/(.*)
+  RewriteCond %{REQUEST_URI} !^/nindia/rss/(.*)
+	RewriteCond %{REQUEST_URI}  !^/nmiddleeast/rss/(.*)
+  RewriteCond %{REQUEST_URI} !^/natureevents/(.*).xml
+	RewriteCond %{REQUEST_URI} !^/natureevents/(.*).rss
+	RewriteRule \.(jar|sbml|pdb|sdf|jdx|cif|cdx|cml|mol|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rss|RSS|rdf|RDF|sbml|SBML|ico|svg)$ - [L]
+
+	RewriteRule ^/natureevents/?$ /natureevents/science
+	RewriteRule ^/natureevents/(.*) http://localhost:7380/natureevents/$1 [P,L]
+	RewriteRule ^/java/(.*) http://localhost:7380/java/$1 [P,L]
+
+  #Gateways
+  RewriteRule ^/(aba|fg|cmg|cmg_update|psisgkb|pid)   -   [L]
+
+  RewriteRule ^/trends/(.*) http://localhost:7080/trends/$1 [P] 
+	RewriteRule ^/nindia/$ /nindia/index.html [N]
+
+	RewriteRule ^/news/$ /news/index.html [R]
+	RewriteRule ^/news/webfeeds/$ /news/webfeeds/index.html [N]
+	RewriteRule ^/news/(.*)/$ /news/$1/index.html [R,N]
+  RewriteRule ^/news/(.*) http://localhost:7080/xb3/news/$1 [P,L]
+
+	#RewriteRule ^/current_issue/(.*)$ /journal/v454/n7200/index.html [R]
+	RewriteRule ^/(.*)/journal/(.*)/(.*)/$ http://test-www.nature.com/$1/journal/$2/$3/index.html [R,L]       
+	RewriteRule ^/api/(.*) http://localhost:7080/api/$1 [P,L]
+	RewriteRule ^/rest/(.*) http://localhost:7080/api/$1 [P,L]
+	RewriteRule ^/isn/search/(.*) http://localhost:7080/isn/search/$1 [P]
+	RewriteRule ^/artifactory/$ http://192.168.88.200/artifactory/webapp/ [P,L]
+  RewriteRule ^/nindia/(.*) http://localhost:7080/xb3/nindia/$1 [P,L]
+  # RewriteRule ^/gnus/(.*) http://localhost:7080/xb3/gnus/$1 [P,L]
+
+  # Nature archives from Volume 1 - 164  are served by XB3
+  # v1-99
+  RewriteRule ^/nature/journal/v(\d)(\d?)/(.*) http://localhost:7080/xb3/nature/journal/v$1$2/$3 [P,L]
+  #Vol 100-159
+  RewriteRule ^/nature/journal/v1([0-5])(\d)/(.*) http://localhost:7080/xb3/nature/journal/v1$1$2/$3 [P,L]
+  #Vol 160-164
+  RewriteRule ^/nature/journal/v16([0-4])/(.*) http://localhost:7080/xb3/nature/journal/v16$1/$2 [P,L]
+
+  #Nature Archive
+  RewriteRule ^/nature/(.*)/$ /nature/$1/index.html [N]
+  RewriteRule ^/nature/journal/v(\d)(\d?)/(.*) http://localhost:7080/xb3/nature/journal/v$1$2/$3 [P,L]
+
+  #Vol 150-159
+  RewriteRule ^/nature/journal/v1([0-5])(\d)/(.*) http://localhost:7080/xb3/nature/journal/v1$1$2/$3 [P,L]
+
+  #Vol 160-164
+  RewriteRule ^/nature/journal/v16([0-4])/(.*) http://localhost:7080/xb3/nature/journal/v16$1/$2 [P,L]
+  #Special/static pages
+  RewriteRule ^/nature/journal/listdecades.html(.*) http://localhost:7080/xb3/nature/journal/listdecades.html$1 [P,L]
+  RewriteRule ^/nature/archive/1869archive/(.*) http://localhost:7080/xb3/nature/journal/listdecades.html [P,L]
+  RewriteRule ^/nature/journal/currentdecade.html(.*) http://localhost:7080/xb3/nature/journal/currentdecade.html$1 [P,L]
+  RewriteRule ^/nature/journal/currentdecade.xml(.*) http://localhost:7080/xb3/nature/journal/currentdecade.xml$1 [P,L]
+
+  # end Nature 1869 Archive
+  RewriteRule ^/nature-newbio/(.*) http://localhost:7080/xb3/nature-newbio/$1 [P,L]
+  RewriteRule ^/nature-physci/(.*) http://localhost:7080/xb3/nature-physci/$1 [P,L]
+
+	RewriteRule ^/nature/journal/$ /index.html1 [R]
+
+	#IT-1885 Nature Climate Change redirect
+  RewriteRule ^/(natureclimatechange)(.*) /nclimate$2 [R,L]
+
+  ProxyPreserveHost on
+  RewriteRule ^/search/versioninfo(.*) http://localhost:7080/mlsearch-web/versioninfo$1 [P,L]
+	RewriteRule ^/search/(.*).html http://localhost:7080/search/$1.html [P,L]
+	RewriteRule ^/search/adv_search(.*)  http://localhost:7080/mlsearch-web/search/executeSearch$1 [P,L]
+	RewriteRule ^/search(.*)  http://localhost:7080/mlsearch-web/search$1 [P,L]
+	RewriteRule ^/sciam/search/adv_search(.*) http://localhost:7080/mlsearch-web/sciam/search/executeSearch$1 [P,L]
+	RewriteRule ^/sciam/search(.*) http://localhost:7080/mlsearch-web/sciam/search$1 [P,L]
+
+	RewriteRule ^/laban/search/versioninfo(.*) http://localhost:7080/mlsearch-labanweb/versioninfo$1 [P,L]
+	RewriteRule ^/laban/search/adv_search(.*)  http://localhost:7080/mlsearch-labanweb/laban/search/executeSearch$1 [P,L]
+	RewriteRule ^/laban/search(.*) http://localhost:7080/mlsearch-labanweb/laban/search$1 [P,L]
+
+	#Scitable
+  RewriteRule ^/scitable(.*) http://192.168.88.202/scitable$1 [P,L]
+  RewriteRule ^/dimdim(.*) http://192.168.88.202/dimdim$1 [P,L]
+
+	# oai request handling
+	ProxyPass /oai http://127.0.0.1:7080/oai
+	ProxyPassReverse /oai http://127.0.0.1:7080/oai
+
+  ProxyPass /opensearch http://127.0.0.1:7080/opensearch
+  ProxyPassReverse /opensearch http://127.0.0.1:7080/opensearch
+
+	ProxyPass /svnwebclient http://127.0.0.1:7080/svnwebclient
+	ProxyPassReverse /svnwebclient http://127.0.0.1:7080/svnwebclient
+
+  ProxyPass /xbc http://127.0.0.1:7080/xbc
+  ProxyPassReverse /xbc http://127.0.0.1:7080/xbc
+
+	###ProxyPass /artifactory http://localhost:8087/artifactory
+
+	# mjm added 12/06
+	ProxyPass /api http://127.0.0.1:7080/api
+	ProxyPassReverse /api http://127.0.0.1:7080/api
+
+	# keyword pages xquery tool -- added on 06032009 by marcin
+  ProxyPass /focus http://127.0.0.1:7080/focus
+  ProxyPassReverse /focus http://127.0.0.1:7080/focus
+	ProxyPass /keyword_query_builder http://127.0.0.1:7080/keyword_query_builder
+  ProxyPassReverse /keyword_query_builder http://127.0.0.1:7080/keyword_query_builder
+
+	#ProxyPass / http://127.0.0.1:17080/
+	#ProxyPassReverse / hhttp://127.0.0.1:17080/
+  # Nature Middle East
+  RewriteRule ^/nmiddleeast/$ /nmiddleeast/index.html [N]
+  RewriteRule ^/nmiddleeast/(.*) http://localhost:7080/xb3/nmiddleeast/$1 [P,L]
+  #
+  # Leave this in here, so that all other requests go to Foxtrot
+  RewriteRule ^/(.*) http://localhost:7080/$1 [P,L]
+  ProxyPreserveHost on
+  ProxyPassReverse / http://localhost:7080/
+
+	<Location />
+    AuthType Basic
+    AuthName "NPG Development Site"
+    AuthUserFile /etc/httpd/conf/passwd
+    order deny,allow
+    Deny from all
+    # ----- Internal
+    Allow from 127.0.0.1
+    Allow from 172.26               # IT Internal
+    Allow from 172.25               # UK VPN
+    Allow from 172.17               # UK VPN
+    Allow from 192.168.4            # Reston Subnet .4.x
+    Allow from 192.168.88           # DMZ
+    Allow from 192.168.89           # DR
+    Allow from 65.199.186           # NPG - MCI Verizon Business
+    Allow from 65.201.138.2         # NPG - MCI Verizon Business
+    Allow from 65.242.181         # NPG - MCI Verizon Business
+    Allow from 170.224.106          # NJ DC - IBM
+    Allow from 199.168.13           # Reston DC
+    # ----- Offices
+    Allow from 63.64.195.2          # SF VPN
+    Allow from 195.138.194.1        # Macmillan UK
+    Allow from 195.138.194.7        # Macmillan UK
+    Allow from 31.221.45.4        # Macmillan UK
+    Allow from 194.129.50.164       # Macmillan UK
+    Allow from 203.101.103.162      # Macmillan India
+    Allow from 210.151.240.82       # NPG Japan
+    Allow from 122.160.227.17       # MPS India
+    Allow from 66.228.83            # NPG Boston
+    Allow from 203.26.59.4          # NPG Melbourne
+    Allow from 202.144.44.115       # Bangalore Web Production
+    Allow from 61.246.62.130        # Bangalore Web Production - New
+    # ----- Misc
+    Allow from 68.39.154.79
+    Allow from 66.228.83.114        # Thoughtbot's
+    Allow from 66.228.83.115        # Thoughtbot's
+    Allow from 66.228.83.116        # Thoughtbot's
+    Allow from 66.228.83.117        # Thoughtbot's
+    Allow from 66.228.83.118        # Thoughtbot's
+    Allow from 207.218.230.114	# Thoughtbot
+    Allow from 64.131.191.145       # caitlin from home
+    Allow from 68.162.253           # Thoughtbot Boston
+    Allow from 216.254.85.209       # Thoughtbot NYC
+    Allow from 202.54.243.228       # MPS IT-3004
+    Allow from 216.64.169.240       # WebTrends - IT-3383
+    Allow from 99.179.165.138       # WebTrends
+    Allow from 203.200.189.6        # TCS Offshore 1
+    Allow from 203.197.96.43        # TCS Offshore 2
+    Allow from 195.138.194.116      # Anne-Marie Labbate
+    Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+    Allow from 195.138.194.116      # Anne-Marie Labbate
+    Allow from 65.12.150.225 
+    Allow from 208.85.175.134	# NPG Eclipse
+    Require valid-user
+    Satisfy Any
+	</Location>
+
+	<Location /mobile_app_server>
+    Order allow,deny
+    Allow from all
+  </Location>
+
+</VirtualHost>
+
+# ==================================
+# = test-www.palgrave-journals.com =
+# ==================================
+<VirtualHost *:80>
+	ServerName	test-www.palgrave-journals.com
+   	ServerAlias	test-www-sandbox.palgrave-journals.com 
+    	DocumentRoot    /mnt/fs/Web/palgrave
+    	ErrorLog	/var/www/test-www.palgrave-journals.com/logs/error_log
+    	CustomLog	/var/www/test-www.palgrave-journals.com/logs/access_log combined
+	Include		conf/palgrave_redirects.conf
+    
+	AllowEncodedSlashes on
+    	RewriteEngine on
+
+	#Magic ju-ju to inject NPG_SRC_ADDR and avoid confusing access control - restored by JH
+        RewriteEngine on
+        RewriteCond %{REMOTE_ADDR} (.*)
+         RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+    
+
+	#Catch palgraveconnect requests
+	RewriteRule ^/pc/(.*) http://test-www.palgraveconnect.com/ [R]
+	RewriteRule ^/search/versioninfo(.*) http://localhost:7280/mlsearch-palweb/versioninfo$1 [P,L]
+	RewriteRule ^/search/(.*).html http://localhost:7280/search/$1.html [P,L]
+
+	
+	RewriteRule ^/search/adv_search(.*) http://localhost:7280/mlsearch-palweb/search/executeSearch$1 [P,L]
+RewriteRule  ^/search(.*) http://localhost:7280/mlsearch-palweb/search$1 [P,L] 
+	RewriteRule ^/iaor/search/adv_search(.*) http://localhost:7280/mlsearch-palweb/iaor/search/executeSearch$1 [P,L]
+	RewriteRule ^/iaor/search(.*) http://localhost:7280/mlsearch-palweb/iaor/search$1 [P,L]
+
+
+	#Direct
+	RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml)$ - [L]
+
+	#Catch all
+	RewriteRule ^/$ /pal/index.html [R,L]
+        RewriteRule ^/index.html$ /pal/index.html [R,L]
+    	RewriteRule ^/(.*)       http://localhost:7280/$1 [P,L]
+    	#RewriteRule ^/(.*) http://test-www.palgraveconnect.com/$1 [R,L]
+
+	ProxyPreserveHost on
+    	ProxyPassReverse / http://localhost:7280/
+
+	<Location />
+                AuthType Basic
+                AuthName "NPG Development Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 170.224.106          # NJ DC - IBM
+                Allow from 199.168.13           # Reston DC
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- Misc
+                Allow from 68.39.154.79
+                Allow from 66.228.83.114        # Thoughtbot's
+                Allow from 66.228.83.115        # Thoughtbot's
+                Allow from 66.228.83.116        # Thoughtbot's
+                Allow from 66.228.83.117        # Thoughtbot's
+                Allow from 66.228.83.118        # Thoughtbot's
+                Allow from 64.131.191.145       # caitlin from home
+                Allow from 65.12.150.225 
+		Allow from 68.162.253           # Thoughtbot Boston
+                Allow from 216.254.85.209       # Thoughtbot NYC
+                Allow from 202.54.243.228       # MPS IT-3004
+                Allow from 216.64.169.240       # WebTrends - IT-3383
+                Allow from 203.200.189.6        # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>
+
+# ================================
+# = test-www.palgraveconnect.com =
+# ================================
+<VirtualHost *:80>
+	ServerName	test-www.palgraveconnect.com
+	ServerAlias	test-www-sandbox.palgraveconnect.com
+	DocumentRoot	/mnt/fs/Web/palgrave/
+	ErrorLog	/var/www/test-www.palgraveconnect.com/logs/error_log
+	CustomLog	/var/www/test-www.palgraveconnect.com/logs/access_log combined
+	Include		conf/palgraveconnect_redirects.conf
+	
+	RewriteEngine On
+
+	RewriteCond %{REMOTE_ADDR} (.*)
+        RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+	#### Peters "hack" rules to enforce link policy, THIS WILL NOT GO LIVE! ###
+	#RewriteRule ^/$ /pc/index.html [R,L]
+	#RewriteRule !^(/pc|/common)(.*) /pc/index.html [R,L]
+	#RewriteRule  \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml)$ - [L]
+	#RewriteRule (.*) http://localhost:7280$1 [P,L]
+
+	RewriteRule ^/pc/browse/processAdvancedsearchForm http://localhost:7280/pc/browse/processAdvancedsearchForm [P,L]
+
+        RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L]
+
+        #Block requests we're not supposed to serve on this domain
+        RewriteRule !^(/pc|/common|/browse|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /pc/index.html [R,L]
+
+        #IT-2691
+        #RewriteRule ^/pc/doifinder/(.*) /doifinder/$1 [R,L]
+        #RewriteRule ^/doifinder/(.*) http://localhost:7280/pc/doifinder/$1 [P,L]
+
+	#DEPLOY-9
+	RewriteRule ^/doifinder/(.*) /pc/doifinder/$1 [R,L]
+
+        RewriteRule ^/$ http://localhost:7280/pc/index.html [P,L]
+        RewriteRule ^/index.html$ http://localhost:7280/pc/index.html [P,L]
+
+        #Proxy common to jetty directly
+        RewriteRule ^/common/(.*) http://localhost:7280$1 [P,L]
+
+        #Proxy all else by prefixing it with /pc/
+        RewriteRule (.*) http://localhost:7280$1 [P,L]
+
+	ProxyPreserveHost on
+
+	<Location />
+                AuthType Basic
+                AuthName "NPG Development Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 170.224.106          # NJ DC - IBM
+                Allow from 199.168.13           # Reston DC
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- Misc
+                Allow from 68.39.154.79
+                Allow from 66.228.83.114        # Thoughtbot's
+                Allow from 66.228.83.115        # Thoughtbot's
+                Allow from 66.228.83.116        # Thoughtbot's
+                Allow from 66.228.83.117        # Thoughtbot's
+                Allow from 66.228.83.118        # Thoughtbot's
+                Allow from 64.131.191.145       # caitlin from home
+                Allow from 68.162.253           # Thoughtbot Boston
+                Allow from 216.254.85.209       # Thoughtbot NYC
+                Allow from 202.54.243.228       # MPS IT-3004
+                Allow from 216.64.169.240       # WebTrends - IT-3383
+                Allow from 203.200.189.6        # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>
+	
+# =============================
+# = test-lipidmaps.nature.com =
+# =============================
+<VirtualHost *:80>
+	ServerName	test-lipidmaps.nature.com
+	DocumentRoot	/mnt/fs/Web/NPG/lipidmaps
+	ErrorLog	/var/www/test-lipidmaps.nature.com/logs/error.log
+	CustomLog	/var/www/test-lipidmaps.nature.com/logs/access.log common
+
+	ProxyPreserveHost On
+
+	RewriteEngine on
+
+	# all images, css etc are served by Apache
+	RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF)$ - [L]
+
+	# everything else goes to Java
+	RewriteRule ^/(.*) http://localhost:7080/lipidmaps/$1 [P,L]
+
+	# The same as you Document Root
+	<Directory "/mnt/fs/Web/NPG/lipidmaps">
+		AllowOverride All
+		Options FollowSymLinks
+		Order allow,deny
+		Allow from all
+	</Directory>
+
+	<Location />
+                AuthType Basic
+                AuthName "NPG Development Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 170.224.106          # NJ DC - IBM
+Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- Misc
+                Allow from 68.39.154.79
+                Allow from 66.228.83.114        # Thoughtbot's
+                Allow from 66.228.83.115        # Thoughtbot's
+                Allow from 66.228.83.116        # Thoughtbot's
+                Allow from 66.228.83.117        # Thoughtbot's
+                Allow from 66.228.83.118        # Thoughtbot's
+                Allow from 64.131.191.145       # caitlin from home
+                Allow from 68.162.253           # Thoughtbot Boston
+                Allow from 216.254.85.209       # Thoughtbot NYC
+                Allow from 202.54.243.228       # MPS IT-3004
+                Allow from 216.64.169.240       # WebTrends - IT-3383
+                Allow from 203.200.189.6        # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>
+
+# ===========================
+# = test-www.isn-online.org =
+# ===========================
+<VirtualHost *:80>
+        ServerName test-www.isn-online.org
+        ErrorLog /var/www/test-www.isn-online.org/logs/error_log
+        CustomLog /var/www/test-www.isn-online.org/logs/access_log combined
+        DocumentRoot /mnt/fs/Web/NPG
+	AccessFileName  .htaccess	
+
+	<Directory "/mnt/fs/Web/NPG">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+	RewriteEngine on
+
+	RewriteRule ^/isn/join /isn/society/membership/index.html [R,L]
+
+	RewriteRule ^/(ki|nrneph|isn\/kieditions|npg|npg_|webfeeds|help|info|news|naturejobs|naturedotcom|scitable|ncpcardio|search)/(.*) http://test-www.nature.com/$1/$2 [R,L]
+
+	RewriteRule ^/isn/network(.*) http://test-isn-network.nature.com/isn/network$1 [P,L]
+
+                #Added condition, smm
+        RewriteCond %{REQUEST_URI} ^/(isn|__chars|common|foxtrot|nams|super|images)/(.*)
+	RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|rdf)$ - [L]
+
+        RewriteCond %{REQUEST_URI} ^/(isn|__chars|common|foxtrot|nams|super|images)/(.*)
+        RewriteRule ^/(.*) http://localhost:7080/$1 [P,L]
+
+                #Catch all
+        RewriteRule (.*) /isn/index.html [R,L]
+
+	ProxyPreserveHost On
+</VirtualHost>
+
+# ===========================
+# = test-network.nature.com =
+# ===========================
+<VirtualHost *:80>
+	ServerName	test-network.nature.com
+	ServerAlias	test-network-int.nature.com
+	ErrorLog /var/www/test-network.nature.com/logs/error_log
+	CustomLog /var/www/test-network.nature.com/logs/access_log combined
+
+	DocumentRoot /mnt/fs/Web/NPG/nn
+
+	ExpiresActive on
+	ExpiresDefault  "access plus 0 days"
+	ExpiresByType image/gif "access plus 60 minutes"
+	ExpiresByType image/jpeg "access plus 60 minutes"
+	ExpiresByType image/png "access plus 60 minutes"
+	ExpiresByType text/css "access plus 60 minutes"
+	ExpiresByType application/x-javascript "access plus 60 minutes"
+	
+	Alias /system/gadgets /mnt/fs/Web/NPG/nn/uploaded_images/gadgets
+	Alias /system/user /mnt/fs/Web/NPG/nn/uploaded_images/user
+	Alias /system/group /mnt/fs/Web/NPG/nn/uploaded_images/group
+	Alias /system/hub /mnt/fs/Web/NPG/nn/uploaded_images/hub
+	Alias /system/screencast /mnt/fs/Web/NPG/nn/uploaded_images/screencast
+	Alias /system/photo /mnt/fs/Web/NPG/nn/uploaded_images/photo
+
+	Alias /style /mnt/fs/Web/NPG/nn/assets/style
+	Alias /scripts /mnt/fs/Web/NPG/nn/assets/scripts
+	Alias /gadgets /mnt/fs/Web/NPG/nn/gadgets
+
+	RewriteEngine On
+	RewriteLog		/var/www/test-network.nature.com/logs/rewrite_log
+	ProxyPreserveHost on
+	
+	RewriteMap host_map txt:/etc/httpd/conf.d/vhosts/nature_network.hosts
+
+	RewriteRule /oauth/ ${host_map:java}/oauth/ [P,L]
+
+	RewriteRule ^/javascripts(.*) ${host_map:rails}/javascripts$1 [P,L]
+	RewriteRule ^/stylesheets(.*) ${host_map:rails}/stylesheets$1 [P,L]
+	
+  RewriteCond /mnt/fs/Web/NPG/nn/assets%{REQUEST_URI} -f [OR]
+  RewriteCond /mnt/fs/Web/NPG/nn%{REQUEST_URI} -f
+  RewriteRule ^/(style|scripts|gadgets)/(.*) - [L]
+
+	RewriteCond %{REQUEST_URI} !^/system/user/(.*)
+	RewriteCond %{REQUEST_URI} !^/system/group/(.*)
+	RewriteCond %{REQUEST_URI} !^/system/gadgets/(.*)
+	
+	RewriteRule ^/super(.*) ${host_map:java}/super$1 [P,L]
+	RewriteRule ^/common(.*) ${host_map:java}/common$1 [P,L]
+	RewriteRule ^/config(.*) ${host_map:java}/config$1 [P,L]
+
+	RewriteCond /mnt/fs/Web/NPG/nn/assets%{REQUEST_URI}  !-f  
+	RewriteRule ^/images(.*) ${host_map:rails}/images$1 [P,L] 
+	RewriteRule ^/favicon.ico ${host_map:rails}/favicon.ico [P,L]
+
+	Alias /images /mnt/fs/Web/NPG/nn/assets/images
+
+	RewriteRule \.(ris|gif|jpg|jpeg|png|css|txt|cgi|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|JPEG|PNG|CSS|TXT|CGI|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rdf|RDF|sbml|SBML|ico)$ - [L]
+
+  # Permanent (301) Redirects to take care of existing URLs that have been miodified as part of redesign
+	RewriteRule ^/people/([^/]+)/profile$ /profile/$1 [R=301,L]
+
+	# Routing rules
+	RewriteRule ^/$ ${host_map:rails}/ [P,L]
+	RewriteRule ^/forums(.*) ${host_map:rails}/forums$1 [P,L]
+	RewriteRule ^/groups(.*) ${host_map:rails}/groups$1 [P,L]
+	RewriteRule ^/search(.*) ${host_map:rails}/search$1 [P,L]
+	RewriteRule ^/site/(.*) ${host_map:rails}/site/$1 [P,L]
+	RewriteRule /blog[s]?(.*) ${host_map:rails}/blogs$1 [P,L]
+	RewriteRule ^/hubs(.*) ${host_map:rails}/hubs$1 [P,L]
+	RewriteRule ^/affiliations(.*) ${host_map:rails}/affiliations$1 [P,L]
+	RewriteRule ^/tags(.*) ${host_map:rails}/tags$1 [P,L]
+	RewriteRule ^/people(.*) ${host_map:rails}/people$1 [P,L]
+	RewriteRule ^/me(.*) ${host_map:rails}/me$1 [P,L]
+	RewriteRule ^/invitations(.*) ${host_map:rails}/invitations$1 [P,L]
+	RewriteRule ^/admin(.*) ${host_map:rails}/admin$1 [P,L]
+
+	
+	# TCS Java application rules
+	########### For Static Resources, OpenSocial and OAuth (applicable accross all modules)
+	RewriteRule ^/social(.*) ${host_map:java}/social$1 [P,L]
+	RewriteRule ^/ifr(.*) ${host_map:java}/ifr$1 [P,L]
+	RewriteRule ^/user/(.*) ${host_map:java}/$1 [P,L]
+	########### For Registration and Sign-in/Sign-out
+	RewriteRule ^/login(/)?$  ${host_map:java}/login [P,L]
+	RewriteRule ^/do-login$  ${host_map:java}/do-login [P,L]
+	RewriteRule ^/logout(/)?$  ${host_map:java}/logout?cmd=closeXMPPCon [P,L]
+	RewriteRule ^/create-account(/)?$ ${host_map:java}/create-account [P,L]
+	RewriteRule ^/register(/)?$ ${host_map:java}/register [P,L]
+	RewriteRule ^/register-user$ ${host_map:java}/register-user [P,L]
+	RewriteRule ^/register-member$ ${host_map:java}/register-member [P,L]
+	RewriteRule ^/register-member-details$ ${host_map:java}/register-member-details [P,L]
+	########### For User Profile
+	RewriteRule ^/profile/me/(.*) ${host_map:java}/profile/$1 [P,L]
+	RewriteRule ^/profile/me$ ${host_map:java}/profile/viewProfile [P,L]
+	RewriteRule ^/profile/([^/]+)/education$ ${host_map:java}/profile/education?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/publication$ ${host_map:java}/profile/publication?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/work-experience$ ${host_map:java}/profile/work-experience?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/affiliation$ ${host_map:java}/profile/affiliation?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/web-activities$ ${host_map:java}/profile/web-activities?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/activities$ ${host_map:java}/profile/activities?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/connections$ ${host_map:java}/profile/contacts?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/contacts$ ${host_map:java}/profile/contacts?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)$ ${host_map:java}/profile/viewProfile?userid=$1 [P,L]
+	########### For workbench and related Gadgets
+	RewriteRule ^/workbench(/)?$ ${host_map:java}/workbench/loadWorkbenchPage [P,L]
+	RewriteRule ^/workbench/([^/]+)/add-gadgets(/)?$ ${host_map:java}/workbench/add-gadgets?userid=$1 [P,L]
+	RewriteRule ^/workbench/([^/]+)/people-tracker(/)?$ ${host_map:java}/workbench/loadTrackingPage?userid=$1 [P,L]
+	RewriteRule ^/workbench/([^/]+)/people-tracker-feed/([^/]+)$ ${host_map:java}/workbench/getPeopleTrackerFeed?keyWords=$1&feedtype=$2 [P,L]
+	RewriteRule ^/workbench/([^/]+)/my-network/?(.*) ${host_map:java}/workbench/loadMyNetworkPage?userid=$1&displayTab=$2 [P,L]
+	RewriteRule ^/workbench/([^/]+)/my-contacts/?(.*) ${host_map:java}/workbench/loadMyNetworkPage?userid=$1&displayTab=$2 [P,L]
+	RewriteRule ^/workbench/([^/]+)/questions-answers(/)?$ ${host_map:java}/workbench/loadQAGadget?userid=$1 [P,L]
+	RewriteRule ^/loadCanvasPage(.*) ${host_map:java}/workbench/loadCanvasPage$1 [P,L]
+	RewriteRule ^/gadgets(.*) ${host_map:java}/gadgets$1 [P,L]
+	########### For Questions & Answers
+	RewriteRule ^/questions-answers(/)?$ ${host_map:java}/questions-answers/loadQAHomePage [P,L]
+	RewriteRule ^/questions-answers/search$ ${host_map:java}/questions-answers/searchQAHomePage [P,L]
+	RewriteRule ^/questions-answers/question/([^/]+)-([^/]+)$ ${host_map:java}/questions-answers/viewSingleQuestion?questionID=$2 [P,L]
+  RewriteRule ^/welcome/([^/]+)(/)?$ ${host_map:java}/loadSignedInPage?userid=$1 [P,L]
+	########### For Site Admin
+  RewriteRule ^/siteadmin/([^/]+)/fields(/)?$ ${host_map:java}/admin/fields?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/search-fields(/)?$ ${host_map:java}/admin/search-fields?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/upload-field(/)?$ ${host_map:java}/admin/upload-field?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/remap-field(/)?$ ${host_map:java}/admin/remap-field?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/gadgets(/)?$ ${host_map:java}/admin/gadgets?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/search-gadgets(/)?$ ${host_map:java}/admin/search-gadgets?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/questions-answers(/)?$ ${host_map:java}/admin/questions-answers?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)(/)?$ ${host_map:java}/admin/loadSiteAdminPage?userid=$1 [P,L]
+
+	RewriteRule ^/(.*)$ ${host_map:rails}/$1 [P,L]
+
+	<Location />
+		AuthType        Basic
+		AuthName        "Beta Network"
+		AuthUserFile    /etc/httpd/conf/network-passwd
+		Options Includes Indexes
+		Order deny,allow
+		Deny from all
+		# ----- Internal
+		Allow from 127.0.0.1
+		Allow from 172.26               # IT Internal
+		Allow from 172.25               # UK VPN
+		Allow from 172.17               # UK VPN
+		Allow from 192.168.88           # DMZ                Allow from 192.168.89           # DR
+		Allow from 65.199.186           # NPG - MCI Verizon Business
+		Allow from 65.201.138.2         # NPG - MCI Verizon Business
+		Allow from 170.224.106          # NJ DC - IBM
+		# ----- Offices
+		Allow from 63.64.195.2          # SF VPN
+		Allow from 195.138.194.1        # Macmillan UK
+		Allow from 31.221.45.4        # Macmillan UK
+		Allow from 195.138.194.7        # Macmillan UK
+		Allow from 194.129.50.164       # Macmillan UK
+    # ----- Misc
+    Allow from 68.39.154.79
+    Allow from 66.228.83.114        # Thoughtbot's
+    Allow from 66.228.83.115        # Thoughtbot's
+    Allow from 66.228.83.116        # Thoughtbot's
+    Allow from 66.228.83.117        # Thoughtbot's
+    Allow from 66.228.83.118        # Thoughtbot's
+    Allow from 68.162.253           # Thoughtbot Boston
+    Allow from 216.254.85.209       # Thoughtbot NYC		
+		Require valid-user
+		Satisfy any
+	</Location>
+</VirtualHost>
+
+# ============================
+# = test-entities.nature.com =
+# ============================
+<VirtualHost *:80>
+        ServerName      test-entities.nature.com
+        DocumentRoot    /mnt/fs/Web/NPG/natureentities
+
+        ErrorLog        /var/www/test-entities.nature.com/logs/error.log
+        CustomLog       /var/www/test-entities.nature.com/logs/access.log common
+
+        ProxyPreserveHost On
+
+        RewriteEngine on
+        #RewriteLog /var/log/httpd/natureentities-rw.log
+        #RewriteLogLevel 3
+
+        # all images, css etc are served by Apache
+        RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF)$ - [L]
+
+        # everything else goes to Java
+        RewriteRule ^/(.*) http://localhost:7380/$1 [P,L]
+
+        # The same as your Document Root
+        <Directory "/mnt/fs/Web/NPG/natureentities">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+        <Location />
+                AuthType Basic
+                AuthName "NPG Development Site" 
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Deny from all
+								# ----- Internal
+								Allow from 127.0.0.1
+								Allow from 172.26               # IT Internal
+								Allow from 172.25               # UK VPN
+								Allow from 172.17               # UK VPN
+								Allow from 192.168.4            # Reston Subnet .4.x
+								Allow from 192.168.88           # DMZ
+								Allow from 192.168.89           # DR
+								Allow from 65.199.186           # NPG - MCI Verizon Business
+								Allow from 65.201.138.2         # NPG - MCI Verizon Business
+								Allow from 65.242.181         # NPG - MCI Verizon Business
+								Allow from 170.224.106          # NJ DC - IBM
+								Allow from 199.168.13           # Reston DC
+								# ----- Offices
+								Allow from 63.64.195.2          # SF VPN
+								Allow from 195.138.194.1        # Macmillan UK
+								Allow from 31.221.45.4        # Macmillan UK
+								Allow from 195.138.194.7        # Macmillan UK
+								Allow from 194.129.50.164       # Macmillan UK
+								Allow from 203.101.103.162      # Macmillan India
+								Allow from 210.151.240.82       # NPG Japan
+								Allow from 122.160.227.17       # MPS India
+								Allow from 66.228.83            # NPG Boston
+								Allow from 203.26.59.4          # NPG Melbourne
+								Allow from 202.144.44.115       # Bangalore Web Production
+								Allow from 61.246.62.130        # Bangalore Web Production - New
+								# ----- Misc
+								Allow from 68.39.154.79
+								Allow from 66.228.83.114        # Thoughtbot's
+								Allow from 66.228.83.115        # Thoughtbot's
+								Allow from 66.228.83.116        # Thoughtbot's
+								Allow from 66.228.83.117        # Thoughtbot's
+								Allow from 66.228.83.118        # Thoughtbot's
+								Allow from 207.218.230.114	# Thoughtbot
+								Allow from 64.131.191.145       # caitlin from home
+								Allow from 68.162.253           # Thoughtbot Boston
+								Allow from 216.254.85.209       # Thoughtbot NYC
+								Allow from 202.54.243.228       # MPS IT-3004
+								Allow from 216.64.169.240       # WebTrends - IT-3383
+								Allow from 99.179.165.138       # WebTrends
+								Allow from 203.200.189.6        # TCS Offshore 1
+								Allow from 203.197.96.43        # TCS Offshore 2
+								Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+								Allow from 208.85.175.134	# NPG Eclipse
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>

@@ -1,0 +1,282 @@
+	RewriteEngine on
+	RewriteRule ^/nature(jobs|events)/science	- [F,L]  # Temporary
+
+	########################################BUILD SERVER SPECIFIC CONFIG STARTS###########################
+    
+	# hudson+artifactory
+    	RewriteRule ^/artifactory/content/groups/repo/org/powermock/(.*) http://powermock.googlecode.com/svn/repo/org/powermock/$1 [R]
+    	RewriteRule ^/artifactory/content/groups/repo/org/eclipse/persistence(.*)$ http://mirror.cc.columbia.edu/pub/software/eclipse/rt/eclipselink/maven.repo/org/eclipse/persistence$1 [P,N]
+    	RewriteRule ^/artifactory(.*) http://ci.nature.com/artifactory$1 [R]
+    	RewriteRule ^/hudson(.*)$ http://ci.nature.com/hudson$1 [R]
+      
+  	########################################BUILD SERVER SPECIFIC CONFIG ENDS#############################
+
+	#Fake NPG_SRC_ADDR DO NOT DELETE
+  	RewriteCond %{REMOTE_ADDR} (.*)
+  	RewriteRule .* - [E=R_A:%1] 
+  	RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+
+	#Allow /server-status   DO NOT DELETE
+	RewriteRule ^/server-status - [L]
+
+	# Nature API docs
+	RewriteRule ^/rest/docs/(.*) - [L]
+
+	RewriteRule /npg/ /npg_/index_npg.html
+  	#ProxyPass /npg/index.html http://127.0.0.1:7080/npg/index_npg.html
+  	#ProxyPassReverse /npg/index.html http://127.0.0.1:7080/npg/index_npg.html
+
+	# Don't send error page to Jetty
+	RewriteRule ^/common/access/generic_error.html - [L]
+
+
+	#AOTF redirects for IT-4816
+	# Use pass thru proxy
+  	#RewriteRule ^/.*/v[^/]+/n[^/]+/related/(authors|keywords)/(.*) /view/includes/global.related-content.html [PT] #?articleRef=$2 
+ 	#RewriteRule ^/.*/most/(emailed|blogged|downloaded) /view/includes/global.most.html [PT,N]
+	RewriteRule ^/([^/]+)/journal/(v[^/]*)/(n[^/]*)/related/(authors|keywords)/(.*)\.html /view/includes/global.related-content.html?journal=$1&volume=$2&issue=$3&related=$4&article=$5 [R,N] 
+	RewriteRule ^/([^/]+)/most/(emailed|blogged|downloaded) /view/includes/global.most.html?journal=$1most=$2 [R,N]	
+	#end AOTF
+
+
+	RewriteRule /subscribe/ncpendmet /subscribe/nrendo [R]
+	RewriteRule /subscribe/ncpcardio /subscribe/nrcardio [R]
+	RewriteRule /subscribe/ncpneph /subscribe/nrneph [R]
+	RewriteRule /subscribe/ncponc /subscribe/nrclinonc [R]
+	RewriteRule /subscribe/ncprheum /subscribe/nrrheum [R]
+	RewriteRule /subscribe/ncpgasthep /subscribe/nrgastro [R]
+	RewriteRule /subscribe/ncpneuro /subscribe/nrneurol [R]
+	RewriteRule /subscribe/ncpuro /subscribe/nrurol [R]
+	RewriteRule ^/logsxml(.*) - [L]
+
+  	# IT-5155
+	RewriteRule ^/naturejobs/science$ /naturejobs/science/ [R]
+	#RewriteRule ^/naturejobs/science/(.*) http://192.168.88.195/naturejobs/science/$1 [P,L]
+  	RewriteRule ^/naturejobs/science/system/(.*) /mnt/fs/Web/NPG/naturejobs/shared/system/$1 [L]
+	RewriteRule ^/naturejobs/science/(.*) http://localhost:7380/naturejobs/science/$1 [P,L]
+
+	RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+
+
+  	<Location /naturejobs/science/login>
+  	  ExpiresActive Off
+  	</Location>
+
+	
+	# ====================
+	# = Nature Protocols =
+	
+  	RewriteRule ^/natureprotocols/(.*) http://localhost:7380/natureprotocols/$1 [P,L]
+
+  	<Location /natureprotocols>
+      		ExpiresActive Off
+  	</Location>
+	# ====================
+
+	
+  	# ========
+  	# = Bdje =
+  	  RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+  	  RewriteRule ^/bdje/(.*) http://localhost:7380/bdje/$1 [P,L]
+  	  RewriteRule ^/bdje/? http://localhost:7380/bdje [P,L]
+  	# ========
+  
+
+  	# =================
+  	# = Salary Survey =
+  	#RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f  
+  	RewriteRule ^/naturejobs/salary/survey/search/(.*) http://localhost:7380/naturejobs/salary/survey/search/$1 [proxy,last]
+  	RewriteRule ^/naturejobs/salary/survey/search/? http://localhost:7380/naturejobs/salary/survey/search [proxy,last]
+
+  	<Location /naturejobs/salary/survey/search>
+  	  ExpiresActive Off
+  	</Location>
+  	# =================
+
+
+  	RewriteRule ^/server-error(.*) - [L]
+
+	RewriteRule ^/trends-term-viewer/(.*) http://localhost:8081/trends-term-viewer/$1 [P]
+	# Selenium
+	RewriteRule ^/selenium/core/(.*) - [L]
+	#added while working on REQ-290
+
+	#RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|css|pl)$ - [L]
+  	RewriteCond %{REQUEST_URI} !^/news/rss/(.*)
+  	RewriteCond %{REQUEST_URI} !^/nindia/rss/(.*)
+	RewriteCond %{REQUEST_URI}  !^/nmiddleeast/rss/(.*)
+  	RewriteCond %{REQUEST_URI} !^/natureevents/(.*).xml
+	RewriteCond %{REQUEST_URI} !^/natureevents/(.*).rss
+	RewriteRule \.(jar|sbml|pdb|sdf|jdx|cif|cdx|cml|mol|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rss|RSS|rdf|RDF|sbml|SBML|ico|svg)$ - [L]
+
+	RewriteRule ^/natureevents/?$ /natureevents/science
+	RewriteRule ^/natureevents/(.*) http://localhost:7380/natureevents/$1 [P,L]
+	RewriteRule ^/java/(.*) http://localhost:7380/java/$1 [P,L]
+
+  	#Gateways
+  	RewriteRule ^/(aba|fg|cmg|cmg_update|psisgkb|pid)   -   [L]
+
+  	RewriteRule ^/trends/(.*) http://localhost:7080/trends/$1 [P] 
+	RewriteRule ^/nindia/$ /nindia/index.html [N]
+
+	RewriteRule ^/news/$ /news/index.html [R]
+	RewriteRule ^/news/webfeeds/$ /news/webfeeds/index.html [N]
+	RewriteRule ^/news/(.*)/$ /news/$1/index.html [R,N]
+  	RewriteRule ^/news/(.*) http://localhost:7080/xb3/news/$1 [P,L]
+
+	#RewriteRule ^/current_issue/(.*)$ /journal/v454/n7200/index.html [R]
+	RewriteRule ^/(.*)/journal/(.*)/(.*)/$ http://test-www.nature.com/$1/journal/$2/$3/index.html [R,L]       
+	RewriteRule ^/api/(.*) http://localhost:7080/api/$1 [P,L]
+	RewriteRule ^/rest/(.*) http://localhost:7080/api/$1 [P,L]
+	RewriteRule ^/isn/search/(.*) http://localhost:7080/isn/search/$1 [P]
+	RewriteRule ^/artifactory/$ http://192.168.88.200/artifactory/webapp/ [P,L]
+  	RewriteRule ^/nindia/(.*) http://localhost:7080/xb3/nindia/$1 [P,L]
+  	# RewriteRule ^/gnus/(.*) http://localhost:7080/xb3/gnus/$1 [P,L]
+
+  	# Nature archives from Volume 1 - 164  are served by XB3
+  	# v1-99
+  	RewriteRule ^/nature/journal/v(\d)(\d?)/(.*) http://localhost:7080/xb3/nature/journal/v$1$2/$3 [P,L]
+  	#Vol 100-159
+  	RewriteRule ^/nature/journal/v1([0-5])(\d)/(.*) http://localhost:7080/xb3/nature/journal/v1$1$2/$3 [P,L]
+  	#Vol 160-164
+  	RewriteRule ^/nature/journal/v16([0-4])/(.*) http://localhost:7080/xb3/nature/journal/v16$1/$2 [P,L]
+
+  	#Nature Archive
+  	RewriteRule ^/nature/(.*)/$ /nature/$1/index.html [N]
+  	RewriteRule ^/nature/journal/v(\d)(\d?)/(.*) http://localhost:7080/xb3/nature/journal/v$1$2/$3 [P,L]
+
+  	#Vol 150-159
+  	RewriteRule ^/nature/journal/v1([0-5])(\d)/(.*) http://localhost:7080/xb3/nature/journal/v1$1$2/$3 [P,L]
+
+  	#Vol 160-164
+  	RewriteRule ^/nature/journal/v16([0-4])/(.*) http://localhost:7080/xb3/nature/journal/v16$1/$2 [P,L]
+  	#Special/static pages
+  	RewriteRule ^/nature/journal/listdecades.html(.*) http://localhost:7080/xb3/nature/journal/listdecades.html$1 [P,L]
+  	RewriteRule ^/nature/archive/1869archive/(.*) http://localhost:7080/xb3/nature/journal/listdecades.html [P,L]
+  	RewriteRule ^/nature/journal/currentdecade.html(.*) http://localhost:7080/xb3/nature/journal/currentdecade.html$1 [P,L]
+  	RewriteRule ^/nature/journal/currentdecade.xml(.*) http://localhost:7080/xb3/nature/journal/currentdecade.xml$1 [P,L]
+
+  	# end Nature 1869 Archive
+  	RewriteRule ^/nature-newbio/(.*) http://localhost:7080/xb3/nature-newbio/$1 [P,L]
+  	RewriteRule ^/nature-physci/(.*) http://localhost:7080/xb3/nature-physci/$1 [P,L]
+
+	RewriteRule ^/nature/journal/$ /index.html1 [R]
+
+	#IT-1885 Nature Climate Change redirect
+  	RewriteRule ^/(natureclimatechange)(.*) /nclimate$2 [R,L]
+
+  	ProxyPreserveHost on
+  	RewriteRule ^/search/versioninfo(.*) http://localhost:7080/mlsearch-web/versioninfo$1 [P,L]
+	RewriteRule ^/search/(.*).html http://localhost:7080/search/$1.html [P,L]
+	RewriteRule ^/search/adv_search(.*)  http://localhost:7080/mlsearch-web/search/executeSearch$1 [P,L]
+	RewriteRule ^/search(.*)  http://localhost:7080/mlsearch-web/search$1 [P,L]
+	RewriteRule ^/sciam/search/adv_search(.*) http://localhost:7080/mlsearch-web/sciam/search/executeSearch$1 [P,L]
+	RewriteRule ^/sciam/search(.*) http://localhost:7080/mlsearch-web/sciam/search$1 [P,L]
+
+	RewriteRule ^/laban/search/versioninfo(.*) http://localhost:7080/mlsearch-labanweb/versioninfo$1 [P,L]
+	RewriteRule ^/laban/search/adv_search(.*)  http://localhost:7080/mlsearch-labanweb/laban/search/executeSearch$1 [P,L]
+	RewriteRule ^/laban/search(.*) http://localhost:7080/mlsearch-labanweb/laban/search$1 [P,L]
+
+	#Scitable
+  	RewriteRule ^/scitable(.*) http://192.168.88.202/scitable$1 [P,L]
+  	RewriteRule ^/dimdim(.*) http://192.168.88.202/dimdim$1 [P,L]
+
+	# oai request handling
+	ProxyPass /oai http://127.0.0.1:7080/oai
+	ProxyPassReverse /oai http://127.0.0.1:7080/oai
+
+  	ProxyPass /opensearch http://127.0.0.1:7080/opensearch
+  	ProxyPassReverse /opensearch http://127.0.0.1:7080/opensearch
+
+	ProxyPass /svnwebclient http://127.0.0.1:7080/svnwebclient
+	ProxyPassReverse /svnwebclient http://127.0.0.1:7080/svnwebclient
+
+  	ProxyPass /xbc http://127.0.0.1:7080/xbc
+  	ProxyPassReverse /xbc http://127.0.0.1:7080/xbc
+
+	###ProxyPass /artifactory http://localhost:8087/artifactory
+
+	# mjm added 12/06
+	ProxyPass /api http://127.0.0.1:7080/api
+	ProxyPassReverse /api http://127.0.0.1:7080/api
+
+	# keyword pages xquery tool -- added on 06032009 by marcin
+  	ProxyPass /focus http://127.0.0.1:7080/focus
+ 	ProxyPassReverse /focus http://127.0.0.1:7080/focus
+	ProxyPass /keyword_query_builder http://127.0.0.1:7080/keyword_query_builder
+  	ProxyPassReverse /keyword_query_builder http://127.0.0.1:7080/keyword_query_builder
+
+	#ProxyPass / http://127.0.0.1:17080/
+	#ProxyPassReverse / hhttp://127.0.0.1:17080/
+
+  	# Nature Middle East
+  	RewriteRule ^/nmiddleeast/$ /nmiddleeast/index.html [N]
+  	RewriteRule ^/nmiddleeast/(.*) http://localhost:7080/xb3/nmiddleeast/$1 [P,L]
+  	#
+  	# Leave this in here, so that all other requests go to Foxtrot
+  	RewriteRule ^/(.*) http://localhost:7080/$1 [P,L]
+
+  	ProxyPassReverse / http://localhost:7080/
+
+	<Location />
+    		AuthType Basic
+    		AuthName "NPG Development Site"
+    		AuthUserFile /etc/httpd/conf/passwd
+    		order deny,allow
+    		Deny from all
+    		# ----- Internal
+    		Allow from 127.0.0.1
+    		Allow from 172.26               # IT Internal
+    		Allow from 172.25               # UK VPN
+    		Allow from 172.17               # UK VPN
+    		Allow from 192.168.4            # Reston Subnet .4.x
+    		Allow from 192.168.88           # DMZ
+    		Allow from 192.168.89           # DR
+    		Allow from 65.199.186           # NPG - MCI Verizon Business
+    		Allow from 65.201.138.2         # NPG - MCI Verizon Business
+    		Allow from 65.242.181         # NPG - MCI Verizon Business
+    		Allow from 170.224.106          # NJ DC - IBM
+    		Allow from 199.168.13           # Reston DC
+    		# ----- Offices
+    		Allow from 63.64.195.2          # SF VPN
+    		Allow from 195.138.194.1        # Macmillan UK
+    		Allow from 195.138.194.7        # Macmillan UK
+    		Allow from 194.129.50.164       # Macmillan UK
+    		Allow from 203.101.103.162      # Macmillan India
+    		Allow from 210.151.240.82       # NPG Japan
+    		Allow from 122.160.227.17       # MPS India
+    		Allow from 66.228.83            # NPG Boston
+    		Allow from 203.26.59.4          # NPG Melbourne
+    		Allow from 202.144.44.115       # Bangalore Web Production
+    		Allow from 61.246.62.130        # Bangalore Web Production - New
+    	        Allow from 195.138.194.116      #12813
+		# ----- Misc
+    		Allow from 69.253.44.235
+    		Allow from 66.228.83.114        # Thoughtbot's
+    		Allow from 66.228.83.115        # Thoughtbot's
+    		Allow from 66.228.83.116        # Thoughtbot's
+    		Allow from 66.228.83.117        # Thoughtbot's
+    		Allow from 66.228.83.118        # Thoughtbot's
+    		Allow from 207.218.230.114	# Thoughtbot
+    		Allow from 64.131.191.145       # caitlin from home
+    		Allow from 68.162.253           # Thoughtbot Boston
+    		Allow from 216.254.85.209       # Thoughtbot NYC
+    		Allow from 202.54.243.228       # MPS IT-3004
+    		Allow from 216.64.169.240       # WebTrends - IT-3383
+    		Allow from 99.179.165.138       # WebTrends
+    		Allow from 203.200.189.6        # TCS Offshore 1
+    		Allow from 203.197.96.43        # TCS Offshore 2
+    		Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+    		Allow from 208.85.175.134	# NPG Eclipse
+    	        Allow from 195.138.184.116
+		Allow from 195.138.194.116 
+		Allow from 81.149.52.79		#IT-13732
+	Require valid-user
+    		Satisfy Any
+	</Location>
+
+	<Location /mobile_app_server>
+  	  Order allow,deny
+  	  Allow from all
+  	</Location>

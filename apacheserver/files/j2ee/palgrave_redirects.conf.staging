@@ -1,0 +1,5 @@
+#RewriteRule ^/news/rss.rdf$ /news/rss/index.rdf [R=302,L]
+RewriteRule ^/help(.*) http://palgrave.custhelp.com/cgi-bin/palgrave.cfg/php/enduser/std_alp.php [R]
+
+#P3P for IT-4073
+Header append P3P 'CP="CAO DSP LAW IVA IVD HIS OUR UNR STP UNI COM"' 
