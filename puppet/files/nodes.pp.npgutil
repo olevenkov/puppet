@@ -1,0 +1,3141 @@
+# /etc/puppet/manifests/nodes.pp
+
+#
+# Master file listing all of our node definitions
+
+node default {
+  notice "There is no definition for this node (${hostname})!"
+}
+
+node basenode {
+  $puppet_server = 'puppet.nature.com'
+  host { "puppet.nature.com": ip=>"192.168.4.69", host_aliases=>["puppet"], ensure=>present }
+  include puppet::client,sudo,snmp,rhel-basepkgs,ntp::client,systemvars,npgscripts,motd
+  include openaudit
+  include yum::client
+  include npgfacts::warrantyexpiry
+  if ($operatingsystem == "RedHat" and $lsbmajdistrelease != "4") {
+    include mcollective,mcollective::server
+    include mcollective::plugins::finduid::agent,mcollective::plugins::package::agent
+  }
+}
+
+# Anything specific to Reston goes here, this lets us use templates for each location
+node restonnode inherits basenode {
+  $nameservers = ['192.168.4.61','192.168.4.62']
+  $mail_server = 'babylon.nature.com'
+  $datacenter = "reston"
+  npgfacts::npgfact { "datacenter": val => $datacenter }
+  class { 'dns::client':
+    nameservers => ["192.168.4.61","192.168.4.62"],
+    searchpath  => "nature.com",
+    domainname  => "nature.com",
+  }
+  user { 'cdiadmin':
+              ensure => present,
+              uid => 0,
+              gid => 0,
+              shell => '/bin/bash',
+              allowdupe => 'true',
+              home => '/tmp',
+              password => '$1$rehOTq9L$ekru7qILvOKK8UgRaXbp70'
+    }
+}
+
+node restonejpnode inherits restonnode {
+  user {
+        'zenoss':
+            ensure => present,
+            uid => 600,
+            gid => 600,
+            shell => '/bin/bash',
+            home => '/home/zenoss',
+            password => '$1$.Jxnccm7$Ym4XUe.saCF8mojpRj5cN1',
+            require => Group["zenoss"]
+        }
+
+  group {
+        'zenoss':
+            ensure => present,
+            gid => 600
+        }
+}
+
+# Anything specific to NYC goes here
+node nycnode inherits basenode {
+  $mail_server = '192.168.88.165'
+  $datacenter = "varick"
+  npgfacts::npgfact { "datacenter": val => $datacenter }
+
+  class { 'dns::client':
+    nameservers => ["192.168.88.165","192.168.88.51"],
+    domainname  => "nature.com",
+    searchpath  => 'nature.com',
+  }
+  include commonhosts,nychosts
+}
+
+node nycdrnode inherits nycnode {
+    $servergroup="dr"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+    $role="npgappserver"
+    npgfacts::npgfact { "role": val => $role }
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+    include ldapclient,yum::client,nychosts
+    #include jetty::npg, jetty::palgrave, jetty::ruby, jetty::mynaturebase, jetty::external
+    #include apacheserver::j2ee
+    #include natureapps::jetty-npg,natureapps::jetty-ruby,natureapps::jetty-palgrave,natureapps::jetty-external
+    #include crossrefblock
+    #include miscapps::imagemagick
+}
+
+# Parent node for all npgj2ee servers in production datacenter
+node restonj2eenode inherits restonnode {
+    $servergroup="live"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+    $role="npgappserver"
+    npgfacts::npgfact { "role": val => $role }
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+    $saltappsjvmargs='-Datacama.home=/usr/local/atacama-platform/ -Datacama.keystore=/usr/local/atacama-platform/keys/shib-npg-keystore-2012.jks -Datacama.keystore.password=npg123* -Datacama.keystore.alias=secure'
+    $adminappsjvmargs='-Denvironment=LIVE -DconfigurationDir=file:$JETTY_HOME/etc'
+    $gatewayappsjvmargs='-DXMLGATEWAY_CONFIG_HOME=file:$JETTY_HOME/etc'
+    include yum::client,commonhosts,restonbigiphosts,restoncommonhosts
+    include jetty::npg, jetty::palgrave, jetty::ruby, jetty::mynaturebase, jetty::external
+    include apacheserver::j2ee
+    include natureapps::jetty-npg,natureapps::jetty-ruby,natureapps::jetty-palgrave,natureapps::jetty-external
+    include natureapps::jetty-adminapps,natureapps::jetty-gateway,natureapps::jetty-salt
+    include crossrefblock
+    include miscapps::imagemagick
+    include varnish::naturejobs_ps
+    include npgscripts::j2ee
+
+    include system_ruby, augeas, runit
+    include rbenv
+    rbenv::ruby { '1.9.3-p194': }
+}
+
+# Parent node for xbuilder servers
+node 'xbuildernode' inherits nycnode {
+    $role="xbuilder"
+    npgfacts::npgfact { "role": val => $role }
+    include yum::client
+}
+
+node 'sherlock' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  $role="autonomy"
+  npgfacts::npgfact { "role": val => $role }
+  include commonhosts,restoncommonhosts
+  include yum::client
+}
+node 'testsherlock' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  $role="autonomy"
+  npgfacts::npgfact { "role": val => $role }
+  include commonhosts,nychosts
+  host { "xml.nature.com": ip=>"192.168.88.109",ensure=>present }
+}
+node 'staging-sherlock' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  $role="autonomy"
+  npgfacts::npgfact { "role": val => $role }
+  include commonhosts,nychosts,yum::client,ldapclient
+    host { "xml.nature.com": ip=>"192.168.88.109",ensure=>present }
+}
+
+node 'npgutil.nature.com' {
+    $servergroup="live"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+    $nameservers=["192.168.4.61","192.168.4.62"]
+    host { "puppet.nature.com": ip=>"192.168.4.69", host_aliases=>["puppet"], ensure=>present }
+    $motdbanner="WARNING:  Puppet repos have changed; never edit on npgutil; push changes and then pull down to /opt/repos/<reponame>.\n All puppet configuration is managed in the puppet module within IT/puppet-modules\n"
+    $role="util"
+    npgfacts::npgfact { "role": val => $role }
+    class { 'dns::client':
+      nameservers => ["192.168.4.61","192.168.4.62"],
+      searchpath  => "nature.com",
+      domainname  => "nature.com",
+    }
+    include sudo,snmp,rhel-basepkgs,systemvars,npgscripts
+    include commonhosts,restoncommonhosts,restonnonbigiphosts,yum::client,miscapps::imagemagick
+    include puppet::master, puppet::hiera
+    include mysql::oldconfig,mysql::shaunsenv1
+    include motd
+    include redis::from_source
+    include rbenv
+    rbenv::ruby { '1.9.3-p194': }
+    include syslog, runit, logstash
+
+    syslog::log_remotely { 'local0': }
+
+    include mcollective::client,mcollective::plugins::puppetd::controller,mcollective::plugins::puppetd::commander,mcollective::plugins::package::app
+
+    class { naturejobs: rails_env => 'production', solr => false, passenger => false }
+    class { 'naturejobs::util_server': rails_env => 'production', primary => true }
+    class { natureblogs: rails_env => 'production', passenger => false }
+    class { bdje: rails_env => 'staging', passenger => false }
+    class { natureprecedings: rails_env => 'production', passenger => false }
+    class { bdjjobs: rails_env => 'production', passenger => false }
+    class{ 'bdje::cron': rails_env => 'production' }
+    class{ 'natureblogs::cron': rails_env => 'production' }
+    class { mynature: passenger => false, rss => true }
+    class { natureevents: rails_env => "production", passenger => false}
+    class { curi: rails_env => 'production', passenger => false }
+    class { gradsurvey: rails_env => 'production', passenger => false }
+    user { "mynature-live-password":
+      name => "mynature",
+      password => '$1$eXl9BxCp$9/DMCtjJ2S9C8cmD4ez4c.',
+    }
+    include phoenix, palgraveconnect
+}
+node 'staging-npgutil.nature.com' inherits nycnode {
+    $servergroup="staging"
+    $role="util"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+    npgfacts::npgfact { "role": val => $role }
+    include commonhosts,nychosts,yum::client,ldapclient,miscapps::imagemagick
+    include system_ruby,augeas,runit
+    include rbenv
+    rbenv::ruby { '1.9.3-p194': }
+
+    class { naturejobs: rails_env => 'staging', solr => false, passenger => false }
+    class { natureblogs: rails_env => 'staging', passenger => false }
+    class { bdje: rails_env => 'staging', passenger => false }
+    class { natureevents: rails_env => 'staging', passenger => false }
+    class { natureprecedings: rails_env => 'staging', passenger => false }
+    class { mynature: passenger => false, rss => true }
+    class { natureentities: rails_env => 'staging', passenger => false }
+    class{ 'bdje::cron': rails_env => 'staging' }
+    class{ 'natureevents::util_server': rails_env => 'staging' }
+    class{ 'natureblogs::cron': rails_env => 'staging' }
+    class { 'naturejobs::util_server': rails_env => 'staging', primary => true }
+    class { bdjjobs: rails_env => 'staging', passenger => false }
+    class { curi: rails_env => 'production', passenger => false}
+    class { gradsurvey: rails_env => 'production', passenger => false }
+    include journals, palgraveconnect
+    include phoenix
+}
+node 'test-npgutil.nature.com' inherits nycnode {
+    $servergroup="test"
+    $role="util"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+    npgfacts::npgfact { "role": val => $role }
+    include commonhosts,nychosts,yum::client,ldapclient,miscapps::imagemagick
+
+    include system_ruby, augeas, runit
+    include rbenv
+    rbenv::ruby { '1.9.3-p194': }
+
+    package { "raptor": ensure => installed }
+    package { "raptor-devel": ensure => installed }
+    class { bdje: rails_env => 'qa', passenger => false, solr => true }
+    class { natureevents: rails_env => "qa", passenger => false, solr => false }
+    class { natureblogs: rails_env => 'qa', passenger => false }
+    class { naturejobs: rails_env => "qa", solr => false, passenger => false }
+    class { 'naturejobs::util_server': rails_env => 'qa', primary => true }
+    class{ 'bdje::cron': rails_env => 'qa' }
+    class{ 'natureevents::util_server': rails_env => 'qa' }
+    class { mynature: passenger => false, rss => true }
+    class { bdjjobs: rails_env => "qa", passenger => false }
+    class { gradsurvey: rails_env => 'production' }
+
+    include journals, palgraveconnect, asimov
+
+}
+
+node 'test-naturerails.nature.com' inherits nycnode {
+    $servergroup="test"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+    include commonhosts,nychosts,yum::client
+}
+
+node 'test-naturerailsdb','test-naturerailsdb.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include commonhosts,nychosts,yum::client
+}
+
+node 'test-ed-mysql','test-ed-mysql.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include mysql::config-testedmysql,mysql::shaunsenv2,commonhosts,nychosts,yum::client,ldapclient
+  include mysql::baselogrotate
+}
+
+node 'test-triplestore.nature.com' inherits nycnode {
+  $servergroup = "test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include ldapclient,sun-jdk::binary, vmware::guest
+  user { "triplestore":
+    ensure => present,
+  }
+  group { "triplestore":
+    ensure => present,
+  }
+  jetty::packagenew { 'jetty-triplestore':
+    name           => "triplestore",
+    version        => "6.1.26",
+    port           => "7080",
+    user           => "xb3",
+    group          => "triplestore",
+    jvmtuningargs => "-server -XX:MaxPermSize=512M -Xmx1024M -DXB3_CONFIG_HOME=/usr/local/jetty/etc",
+    require       => User["xb3"],
+  }
+  apacheserver::vhost { "test-triplestore.nature.com":
+    name       => "test-triplestore.nature.com",
+    acblock    => "Include /etc/httpd/conf/basic_ip_restrictions.conf",
+    proxyblock => "RewriteRule ^/triplestore/(.*)$ http://localhost:7080/triplestore/$1 [P,L]",
+  }
+  file { "/etc/httpd/conf/basic_ip_restrictions.conf":
+    source  => "puppet:///modules/apacheserver/basic_ip_restrictions.conf",
+    notify  => Service["httpd"],
+    require => Package["httpd"],
+  }
+  file { "/etc/httpd/conf/passwd":
+    source  => "puppet:///modules/apacheserver/htpasswd_base",
+    notify  => Service["httpd"],
+    require => Package["httpd"],
+  }
+}
+
+node 'staging-triplestore.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include commonhosts,nychosts,yum::client,ldapclient,sun-jdk::binary
+}
+node 'staging-triplestore1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include commonhosts,nychosts,yum::client,ldapclient,sun-jdk::binary
+user { "triplestore":
+    ensure => present,
+  }
+  group { "triplestore":
+    ensure => present,
+  }
+  jetty::packagenew { 'jetty-triplestore':
+    name           => "triplestore",
+    version        => "6.1.26",
+    port           => "7080",
+    user           => "triplestore",
+    group          => "triplestore",
+    jvmtuningargs => "-server -XX:MaxPermSize=512M -Xmx1024M -DXB3_CONFIG_HOME=/usr/local/jetty/etc",
+    require       => User["triplestore"],
+  }
+  apacheserver::vhost { "staging-triplestore.nature.com":
+    name       => "staging-triplestore.nature.com",
+    acblock    => "Include /etc/httpd/conf/basic_ip_restrictions.conf",
+    proxyblock => "RewriteRule ^/triplestore/(.*)$ http://localhost:7080/triplestore/$1 [P,L]",
+  }
+  file { "/etc/httpd/conf/basic_ip_restrictions.conf":
+    source  => "puppet:///modules/apacheserver/basic_ip_restrictions.conf",
+    notify  => Service["httpd"],
+    require => Package["httpd"],
+  }
+  file { "/etc/httpd/conf/passwd":
+    source  => "puppet:///modules/apacheserver/htpasswd_base",
+    notify  => Service["httpd"],
+    require => Package["httpd"],
+  }
+
+}
+node 'staging-triplestore2.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include commonhosts,nychosts,yum::client,ldapclient,sun-jdk::binary
+user { "triplestore":
+    ensure => present,
+  }
+  group { "triplestore":
+    ensure => present,
+  }
+  jetty::packagenew { 'jetty-triplestore':
+    name           => "triplestore",
+    version        => "6.1.26",
+    port           => "7080",
+    user           => "triplestore",
+    group          => "triplestore",
+    jvmtuningargs => "-server -XX:MaxPermSize=512M -Xmx1024M -DXB3_CONFIG_HOME=/usr/local/jetty/etc",
+    require       => User["triplestore"],
+  }
+  apacheserver::vhost { "staging-triplestore.nature.com":
+    name       => "staging-triplestore.nature.com",
+    acblock    => "Include /etc/httpd/conf/basic_ip_restrictions.conf",
+    proxyblock => "RewriteRule ^/triplestore/(.*)$ http://localhost:7080/triplestore/$1 [P,L]",
+  }
+  file { "/etc/httpd/conf/basic_ip_restrictions.conf":
+    source  => "puppet:///modules/apacheserver/basic_ip_restrictions.conf",
+    notify  => Service["httpd"],
+    require => Package["httpd"],
+  }
+  file { "/etc/httpd/conf/passwd":
+    source  => "puppet:///modules/apacheserver/htpasswd_base",
+    notify  => Service["httpd"],
+    require => Package["httpd"],
+  }
+
+}
+node 'datastore.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include commonhosts,nychosts,yum::client,ldapclient,sun-jdk::binary
+    include apacheserver::datastore
+  user { "triplestore":
+    ensure => present,
+  }
+  group { "triplestore":
+    ensure => present,
+  }
+  jetty::packagenew { 'jetty-triplestore':
+    name           => "triplestore",
+    version        => "6.1.26",
+    port           => "7080",
+    user           => "triplestore",
+    group          => "triplestore",
+    jvmtuningargs => "-server -XX:MaxPermSize=512M -Xmx1024M -DXB3_CONFIG_HOME=/usr/local/jetty/etc",
+    require       => User["triplestore"],
+  }
+
+}
+
+node 'it-mysql.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,nychosts,yum::client,ldapclient
+}
+node 'stagingmysql.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,nychosts,yum::client,ldapclient
+    include mysql::shaunsenv2a
+    include mysql::multi,mysql::multi1,mysql::multi2
+    include mysql::logrotatemulti1a,mysql::logrotatemulti1b
+}
+node 'staging-ed-mysql','staging-ed-mysql.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include mysql::shaunsenv2,commonhosts,nychosts,yum::client,ldapclient
+    include mysql::config-stagingedmysql,mysql::baselogrotate,mysql::backup-stagingedmysql
+}
+
+
+
+#Old zenoss box on 88.182
+node 'zen-it-old-oss' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+}
+
+node 'zenoss.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,restoncommonhosts,restonnonbigiphosts
+  include sun-jdk::binary
+  include zenoss::truesightmonitor
+  include mysql::oldconfig
+
+  include mcollective::client,mcollective::plugins::puppetd::controller
+}
+
+node 'it-zenoss.nature.com','it-zenoss' inherits nycnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include commonhosts,nychosts,ldapclient
+  include sun-jdk::binary
+}
+
+node 'connotea1' inherits restonnode {
+    $memcache_options ="-d -u memcached -c 1024 -m 9182 -p 11212"
+    include memcache::package
+    include memcache
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+}
+
+node 'connoteadb1' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include mysql::shaunsenv1
+    include mysql::oldconfig
+}
+
+node 'connoteawc' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+}
+node 'npg_solr.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include yum::client,commonhosts,restoncommonhosts,restonnonbigiphosts
+
+}
+
+node 'naturefs5','naturefs5.nature.com' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include yum::client,vmware::guest,natureapps::fileserver,nfs::server
+  package { "ImageMagick-devel": ensure => absent }
+  package { "ImageMagick": ensure => absent }
+}
+
+node 'puppettestclient' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,nychosts,yum::client,ldapclient
+}
+node 'npd-sandbox' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,nychosts,apacheserver
+}
+node 'npd-sandbox-2' inherits nycnode {
+  $servergroup = "test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include yum::client,commonhosts,nychosts,apacheserver
+}
+node 'platformdev' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+
+    include jetty::npgbase,jetty::palgravebase
+    include yum::client,commonhosts,nychosts,apacheserver
+    include npgscripts::testweb
+
+    include journals
+}
+
+node 'test-external' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyname="external"
+    $jettyversion="6.1.26"
+
+  include yum::client,commonhosts,nychosts,apacheserver::external,ldapclient
+  include kerneltuning,npgscripts::j2ee
+  include jetty::package,sun-jdk::binary
+  group {
+    "snapplewriters":
+      gid => 1347,
+      ensure => present;
+  }
+    file {
+        "/mnt/fs":
+            ensure=>directory,
+    }
+  mount{
+        "/mnt/fs":
+            device=>'test-fs:/usr/fs',
+            atboot  => true,
+            ensure  => mounted,
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl",
+            require => File["/mnt/fs"];
+        "/mnt/fs/Web/addon":
+            device  => 'test-fs:/usr/fs/Web/addon',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs'],
+            fstype  => nfs,
+            options => 'rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl',
+  }
+  user { "triplestore-update":
+    ensure  => present,
+    gid     => "snapplewriters",
+    require => Group["snapplewriters"],
+  }
+}
+
+node 'staging-external.nature.com' inherits nycnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  $jettyname="external"
+  $jettyversion="6.1.26"
+
+  include jetty::package,sun-jdk::binary,yum::client,commonhosts,nychosts,apacheserver::external,ldapclient,natureapps::jetty-api,natureapps::jetty-external
+
+  file {
+          "/mnt/fs":
+                ensure=>directory,
+      }
+  mount{
+          "/mnt/fs":
+              device=>'staging-fs:/usr/fs/web_d',
+                atboot  => true,
+                ensure  => mounted,
+                fstype  => nfs,
+                options => "rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl",
+                require => File["/mnt/fs"];
+        }
+}
+
+node 'test-j2ee.nature.com', 'test-j2ee-originale' inherits nycnode {
+    $servergroup="test"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+
+    $saltappsjvmargs='-Datacama.home=/usr/local/atacama-platform/ -Datacama.keystore=/usr/local/atacama-platform/keys/shib-npg-keystore-2012.jks -Datacama.keystore.password=npg123* -Datacama.keystore.alias=test-secure'
+    $adminappsjvmargs='-Denvironment=UAT -DconfigurationDir=file:$JETTY_HOME/etc'
+    $gatewayappsjvmargs='-DXMLGATEWAY_CONFIG_HOME=file:$JETTY_HOME/etc'
+
+    $memcache_options ="-d -u memcached -m 500 -p 11211"
+    $memcache_options2="-d -u memcached -m 50 -p 11212"
+    $memcache_options3="-d -u memcached -m 50 -p 11213"
+    include yum::client,commonhosts,nychosts,apacheserver,memcache,ldapclient
+    include jetty::npgbase,jetty::palgravebase,jetty::rubybase,jetty::mynaturebase
+    include natureapps::jetty-adminapps,natureapps::jetty-gateway,natureapps::jetty-salt
+    include kerneltuning
+    include redis::from_source
+    include npgscripts::j2ee
+    include npgscripts::testweb
+    include mcollective::plugins::puppetd::managednode
+    include varnish
+    include apacheserver::pagespeed
+    include runit,logstash
+
+    group {
+        "snapplewriters":
+            gid => 1347,
+            ensure=>present;
+    }
+
+    file {
+        "/etc/httpd/conf":
+            ensure => link,
+            target => "/usr/local/testwwwconfig/apache/conf";
+        "/etc/httpd/conf.d/":
+            ensure => link,
+            target => "/usr/local/testwwwconfig/apache/conf.d";
+        "/usr/local/jetty-npg/etc":
+            ensure => link,
+            target => "/usr/local/testwwwconfig/jetty-npg-etc";
+        "/usr/local/jetty-palgrave/etc":
+            ensure => link,
+            target => "/usr/local/testwwwconfig/jetty-palgrave-etc";
+        "/usr/local/jetty-ruby/etc":
+            ensure => link,
+            target => "/usr/local/testwwwconfig/jetty-ruby-etc";
+        "/usr/local/jetty-npg/contexts":
+            ensure => link,
+            target => "/usr/local/testwwwconfig/jetty-npg-contexts";
+        "/usr/local/jetty-palgrave/contexts":
+            ensure => link,
+            target => "/usr/local/testwwwconfig/jetty-palgrave-contexts";
+        "/usr/local/jetty-ruby/contexts":
+            ensure => link,
+            target => "/usr/local/testwwwconfig/jetty-ruby-contexts";
+        "/etc/httpd/logs":
+            ensure => link,
+            target => "/var/log/httpd";
+        "/etc/httpd/run":
+            ensure => link,
+            target => "/var/run";
+        "/mnt/fs":
+            ensure => directory,
+            owner  => root,
+            group  => root;
+        "/mnt/fs/Web/addon":
+            ensure => directory,
+            owner  => root,
+            group  => root;
+    }
+    mount{
+        "/mnt/fs":
+            device=>'test-fs:/usr/fs',
+            atboot  => true,
+            ensure  => mounted,
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl";
+        "/mnt/fs/Web/addon":
+            device  => 'test-fs:/usr/fs/Web/addon',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs'],
+            fstype  => nfs,
+            options => 'rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl',
+    }
+    cron { "hudson-deploy.py":
+        command => "/usr/local/scripts/hudson-deploy.py",
+        user => root,
+        hour => [03,12],
+        minute => [30],
+        require => File["/usr/local/scripts/hudson-deploy.py"],
+    }
+
+    include rbenv
+    rbenv::ruby { '1.9.3-p194': }
+
+    class { mynature: rails_env => "production" }
+    class { naturejobs: rails_env => "qa" }
+    class { natureblogs: rails_env => "qa" }
+    class { bdje: rails_env => "qa" }
+    class { natureevents: rails_env => "qa" }
+    class { natureprecedings: rails_env => "qa" }
+    class { natureentities: rails_env => "qa" }
+    class { ps : rails_env => 'production', passenger => true }
+    class { bdjjobs: rails_env => "qa" }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+    include connotea-export
+}
+
+
+node 'test-j2ee-sandbox.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $memcache_options ="-d -u memcached -m 500 -p 11211"
+    $memcache_options2="-d -u memcached -m 50 -p 11212"
+    $memcache_options3="-d -u memcached -m 50 -p 11213"
+    include yum::client,commonhosts,nychosts,apacheserver,ldapclient
+    include memcache
+#    include jetty::npg,jetty::palgrave,jetty::ruby
+#    include apacheserver::j2ee
+    include kerneltuning
+    include npgscripts::j2ee
+    include openaudit
+
+    file{'/mnt/fs': ensure=>directory, owner=>root, group=>root, }
+    mount{'/mnt/fs':
+        device=>'test-fs:/usr/fs', atboot=>true, ensure=>mounted, fstype=>nfs, options=>"rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl",
+    }
+    mount{'/mnt/fs/Web/addon':
+        device=>'test-fs:/usr/fs/Web/addon', atboot=>true, ensure=>mounted, require => File['/mnt/fs'], fstype=>nfs, options=>'rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl',
+    }
+}
+
+node 'test-j2ee-web-sandbox' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,nychosts,varnish,ldapclient
+    include kerneltuning
+    include apacheserver::j2ee
+    include openaudit
+
+    file{'/mnt/fs': ensure=>directory, owner=>root, group=>root, }
+    file{'/mnt/fs/Web/addon': ensure=>directory, owner=>root, group=>root, }
+    mount{'/mnt/fs':
+        device=>'test-fs:/usr/fs', atboot=>true, ensure=>mounted, fstype=>nfs, options=>"rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl",
+    }
+    mount{'/mnt/fs/Web/addon':
+        device=>'test-fs:/usr/fs/Web/addon', atboot=>true, ensure=>mounted, require => File['/mnt/fs'], fstype=>nfs, options=>'rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl',
+    }
+}
+
+node 'testcache1' inherits nycnode  {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  $memcache_options="-d -u memcached -c 4096 -m 2048 -p 11211"
+  $memcache_options2="-d -u memcached -c 4096 -m 2048 -p 11212"
+  $memcache_options3="-d -u memcached -c 4096 -m 2048 -p 11213"
+  include kerneltuning
+  include yum::client,commonhosts,nychosts,ldapclient,memcache
+  include redis::from_source
+  include mongodb::server
+  include mysql::shaunsenv2
+  include logstash::uninstall
+  include runit
+
+  class { 'naturejobs':
+    rails_env => 'qa',
+    passenger => false,
+    solr => false,
+    has_shared_fs => false,
+  }
+
+  class { 'naturejobs::solr': environment => 'qa' }
+
+  npd::solr::cleanup { "naturejobs": }
+
+  class { 'natureevents': rails_env => "qa", passenger => false, solr => true, has_shared_fs => false }
+
+  class { 'ps::solr': environment => 'production' }
+}
+
+node 'naturesandbox.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+    $memcache_options ="-d -u memcached -c 1024 -m 1024 -p 11211"
+
+    include jetty::npgbase,jetty::palgravebase,jetty::rubybase,jetty::mynaturebase,yum::client,commonhosts,nychosts,apacheserver,nginx_old
+    include memcache
+    include openaudit
+
+    include journals
+}
+
+node 'ci.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,nychosts,apacheserver,ldapclient,miscapps::imagemagick
+    include groovy::groovy,groovy::grails
+}
+
+node 'test-fs' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,nychosts,ldapclient
+    include nfs::server,npgscripts::wpt
+    package { "ImageMagick-devel": ensure => absent }
+    package { "ImageMagick": ensure => absent }
+}
+node 'new-staging-fs' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,nychosts
+    include nfs::server
+    include ldapclient,npgscripts::wpt
+    include openaudit
+    package { "ImageMagick-devel": ensure => absent }
+    package { "ImageMagick": ensure => absent }
+}
+
+node 'marklogic1','marklogic2' inherits restonnode {
+  $servergroup = "live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+}
+
+node 'test-marklogic' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+}
+
+node 'staging-marklogic' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+}
+
+node 'itlog' inherits nycnode {
+    include puppet::client
+    include apacheserver::generic
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+}
+
+node 'staging-j2ee.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+
+    $saltappsjvmargs='-Datacama.home=/usr/local/atacama-platform/ -Datacama.keystore=/usr/local/atacama-platform/keys/shib-npg-keystore-2012.jks -Datacama.keystore.password=npg123* -Datacama.keystore.alias=staging-secure'
+    $adminappsjvmargs='-Denvironment=STAGING -DconfigurationDir=file:$JETTY_HOME/etc '
+    $gatewayappsjvmargs='-DXMLGATEWAY_CONFIG_HOME=file:$JETTY_HOME/etc'
+
+    include ldapclient,yum::client
+    include jetty::npg,jetty::palgrave,jetty::ruby,jetty::mynaturebase,memcache
+    include natureapps::jetty-npg,natureapps::jetty-ruby,natureapps::jetty-palgrave
+    include natureapps::jetty-adminapps,natureapps::jetty-gateway,natureapps::jetty-salt
+    include apacheserver::j2ee
+    include apacheserver::pagespeed
+    include varnish
+    include runit,logstash
+
+    include rbenv
+    rbenv::ruby { '1.9.3-p194': }
+
+    class { naturejobs: rails_env => "staging" }
+    class { natureblogs: rails_env => "staging" }
+    class { bdje: rails_env => "staging" }
+    class { natureevents: rails_env => "staging" }
+    class { mynature: rails_env => "production" }
+    class { natureprecedings: rails_env => 'staging' }
+    class { natureentities: rails_env => "staging"}
+    class { ps : rails_env => 'staging',passenger => true }
+    class { bdjjobs: rails_env => "staging" }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+
+node 'staging-j2ee2.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyversion="6.1.19"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+
+    $saltappsjvmargs='-Datacama.home=/usr/local/atacama-platform/ -Datacama.keystore=/usr/local/atacama-platform/keys/shib-npg-keystore-2012.jks -Datacama.keystore.password=npg123* -Datacama.keystore.alias=staging-secure'
+    $adminappsjvmargs='-Denvironment=STAGING -DconfigurationDir=file:$JETTY_HOME/etc '
+    $gatewayappsjvmargs='-DXMLGATEWAY_CONFIG_HOME=file:$JETTY_HOME/etc'
+
+    include ldapclient,yum::client,sun-jdk::binary
+    include jetty::npg,jetty::palgrave,jetty::ruby
+    include natureapps::jetty-npg,natureapps::jetty-ruby,natureapps::jetty-palgrave
+    include natureapps::jetty-adminapps,natureapps::jetty-gateway,natureapps::jetty-salt
+    include apacheserver::j2ee,miscapps::imagemagick
+    include apacheserver::pagespeed
+    include varnish
+    include runit,logstash
+
+    include rbenv
+    rbenv::ruby { '1.9.3-p194': }
+
+    class { naturejobs: rails_env => "staging" }
+    class { natureblogs: rails_env => "staging" }
+    class { bdje: rails_env => "staging" }
+    class { natureevents: rails_env => "staging" }
+    class { mynature: rails_env => "production" }
+    class { natureprecedings: rails_env => 'staging' }
+    class { natureentities: rails_env => "staging"}
+    class { ps : rails_env => 'staging',passenger => true }
+    class { bdjjobs: rails_env => "staging" }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+
+    file { '/mnt/fs':
+            ensure => directory,
+            owner => root,
+            group => root
+    }
+
+    mount{
+        "/mnt/fs":
+            device=>'192.168.88.243:/usr/fs/web_d',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+    }
+}
+#node 'staging-j2ee3.nature.com' {
+#    $servergroup="live"
+#  npgfacts::npgfact { "servergroup": val => $servergroup }
+#
+#    $jettyversion="6.1.19"
+#    $jettylib="20110307"
+#    $libcheck="c3p0-0.9.1.2.jar"
+##
+#    $saltappsjvmargs='-Datacama.home=/usr/local/atacama-platform/ -Datacama.keystore=/usr/local/atacama-platform/keys/shib-npg-keystore-2012.jks -Datacama.keystore.password=npg123* -Datacama.keystore.alias=staging-secure'
+#    $adminappsjvmargs='-Denvironment=STAGING -DconfigurationDir=file:$JETTY_HOME/etc '
+#    $gatewayappsjvmargs='-DXMLGATEWAY_CONFIG_HOME=file:$JETTY_HOME/etc'
+#
+#    include jetty::npg,jetty::palgrave,jetty::ruby
+#    include natureapps::jetty-npg,natureapps::jetty-ruby,natureapps::jetty-palgrave
+#    include natureapps::jetty-adminapps,natureapps::jetty-gateway,natureapps::jetty-salt
+#    include apacheserver::j2ee,miscapps::imagemagick
+#
+#    class { naturejobs: rails_env => "staging" }
+#    class { natureblogs: rails_env => "staging" }
+#    class { bdje: rails_env => "staging" }
+#    class { natureevents: rails_env => "staging" }
+#    class { mynature: rails_env => "production" }
+#    class { natureprecedings: rails_env => 'staging' }
+#    class { natureentities: rails_env => "staging"}
+#    class { ps : rails_env => 'staging',passenger => true }
+#    class { bdjjobs: rails_env => "staging" }
+#    class { curi: rails_env => 'production' }
+#    class { gradsurvey: rails_env => 'production' }
+#    include phoenix
+#
+#    file { '/mnt/fs':
+#            ensure => directory,
+#            owner => root,
+#            group => root
+#    }
+#
+#    mount{
+#        "/mnt/fs":
+#            device=>'192.168.10.20:/usr/fs',
+#            atboot  => true,
+#            ensure  => mounted,
+#            require => File['/mnt/fs'],
+#            fstype  => nfs,
+#            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+#    }
+#}
+
+node 'test-socialweb.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client
+}
+node 'staging-socialweb.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client
+}
+
+node 'test-ami.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+}
+
+node 'ami.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+}
+
+node 'spider.nature.com' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,nychosts,ldapclient,sun-jdk::binary
+    include mysql::shaunsenv2
+    include mysql::config-spider,mysql::baselogrotate,mysql::backup-spider
+}
+node 'newspider.nature.com' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,nychosts,ldapclient
+    include mysql::shaunsenv2
+}
+node 'testspider' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,nychosts
+}
+
+node 'prod-xbuild1.nature.com' inherits xbuildernode {
+    $servergroup="staging"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+    include kerneltuning,miscapps::imagemagick669
+    file {
+          "/usr/local/jetty/temp":
+              ensure=>  directory,
+              owner =>  xbuilder,
+              group =>  xbuilder
+          }
+}
+
+node 'prod-xbuild2.nature.com' inherits xbuildernode {
+    $servergroup="staging"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+    include kerneltuning,miscapps::imagemagick669
+    file {
+          "/usr/local/jetty/temp":
+              ensure=>  directory,
+              owner =>  xbuilder,
+              group =>  xbuilder
+          }
+}
+
+node 'npgj2ee1.nature.com' inherits restonj2eenode {
+    include npgscripts::concurrencyreport  # The reporter node.  Should be unique.
+    $rmi_host="192.168.10.201"
+    $memcache_options="-d -u memcached -t8 -c1500 -b1500 -m 4096 -p 11213"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee2.nature.com' inherits restonj2eenode {
+    $rmi_host="192.168.10.202"
+    $memcache_options="-d -u memcached -c 4096 -t 8 -b 2048 -m 4092 -p 11212"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee3.nature.com' inherits restonj2eenode {
+    $rmi_host="192.168.10.203"
+    $memcache_options="-d -u memcached -c 4096 -t8 -b2048 -m4092 -p 11212"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+
+node 'npgj2ee4.nature.com' inherits restonj2eenode {
+    $rmi_host="192.168.10.204"
+    $memcache_options="-d -u memcached -c 4096 -t8 -b2048 -m4092 -p 11212"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee5.nature.com' inherits restonj2eenode {
+    $rmi_host="192.168.10.41"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee6.nature.com' inherits restonj2eenode {
+    $rmi_host="192.168.10.40"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee7.nature.com' inherits restonj2eenode {
+    $rmi_host="192.168.10.33"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee8.nature.com' inherits restonj2eenode {
+    $rmi_host="npgj2ee8"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee9.nature.com' inherits restonj2eenode {
+    $rmi_host="npgj2ee9"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee10.nature.com' inherits restonj2eenode {
+    $rmi_host="npgj2ee10"
+    $memcache_options="-d -u memcached -t8 -c1500 -b1500 -m 4096 -p 11213"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee11.nature.com' inherits restonj2eenode {
+    $rmi_host="npgj2ee11"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+node 'npgj2ee12.nature.com' inherits restonj2eenode {
+    $rmi_host="npgj2ee12"
+    class { naturejobs: rails_env => "production" }
+    class { natureblogs: rails_env => "production" }
+    class { bdje: rails_env => "production" }
+    class { natureevents: rails_env => "production" }
+    class { natureprecedings: rails_env => 'production' }
+    class { mynature: rails_env => "production" }
+    class { bdjjobs: rails_env => "production" }
+    class { ps: rails_env => 'production', passenger => true }
+    class { curi: rails_env => 'production' }
+    class { gradsurvey: rails_env => 'production' }
+    include phoenix
+}
+
+node 'npgmysql1.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonnonbigiphosts,restoncommonhosts
+    include mysql::shaunsenv1
+    include mysql::oldconfignpgmysql1
+}
+node 'npgmysql2.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonnonbigiphosts,restoncommonhosts
+    include mysql::shaunsenv1
+    include mysql::oldconfignpgmysql2
+}
+node 'npgmysql3.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonnonbigiphosts,restoncommonhosts
+    include mysql::shaunsenv1
+}
+node 'npgmysql4.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonnonbigiphosts,restoncommonhosts
+    include mysql::shaunsenv1
+    include mysql::config-npgmysql4,mysql::backup-npgmysql4,mysql::baselogrotate
+}
+
+
+node 'socialweb1' inherits restonnode {  }
+
+node 'stagingcache1' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $memcache_options ="-d -u memcached -c 8192 -m 4096 -p 11211"
+    $memcache_options2="-d -u memcached -c 8192 -m 4096 -p 11212"
+    $memcache_options3="-d -u memcached -c 8192 -m 4096 -p 11213"
+    include ldapclient,yum::client,commonhosts,nychosts
+    include memcache::package,memcache,kerneltuning,mongodb::server
+    include mysql::shaunsenv2
+    include runit
+
+    class { 'naturejobs': rails_env => 'staging', passenger => false, solr => false, has_shared_fs => false }
+    class { 'naturejobs::solr': environment => 'staging' }
+
+    npd::solr::cleanup { "naturejobs": }
+
+    class { natureevents: rails_env => "staging", passenger => false, solr => true, has_shared_fs => false }
+    class { 'ps::solr':
+      environment => 'staging',
+    }
+}
+
+node 'stagingweb1' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts
+    include varnish
+}
+
+node 'npgcache1' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  $memcache_options ="-d -u memcached -c 8192 -t 2 -m 12288 -p 11211"
+  $memcache_options2="-d -u memcached -c 8192 -t 2 -m 12288 -p 11212"
+  include yum::client,commonhosts,restonbigiphosts,restoncommonhosts
+  include memcache::package,memcache,kerneltuning,mongodb::server
+
+  include system_ruby, augeas, runit
+
+  class { naturejobs: rails_env => "production", passenger => false, solr => false, has_shared_fs => false }
+  class { 'naturejobs::solr': environment => 'production' }
+
+  npd::solr::cleanup { "naturejobs": }
+
+  class { 'ps::solr': environment => 'production' }
+}
+
+node 'npgcache2' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  $memcache_options ="-d -u memcached -c 8192 -t 2 -m 12288 -p 11211"
+  $memcache_options2="-d -u memcached -c 8192 -t 2 -m 12288 -p 11212"
+  include yum::client,commonhosts,restonbigiphosts,restoncommonhosts
+  include memcache::package,memcache,kerneltuning,mongodb::server
+
+  include system_ruby, augeas, runit
+
+  class { natureevents: rails_env => "production", passenger => false, solr => true, has_shared_fs => false}
+}
+
+node 'educache1', 'educache2' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonbigiphosts,restoncommonhosts
+    include cron::education
+}
+
+
+
+node 'education1.nature.com','education2.nature.com','education3.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $role="scitableweb"
+    npgfacts::npgfact { "role": val => $role }
+    include yum::client
+    include varnish::nated,sun-jdk::binary,apacheserver::nated,tomcat::scitable6,tomcat::nls6,tomcat::npgrpt6
+    include commonhosts,restonbigiphosts,restoncommonhosts
+    include cron::education
+
+    file { '/mnt/fs/natureeducation':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+
+    file { '/mnt/fs/vnls':
+            ensure=>directory,
+            owner=>root,
+            group=>root;
+            '/mnt/fs/npgreport':
+            ensure=>directory,
+            owner=>root,
+            group=>root;
+        }
+
+    mount{
+        "/mnt/fs/natureeducation":
+            device=>'192.168.10.21:/usr/fs/natureeducation',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/natureeducation'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+        }
+
+    mount {
+        "/mnt/fs/vnls":
+            device=>'192.168.10.21:/usr/fs/vnls',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/vnls'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl";
+        }
+    mount {
+        "/mnt/fs/npgreport":
+            device=>'192.168.10.21:/usr/fs/npgreport',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/npgreport'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+        }
+}
+node 'education4.nature.com','education5.nature.com','education6.nature.com','education7.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $role="scitableweb"
+    npgfacts::npgfact { "role": val => $role }
+    include yum::client
+    include varnish::nated,apacheserver::nated,tomcat::scitable6,tomcat::nls6,tomcat::npgrpt6
+    include commonhosts,restonbigiphosts,restoncommonhosts
+    include cron::education
+
+    file { '/mnt/fs/natureeducation':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+
+    file { '/mnt/fs/vnls':
+            ensure=>directory,
+            owner=>root,
+            group=>root;
+            '/mnt/fs/npgreport':
+            ensure=>directory,
+            owner=>root,
+            group=>root;
+        }
+
+    mount{
+        "/mnt/fs/natureeducation":
+            device=>'192.168.10.21:/usr/fs/natureeducation',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/natureeducation'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+        }
+
+    mount {
+        "/mnt/fs/vnls":
+            device=>'192.168.10.21:/usr/fs/vnls',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/vnls'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl";
+        }
+
+    mount {
+        "/mnt/fs/npgreport":
+            device=>'192.168.10.21:/usr/fs/npgreport',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/npgreport'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+        }
+}
+
+
+node 'educationfs','educationfs.nature.com' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include yum::client,sun-jdk::binary
+  include nfs::server,cron::education
+
+  group { "tomcat":
+    gid    => 504,
+    ensure => present,
+  }
+  user { "tomcat":
+    uid     => 504,
+    gid     => 504,
+    require => Group["tomcat"],
+    ensure  => present,
+  }
+  file { '/usr/fs/natureeducation':
+    ensure=>directory,
+    owner => "tomcat",
+    group => "tomcat",
+    require => User["tomcat"],
+  }
+  file { '/usr/fs/vnls':
+    ensure=>directory,
+    owner => "tomcat",
+    group => "tomcat",
+    require => User["tomcat"],
+  }
+
+}
+
+node 'staging-ed-fs.nature.com' inherits restonnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include yum::client,sun-jdk::binary
+  include nfs::server
+
+  group { "tomcat":
+    gid    => 502,
+    ensure => present,
+  }
+  user { "tomcat":
+    uid     => 502,
+    gid     => 502,
+    require => Group["tomcat"],
+    ensure  => present,
+  }
+  file { '/usr/fs/natureeducation':
+    ensure=>directory,
+    owner => "tomcat",
+    group => "tomcat",
+    require => User["tomcat"],
+  }
+  file { '/usr/fs/vnls':
+    ensure=>directory,
+    owner => "tomcat",
+    group => "tomcat",
+    require => User["tomcat"],
+  }
+
+}
+
+
+node 'education-chat.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,tomcat::scitable5,cron::education
+
+    file { '/mnt/fs/natureeducation':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+
+    file { '/mnt/fs/vnls':
+            ensure=>directory,
+            owner=>root,
+            group=>root
+        }
+
+    mount{
+        "/mnt/fs/natureeducation":
+            device=>'192.168.10.21:/usr/fs/natureeducation',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/natureeducation'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+        }
+    mount {
+        "/mnt/fs/vnls":
+            device=>'192.168.10.21:/usr/fs/vnls',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/vnls'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl";
+        }
+}
+
+node 'staging-ed-www1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $role="scitableweb"
+    npgfacts::npgfact { "role": val => $role }
+    include yum::client
+    $memcache_options = "-d -u memcached -m 4096 -p 11211"
+    include memcache::package,memcache,sun-jdk::binary,varnish,miscapps::imagemagick-rpm
+}
+
+node 'staging-ed-www2.nature.com','staging-ed-www3.nature.com'  inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $role="scitableweb"
+    npgfacts::npgfact { "role": val => $role }
+    include yum::client
+    $memcache_options ="-d -u memcached -m 4096 -p 11211"
+    include memcache::package,memcache,sun-jdk::binary,varnish
+    # include tomcat::scitable6,tomcat::nls6
+    include apacheserver::nated,tomcat::npgrpt6
+}
+
+node 'test-ed-www.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $role="scitableweb"
+    npgfacts::npgfact { "role": val => $role }
+    include yum::client
+
+    file { '/mnt/fs':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+
+    mount{
+        "/mnt/fs":
+            device=>'192.168.88.108:/usr/fs/Web/addon',
+            atboot  => true,
+            ensure  => mounted,
+            require => File["/mnt/fs"],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl"
+        }
+}
+
+node 'education-util.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $memcache_options = "-d -u memcached -m 2048 -p 11211"
+    $memcache_options2 = "-d -u memcached -m 2048 -p 11212"
+    include memcache::package,memcache,yum::client,sun-jdk::binary,ldapserver::education,miscapps::imagemagick-rpm
+    include cron::education
+
+    file { '/mnt/fs': ensure => directory;
+           '/mnt/fs/natureeducation':
+              ensure => directory,
+              owner => root,
+              group => root,
+              require => File['/mnt/fs'];
+            '/mnt/fs/vnls':
+              ensure=>directory,
+              owner=>root,
+              group=>root
+        }
+
+    mount{
+        "/mnt/fs/natureeducation":
+            device=>'192.168.10.21:/usr/fs/natureeducation',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/natureeducation'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl";
+        "/mnt/fs/vnls":
+            device=>'192.168.10.21:/usr/fs/vnls',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/vnls'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+        }
+}
+
+node 'education-util2.nature.com','education-util3.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include cron::education
+
+    user { zenoss:
+              comment => "Zenoss User",
+              home    => "/home/zenoss",
+              shell   => "/bin/bash",
+              uid     => 600,
+              password => '$1$gTv4SCuV$ShBNLrZoXU.kfM2qDdkZw.',
+              ensure  => present
+        }
+
+    file { '/mnt/fs': ensure => directory;
+           '/mnt/fs/natureeducation':
+              ensure => directory,
+              owner => root,
+              group => root,
+              require => File['/mnt/fs'];
+            '/mnt/fs/vnls':
+              ensure=>directory,
+              owner=>root,
+              group=>root;
+        }
+
+    mount {
+        "/mnt/fs/natureeducation":
+            device=>'192.168.10.21:/usr/fs/natureeducation',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/natureeducation'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl";
+        "/mnt/fs/vnls":
+            device=>'192.168.10.21:/usr/fs/vnls',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/vnls'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+        }
+}
+
+node 'staging-ed-util.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $memcache_options = "-d -u memcached -m 1024 -p 11211"
+    $memcache_options2 = "-d -u memcached -m 1024 -p 11212"
+    include memcache::package,memcache,yum::client,ldapserver::education,sun-jdk::binary
+
+    file {'/mnt/fs': ensure=>directory;
+          '/mnt/fs/npgreport':
+            ensure=>directory,
+            owner=>tomcat,
+            group=>tomcat;
+          '/mnt/fs/vnls':
+            ensure=>directory,
+            owner=>tomcat,
+            group=>tomcat;
+          '/mnt/fs/natureeducation':
+            ensure => directory,
+            owner=>tomcat,
+            group=>tomcat;
+        }
+}
+
+node 'staging-ed-util2.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,sun-jdk::binary
+
+    file {'/mnt/fs': ensure=>directory;
+          '/mnt/fs/npgreport':
+            ensure=>directory,
+            owner=>tomcat,
+            group=>tomcat;
+          '/mnt/fs/vnls':
+            ensure=>directory,
+            owner=>tomcat,
+            group=>tomcat;
+          '/mnt/fs/natureeducation':
+            ensure => directory,
+            owner=>tomcat,
+            group=>tomcat;
+          '/usr/jdk-1.6.0':
+            ensure => symlink,
+            target => "/usr/java/latest",
+            require => File["/usr/java/latest"];
+        }
+}
+
+node 'test-ed-util.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $memcache_options = "-d -u memcached -m 1024 -p 11211"
+    $memcache_options2 = "-d -u memcached -m 1024 -p 11212"
+    include memcache::package,memcache,yum::client,ldapserver::education,sun-jdk::binary
+
+    file { '/mnt/fs':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+
+    mount{
+        "/mnt/fs":
+            device=>'192.168.88.108:/usr/fs/Web/addon',
+            atboot  => true,
+            ensure  => mounted,
+      require => File["/mnt/fs"],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl"
+        }
+}
+
+node 'staging-ed-chat.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nychosts,tomcat::scitable5,tomcat::nls5
+}
+
+node 'test-ed-chat.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include sun-jdk,yum::client,tomcat::scitable5,tomcat::nls5
+
+    file { '/mnt/fs':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+
+    mount{
+        "/mnt/fs":
+            device=>'192.168.88.108:/usr/fs/Web/addon',
+            atboot  => true,
+            ensure  => mounted,
+            require => File["/mnt/fs"],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl"
+        }
+}
+
+node 'ebookserver.nature.com' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include nychosts,sun-jdk::binary,tomcat::desktopapp,cron::education
+
+    user { zenoss:
+              comment => "Zenoss User",
+              home    => "/home/zenoss",
+              shell   => "/bin/bash",
+              uid     => 600,
+              password => '$1$gTv4SCuV$ShBNLrZoXU.kfM2qDdkZw.',
+              ensure  => present
+        }
+
+    file { '/mnt/fs': ensure => directory;
+           '/mnt/fs/natureeducation':
+              ensure => directory,
+              owner => root,
+              group => root,
+              require => File['/mnt/fs'];
+            '/mnt/fs/vnls':
+              ensure=>directory,
+              owner=>root,
+              group=>root;
+        }
+
+    mount {
+        "/mnt/fs/natureeducation":
+            device=>'192.168.10.21:/usr/fs/natureeducation',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/natureeducation'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl";
+        "/mnt/fs/vnls":
+            device=>'192.168.10.21:/usr/fs/vnls',
+            atboot  => true,
+            ensure  => mounted,
+            require => File['/mnt/fs/vnls'],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,acl"
+        }
+}
+
+node 'staging-ebookserver.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nychosts,sun-jdk::binary,tomcat::desktopapp
+
+    file {'/mnt/fs': ensure=>directory;
+          '/mnt/fs/npgreport':
+            ensure=>directory,
+            owner=>root,
+            group=>root;
+          '/mnt/fs/vnls':
+            ensure=>directory,
+            owner=>root,
+            group=>root;
+          '/mnt/fs/natureeducation':
+            ensure => directory,
+            owner=>root,
+            group=>root;
+        }
+}
+
+node 'test-ebookserver.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nychosts,sun-jdk::binary,tomcat::desktopapp
+
+    file { '/mnt/fs':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+
+    mount{
+        "/mnt/fs":
+            device=>'192.168.88.108:/usr/fs/Web/addon',
+            atboot  => true,
+            ensure  => mounted,
+            require => File["/mnt/fs"],
+            fstype  => nfs,
+            options => "rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl"
+        }
+}
+
+node 'prod-rsuite.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include mysql::shaunsenv2
+    include mysql::oldconfig
+}
+
+node 'test-rsuite.nature.com','test-rsuite3.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include apacheserver::rsuite,mysql::shaunsenv2
+#    include pound
+}
+
+node 'test-rsuite-clone.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include mysql::shaunsenv2
+}
+
+node 'betasites.nature.com' inherits nycnode { }
+
+node 'test-poly-web1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,varnish,apacheserver::polopoly,pound
+}
+node 'test-poly-admin1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,apacheserver::polopoly,pound
+
+        #Drop box specific stuff for IT-7583
+    file { '/mnt/fs/polopolydropbox':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+    mount{ '/mnt/fs/polopolydropbox':
+        device=>'test-fs:/usr/fs/Web/addon/polopolydropbox',
+        atboot=>true,
+        ensure=>mounted,
+        require => File['/mnt/fs/polopolydropbox'],
+        fstype=>nfs,
+        options=>"rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl",
+    }
+    group { "snapplewriters":
+        gid => 1347,
+        ensure=>present
+    }
+    group { "xb3":
+        gid => 556,
+        ensure=>present
+    }
+}
+node 'test-poly-stats1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts
+}
+node 'test-poly-cms1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts
+}
+node 'test-poly-search1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include ldapclient,yum::client,commonhosts,nychosts
+}
+node 'staging-poly-admin1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,apacheserver::polopoly,pound
+}
+node 'staging-poly-stats1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts
+}
+node 'staging-poly-cms1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts
+}
+node 'staging-poly-search1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts
+}
+node 'staging-poly-web1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,varnish,apacheserver::polopoly,pound
+}
+
+node 'poly-web1.nature.com','poly-web2.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonbigiphosts,varnish,apacheserver::polopoly
+    include vmware::guest  # Safe to apply to VMs.
+}
+node 'poly-admin1.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonbigiphosts,apacheserver::polopoly
+}
+node 'poly-search1.nature.com','poly-stats1.nature.com','poly-cms1.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonbigiphosts
+}
+
+node 'polopolysandbox.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include ldapclient,yum::client,commonhosts,nychosts
+   file { '/mnt/fs/polopolydropbox':
+            ensure=>directory,
+            owner=>root,
+            group=>root,
+        }
+    mount{ '/mnt/fs/polopolydropbox':
+        device=>'test-fs:/usr/fs/Web/addon/polopolydropbox',
+        atboot=>true,
+        ensure=>mounted,
+        require => File['/mnt/fs/polopolydropbox'],
+        fstype=>nfs,
+        options=>"rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl",
+    }
+}
+
+node 'wpt-sandbox.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,apacheserver
+}
+
+node 'test-wpweb1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,apacheserver
+}
+
+node 'staging-wpweb1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include changetheequation,apacheserver::wordpress,ldapclient,yum::client,commonhosts,nychosts
+    include staffblogs
+}
+
+node 'staging-surechem.nature.com' inherits nycnode {
+    include yum::client,commonhosts
+}
+
+node 'npgsurechem1.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,apacheserver
+}
+
+node 'npgsurechem2' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,apacheserver
+}
+
+
+node 'npg-babbage-poc' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,apacheserver
+}
+node 'linuxutil.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts
+  include yum::client::epel
+  include cobbler::server
+  include vmware::guest
+  include mysql::shaunsenv2
+  include mysql::slowpushandpull
+  include mysql::slowpushandpullspider,mysql::slowpushandpullnpgmysql1,mysql::slowpushandpullnpgmysql2,mysql::slowpushandpullnpgmysql4
+  include mysql::slowpushandpullstagingedmysql,mysql::slowpushandpulltestedmysql,mysql::slowpushandpullstagingmysql,mysql::slowpushandpulltestnaturemysql
+}
+
+node 'test-china.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts
+}
+
+node 'test-ejpwww1.nature.com','test-ejpwww2.nature.com','test-ejpwww3.nature.com' inherits nycnode {
+    $servergroup="test"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $sysloc="nyc"
+    include ejp::testbase,ejp::unixodbc,ejp::freetds,nycejphosts,nychosts,commonhosts,yum::client,ldapclient
+    include sun-jdk::binary
+}
+
+node 'staging-ejpwww1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $sysloc="nyc"
+    include ejp::stagingbase,ejp::webserver,ejp::oraclebundle,nycejpstaginghosts,nychosts,commonhosts,yum::client,ldapclient,apacheserver::ejp
+}
+
+node 'ejpwww1.nature.com','ejpwww2.nature.com','ejpwww3.nature.com','ejpwww4.nature.com','ejpwww5.nature.com','ejpwww6.nature.com','ejpwww7.nature.com','ejpwww8.nature.com','ejpwww9.nature.com','ejpwww10.nature.com' inherits restonejpnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ejp::livebase,ejp::webserver,ejp::oraclebundle,commonhosts,yum::client,apacheserver::ejp
+}
+
+node 'ejpspd1.nature.com','ejpspd2.nature.com' inherits restonejpnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ejp::livespdbase,ejp::webserver,ejp::oraclebundle,commonhosts,yum::client,apacheserver::ejpspd,ejp::chilkatsoft
+}
+
+node 'test-ejpfs1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,nychosts,yum::client,ldapclient
+}
+
+node 'staging-ejpfs1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,nychosts,yum::client,ldapclient
+}
+
+node 'ejpfs1.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,yum::client
+}
+
+node 'test-ejplinuxutil.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ejp::testbase,ejp::utilserver,nycejphosts,sudo,commonhosts,yum::client,ldapclient
+    include sun-jdk::binary
+}
+
+node 'staging-ejplinuxutil.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ejp::stagingbase,ejp::utilserver,nycejphosts,sudo,commonhosts,yum::client,ldapclient
+}
+
+node 'ejplinuxutil.nature.com' inherits restonejpnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ejp::livebase,ejp::utilserver,restonejphosts,sudo,commonhosts,yum::client,ejp::chilkatsoft
+}
+
+node 'ejpautonomy.nature.com' inherits restonejpnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include commonhosts,yum::client,vmware::guest
+}
+
+node 'ejpreport.nature.com' inherits restonejpnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include sun-jdk::binary,tomcat::ejp,apacheserver::ejpreport,sudo,commonhosts,yum::client
+}
+
+node 'staging-cm4.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts
+}
+
+node 'octopus.nature.com' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include dia
+    include mysql::shaunsenv1
+    include mysql::oldconfig
+    class { pubadmin-spss: rails_env => 'production'}
+    class { pubadmin-tes: rails_env => 'production'}
+}
+node 'memphis.nature.com' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    file { "/usr/local/scripts/wpt":
+        ensure => directory,
+        mode   => 4775,
+        owner  => "root",
+        group   => "nature",
+    }
+}
+node 'staging-memphis' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+}
+node /^dev-vm/ inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+}
+
+node 'csg-sandbox' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+ }
+
+node 'newtaco' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include miscapps::imagemagick669
+}
+
+node 'newmordac','staging-china.nature.com','dev-connotea-vm1','dev-webpub-vm1.nature.com','tech1.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+}
+
+node 'handle1' inherits nycnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+}
+
+node 'dory' inherits nycnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    package { "ImageMagick-devel": ensure => absent }
+    package { "ImageMagick": ensure => absent }
+}
+node 'staging-naturerails' inherits nycnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+ }
+
+node 'ny-dmz-util' inherits nycnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  $motdbanner=" /dev/sdb1 can be added to the lvm for /data."
+  include ldapclient
+  include cobbler::server
+}
+
+node 'test-spider' inherits nycnode {
+  $servergroup = "live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+ }
+
+node 'test-publishqueue.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include ldapclient,nychosts
+  include vmware::guest
+}
+
+node 'staging-publishqueue.nature.com' inherits nycnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include ldapclient,nychosts,docbox::imagemagick
+  include vmware::guest
+}
+
+node 'publishqueue.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include commonhosts,restoncommonhosts,docbox::imagemagick
+  include vmware::guest
+}
+
+node 'staging-octopus.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include ldapclient,yum::client
+    include freetds::odbcconfig, freetds::freetdsconfig
+    include mysql::shaunsenv2
+    include mysql::oldconfigstagingoctopus
+    class { pubadmin-spss: rails_env => 'staging'}
+    class { pubadmin-tes: rails_env => 'staging'}
+}
+
+node 'test-octopus' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client
+    include mysql::shaunsenv2
+    include mysql::oldconfig
+    class { pubadmin-spss: rails_env => 'demo'}
+    class { pubadmin-tes: rails_env => 'demo' }
+}
+
+node 'test-docbox.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include ldapclient,nychosts,docbox
+}
+
+node 'staging-docbox.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nychosts,docbox
+}
+
+node 'docbox.nature.com' inherits nycnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,restoncommonhosts,docbox
+}
+
+node 'IT-test-mysql-001.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nychosts
+}
+
+node 'IT-test-mysql-002.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nychosts
+}
+
+node 'test-VM-idea.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nychosts,ntp::client,sudo,yum::client
+}
+
+node 'services-sandbox.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,sudo,apacheserver,yum::client,commonhosts,nychosts
+}
+
+node 'test-services.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+    include ldapclient,sudo,apacheserver::services,sun-jdk::binary,jetty::services,yum::client,commonhosts,nychosts
+    include runit
+}
+
+node 'staging-services.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,sudo,apacheserver::services,sun-jdk,jetty::services,natureapps::jetty-services,yum::client,commonhosts,nychosts
+}
+node 'staging-services2.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,sudo,apacheserver::services,sun-jdk,jetty::services,natureapps::jetty-services,yum::client,commonhosts,nychosts
+}
+
+node 'services.nature.com', 'npg-services2.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include sudo,apacheserver::services,sun-jdk,jetty::services,natureapps::jetty-services,yum::client,restoncommonhosts
+    include vmware::guest
+}
+
+node 'babylon.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include sudo,snmp,rhel-basepkgs,systemvars,npgscripts
+    include commonhosts,restoncommonhosts,restonnonbigiphosts,yum::client
+#  include vmware::guest
+}
+
+node 'cumulus.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nychosts
+}
+
+node 'wpweb1.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include changetheequation,restoncommonhosts,commonhosts,yum::client
+}
+
+node 'platformdevfs.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,nfs::server,nychosts
+}
+
+node 'ss-servicemix-sandbox.nature.com' inherits restonnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,sudo,apacheserver,yum::client,commonhosts,nychosts,sun-jdk
+}
+
+node 'db-sandbox-linux1.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,nychosts
+}
+
+node 'db-sandbox-linux2.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,nychosts,vmware::guest
+}
+
+node 'dev-blogs-sa.nature.com' inherits restonnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,sudo,apacheserver,yum::client,commonhosts,nychosts
+    class {'php::configuration':
+      max_execution_time  => '180',
+      max_input_time      => '180',
+      upload_max_filesize => '50M',
+      post_max_size       => '40M',
+    }
+# include varnish::sciamblogs
+}
+
+node 'fed-sandbox.nature.com' inherits restonnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,apacheserver,yum::client,commonhosts,nychosts
+}
+
+node 'test-wp.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include ldapclient,sudo,yum::client,commonhosts,nychosts
+  include staffblogs
+  include staffblogs::poller
+  include changetheequation
+  include bonekey
+  include marketplace
+  include encode
+  include spoton
+  include labanimal
+  include microsites
+
+  file { '/mnt/fs':
+    ensure => directory,
+  }
+
+  mount { '/mnt/fs':
+    ensure  => mounted,
+    device  =>'test-fs:/usr/fs',
+    atboot  => true,
+    fstype  => nfs,
+    options => "rw,_netdev,noatime,tcp,soft,intr,acl,nodiratime",
+    require => File['/mnt/fs'],
+  }
+}
+
+node 'staging-wp.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include ldapclient,sudo,yum::client,commonhosts,nychosts
+  include staffblogs
+  include staffblogs::poller
+  include changetheequation
+  include bonekey
+  include encode
+  include spoton
+  include marketplace
+  include microsites
+
+  file { '/mnt/fs':
+    ensure => directory,
+  }
+
+  mount { '/mnt/fs':
+    ensure  => mounted,
+    device  => 'staging-fs:/usr/fs/web_d',
+    atboot  => true,
+    fstype  => nfs,
+    options => 'rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl',
+    require => File['/mnt/fs'],
+  }
+}
+
+node 'npggraphite.nature.com' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include commonhosts,restoncommonhosts,restonnonbigiphosts,yum::client
+  include sudo
+  include runit, logstash, rabbitmq
+}
+
+node 'npgwp1.nature.com','npgwp2.nature.com' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include sudo,yum::client,restoncommonhosts,commonhosts,restonbigiphosts
+  include staffblogs
+  include staffblogs::poller
+  include bonekey
+  include vmware::guest
+  include encode
+  include spoton
+  include marketplace
+  include microsites
+
+  file { '/mnt/fs': ensure => directory; }
+  mount{
+    "/mnt/fs":
+      device  =>'192.168.10.22:/usr/fs',
+      atboot  => true,
+      ensure  => mounted,
+      require => File['/mnt/fs'],
+      fstype  => nfs,
+      options => "rw,_netdev,noatime,tcp,soft,intr,acl,nodiratime";
+  }
+}
+
+
+node 'prod-blogs-sa','prod-blogs-sa.nature.com','prod-blogs-sa2','prod-blogs-sa2.nature.com','prod-blogs-sa3','prod-blogs-sa3.nature.com' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include commonhosts,restoncommonhosts,yum::client,sudo
+  include varnish::sciamblogs,apacheserver::sciamblogs
+  include vmware::guest
+  class {'php::configuration':
+    max_execution_time  => '180',
+    max_input_time      => '180',
+    upload_max_filesize => '50M',
+    post_max_size       => '40M',
+  }
+}
+
+node 'prod-blogs-sa-db','prod-blogs-sa-db.nature.com' inherits restonnode {
+        $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+        include commonhosts,restoncommonhosts,yum::client,sudo
+	include mysql::shaunsenv1
+	include mysql::config-prodblogssadb,mysql::backup-prodblogssadb,mysql::baselogrotate
+}
+
+node 'it-ldap2.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,restoncommonhosts,yum::client,sun-jdk::binary,ldapserver::npg
+  include vmware::guest
+}
+
+node 'test-ldap.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,nychosts,yum::client
+}
+
+node 'staging-ldap.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,nychosts,yum::client,sun-jdk::binary,ldapserver::npg
+  include vmware::guest
+}
+
+node 'npgldap1.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,restoncommonhosts,yum::client,sun-jdk::binary,ldapserver::npg
+  include vmware::guest
+}
+
+node 'naturesandbox-fs.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,sudo,yum::client,commonhosts,nychosts
+    include nfs::server,npgscripts::wpt
+    package { "ImageMagick-devel": ensure => absent }
+    package { "ImageMagick": ensure => absent }
+
+}
+
+node 'test-integral.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+    include ldapclient,sudo,apacheserver::integral,yum::client,commonhosts,nychosts
+    include sun-jdk::binary
+    include natureapps::jetty-integral
+    file { "/mnt/fs":
+      ensure=>directory,
+    }
+    class{"servicemix::service": version => "4.4.2"}
+    servicemix::karaf-feature-applications {
+      moria: config => "moria.properties";
+      rris: config => "rris.properties";
+      cis: config => "csuploader.cfg";
+      jpis: config =>"jats_processor.properties";
+      jtis: config => ["jats_transformer.properties", "transform-journal-mapping.xml"];
+      rmeta: ;
+    }
+    mount {
+      "/mnt/fs":
+        device=>'test-fs:/usr/fs',
+        atboot  => true,
+        ensure  => mounted,
+        fstype  => nfs,
+        options => "rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl",
+        require => File["/mnt/fs"];
+    "/mnt/fs/Web/addon":
+        device  => 'test-fs:/usr/fs/Web/addon',
+        atboot  => true,
+        ensure  => mounted,
+        require => File['/mnt/fs'],
+        fstype  => nfs,
+        options => 'rw,_netdev,noatime,tcp,soft,intr,rsize=8192,wsize=8192,acl',
+    }
+  }
+node 'staging-integral.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+    include ldapclient,sudo,apacheserver::integral,yum::client,commonhosts,nychosts
+    include sun-jdk::binary
+    include natureapps::jetty-integral
+    file { "/mnt/fs":
+      ensure=>directory,
+    }
+    mount {
+      "/mnt/fs":
+        device=>'192.168.88.243:/usr/fs/web_d',
+        atboot  => true,
+        ensure  => mounted,
+        fstype  => nfs,
+        options => "rw,_netdev,noatime,tcp,soft,intr,acl",
+        require => File["/mnt/fs"];
+    }
+    class{"servicemix::service": version => "4.4.2"}
+    servicemix::karaf-feature-applications {
+      moria: config => "moria.properties";
+      rris: config => "rris.properties";
+      cis: config => "csuploader.cfg";
+      jpis: config =>"jats_processor.properties";
+      jtis: config => ["jats_transformer.properties", "transform-journal-mapping.xml"];
+      rmeta: ;
+    }
+  }
+node 'npg-integral.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $jettyversion="6.1.26"
+    $jettylib="20110307"
+    $libcheck="c3p0-0.9.1.2.jar"
+    include ldapclient,sudo,apacheserver::integral,yum::client,commonhosts
+    include sun-jdk::binary
+    include natureapps::jetty-integral
+
+    file { "/mnt/fs":
+      ensure=>directory,
+    }
+    mount {
+      "/mnt/fs":
+        device=>'192.168.10.19:/usr/fs',
+        atboot  => true,
+        ensure  => mounted,
+        fstype  => nfs,
+        options => "rw,_netdev,noatime,tcp,soft,intr,acl",
+        require => File["/mnt/fs"];
+    }
+    class{"servicemix::service": version => "4.4.2"}
+    servicemix::karaf-feature-applications {
+      moria: config => "moria.properties";
+      rris: config => "rris.properties";
+      cis: config => "csuploader.cfg";
+      jpis: config =>"jats_processor.properties";
+      jtis: config => ["jats_transformer.properties", "transform-journal-mapping.xml"];
+      rmeta: ;
+    }
+  }
+
+
+
+node 'relay-dev1.nature.com','relay-prod1.nature.com','relay-demo1.nature.com','relay-ingest1.nature.com' inherits restonnode {
+
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    $role="relay"
+    npgfacts::npgfact { "role": val => $role }
+    include yum::client,ntp::client,sudo,vmware::guest
+
+    host { "relay-demo1":   ensure => present, ip => "192.168.12.70" }
+    host { "relay-dev1":    ensure => present, ip => "192.168.12.71" }
+    host { "relay-ingest1": ensure => present, ip => "192.168.12.72" }
+    host { "relay-prod1":   ensure => present, ip => "192.168.12.73" }
+}
+
+node 'it-mysql-replication1' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include commonhosts,sudo,restoncommonhosts,yum::client
+  include mysql::shaunsenv1
+  include mysql::testconfig
+  include mysql::logrotateslave1
+  include vmware::guest
+}
+
+node 'it-mysql-replication2' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include commonhosts,sudo,restoncommonhosts,yum::client
+  include mysql::shaunsenv1
+  include mysql::logrotateslave1
+  include vmware::guest
+}
+
+node 'vz-sandbox.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include yum::client,commonhosts,nychosts,apacheserver, nature::shared_fs
+}
+
+node 'tag-sandbox' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include ldapclient
+}
+
+node 'temis.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  include runit, logstash, luxid
+}
+
+node 'it-bdc.nature.com' inherits nycnode {
+  $servergroup = "live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+}
+
+node /^test-rhel/ inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include vmware::guest
+}
+
+
+node 'test-nature-mysql','test-nature-mysql.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include commonhosts,nychosts,yum::client,ldapclient
+  include mysql::shaunsenv1a,mysql::multi,mysql::multi1,mysql::multi2
+  include mysql::backup-test-and-staging-nature1,mysql::logrotatemulti1a,mysql::logrotatemulti1b
+  include mysql::backup-test-and-staging-nature2
+}
+
+node 'staging-logs.nature.com' inherits nycnode {
+  $servergroup='staging'
+  npgfacts::npgfact { 'servergroup': val => $servergroup }
+  include ldapclient,vmware::guest
+
+  # Default Providers
+  include system_ruby, augeas, runit
+
+  # System software
+  include rbenv, nginx, sun-jdk::binary
+
+  rbenv::ruby { '1.9.2-p320': }
+
+  nginx::vhost { 'staging-logs.nature.com':
+    www_root     => '/home/greylog/apps/web/current/public',
+    app_servers  => ['127.0.0.1:5000'],
+    server_names => ['staging-logs.nature.com', 'staging-logs.npgsrv.com'];
+  }
+
+  # Logging appliations
+  include greylog
+
+  include logstash::uninstall
+}
+
+node 'test-faye.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include ldapclient, nychosts, vmware::guest
+  include system_ruby, augeas, runit
+
+  include rbenv
+  rbenv::ruby { '1.9.3-p194': }
+
+  include faye
+}
+
+node 'staging-faye.nature.com' inherits nycnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include ldapclient, nychosts, vmware::guest
+  include system_ruby, augeas, runit
+
+  include rbenv
+  rbenv::ruby { '1.9.3-p194': }
+
+  include faye
+}
+
+
+node 'qa-loadmaster.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include ldapclient,sudo,apacheserver::services,yum::client,commonhosts,nychosts
+}
+
+node 'qa-loadclient01.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include commonhosts
+  include nychosts
+  include ldapclient
+  include sudo
+  include yum::client
+  include commonhosts
+  include nychosts
+  include vmware::guest
+}
+
+node 'test-puppetci.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include ldapclient,sudo
+  include sun-jdk::binary
+
+  include jenkins::remove
+
+  include rbenv
+  rbenv::ruby { '1.9.3-p194': }
+
+  include system_ruby, augeas, runit
+  include graphite_statsd
+}
+
+node 'whoblog.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include ldapclient,sudo
+  include vmware::guest
+  include nychosts
+  include mysql::shaunsenv1
+}
+node 'qa-loadclient02.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include commonhosts
+  include nychosts
+  include ldapclient
+  include sudo
+  include yum::client
+  include commonhosts
+  include nychosts
+  include vmware::guest
+}
+
+node 'webistrano.nature.com' inherits nycnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  ###
+  # Standard IT dependencies
+  include ldapclient,vmware::guest
+
+  ###
+  # DB Configuration
+  # Note: Unsecure, _must_ _install_ _Hiera_
+  include mysql_configs::webistrano
+
+  ###
+  # Custom Providers
+  # Note: Because of provider interdependencies this is will take multiple runs to apply.
+  include system_ruby, augeas, runit
+
+  ###
+  # Application dependencies
+  include webistrano, rbenv
+  rbenv::ruby { 'ree-1.8.7-2012.02': }
+
+  include sun-jdk::binary # needed for jammit asset compilation
+
+  # Webservers
+  class { 'apacheserver': ensure => 'absent' }
+
+  include nginx
+  nginx::vhost {
+    'deploy.npgsrv.com':
+      www_root    => '/home/webistrano/apps/webistrano/current/public',
+      app_servers => ['127.0.0.1:5000'];
+  }
+}
+
+node 'rptmysql.nature.com' inherits restonnode {
+    $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include yum::client,commonhosts,restonnonbigiphosts,restoncommonhosts
+    include vmware::guest,sudo
+    include mysql::shaunsenv1b,mysql::multi,mysql::multi1,mysql::multi2,mysql::multi3,mysql::backup-rptmysql1,mysql::backup-rptmysql2,mysql::backup-rptmysql3
+    include mysql::logrotatemulti2a,mysql::logrotatemulti2b,mysql::logrotatemulti2c
+}
+
+node 'rptmysql2.naure.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include commonhosts
+  include nychosts
+  include ldapclient
+  include sudo
+  include yum::client
+  include commonhosts
+  include nychosts
+  include vmware::guest
+}
+
+node 'dev-sandbox-labanimal.nature.com' inherits nycnode {
+    $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,apacheserver
+    include vmware::guest
+}
+
+node 'greylog.nature.com' inherits restonnode {
+  $servergroup='live'
+  npgfacts::npgfact { 'servergroup': val => $servergroup }
+
+  include ldapclient,vmware::guest
+  include commonhosts,restoncommonhosts
+
+  # Default Providers
+  include system_ruby, augeas, runit
+
+  # Systems software
+  include rbenv, sun-jdk::binary, nginx
+
+  rbenv::ruby { '1.9.2-p320': }
+
+  nginx::vhost { 'logs.npgsrv.com':
+    www_root    => '/home/greylog/apps/web/current/public',
+    app_servers => ['127.0.0.1:5000'];
+  }
+
+  # Logging appliations
+  include greylog
+}
+
+node 'it-open-audit-1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include commonhosts,nychosts
+    include vmware::guest
+}
+
+# Cufft
+node 'gamma-live-node' inherits restonnode {
+  $servergroup="live"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include yum::client,commonhosts,restoncommonhosts,restonnonbigiphosts
+}
+
+# Gamma app server
+node 'npg-gamma1.nature.com' inherits 'gamma-live-node' {
+  # Deployable base providers
+  include system_ruby, augeas, runit
+  rbenv::ruby { '1.9.3-p194': }
+
+  # Web server
+  include nginx
+
+  # Application
+  include sun-jdk::binary
+  include gamma
+}
+
+# Gamma mongo instance
+node 'npg-gamma2.nature.com' inherits 'gamma-live-node' {
+  include gamma::mongo
+}
+
+# Live rabbit instance, not gamma specific (despite the name)
+node 'npg-gamma3.nature.com' inherits 'gamma-live-node' {
+  include rabbitmq
+}
+
+# Cufft
+node 'gamma-staging-node' inherits nycnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+  include vmware::guest, ldapclient
+}
+
+# Gamma app server
+node 'staging-gamma1.nature.com' inherits 'gamma-staging-node' {
+  # Deployable base providers
+  include system_ruby, augeas, runit
+  rbenv::ruby { '1.9.3-p194': }
+
+  # Web server
+  include nginx
+
+  # Application
+  include sun-jdk::binary
+  include gamma
+}
+
+# Gamma mongo instance
+node 'staging-gamma2.nature.com' inherits 'gamma-staging-node' {
+  include gamma::mongo
+}
+
+# Staging rabbit instance, not gamma specific (despite the name)
+node 'staging-gamma3.nature.com' inherits 'gamma-staging-node' {
+  include rabbitmq
+}
+
+node 'test-solr.nature.com' inherits nycnode {
+  $servergroup="test"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  # IT standard includes
+  include ldapclient,yum::client,commonhosts,nychosts,vmware::guest
+  class { apacheserver: ensure => 'absent' }
+
+  # Solr node classes
+  include system_ruby, augeas, runit, sun-jdk::binary, nature::shared_fs, solr
+
+  # Application solr instances
+  class { 'naturejobs::solr': environment => 'qa' }
+}
+
+node 'staging-solr.nature.com' inherits nycnode {
+  $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+  # IT standard includes
+  include ldapclient,yum::client,commonhosts,nychosts,vmware::guest
+  class { apacheserver: ensure => 'absent' }
+
+  # Solr node classes
+  include system_ruby, augeas, runit, sun-jdk::binary, nature::shared_fs, solr
+
+  # Application solr instances
+  class { 'naturejobs::solr': environment => 'qa' }
+}
+
+node 'staging-labanimal1.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,apacheserver
+    include vmware::guest
+}
+
+node 'staging-labanimal2.nature.com' inherits nycnode {
+    $servergroup="staging"
+  npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include ldapclient,yum::client,commonhosts,nychosts,apacheserver
+    include vmware::guest
+}
+
+node 'staging-xbuilder.nature.com' inherits restonnode {
+    $servergroup="live"
+    npgfacts::npgfact { "servergroup": val => $servergroup }
+
+    include kerneltuning,miscapps::imagemagick669,sun-jdk::binary
+
+    file {
+          "/usr/local/jetty/temp":
+              ensure=>  directory,
+              owner =>  xbuilder,
+              group =>  xbuilder
+          }
+}
+
+

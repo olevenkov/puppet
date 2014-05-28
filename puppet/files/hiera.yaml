@@ -1,0 +1,8 @@
+---
+:backends: - yaml
+:logger: console
+:hierarchy: - %{environment}-secure
+            - %{environment}
+            - common
+:yaml:
+  :datadir: /etc/puppet/hieradata

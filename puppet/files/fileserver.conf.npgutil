@@ -1,0 +1,3 @@
+[confidential]
+	path /opt/repos/confidential
+	allow *

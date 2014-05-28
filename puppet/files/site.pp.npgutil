@@ -1,0 +1,32 @@
+# site.pp
+
+import "nodes"
+import "modules"
+
+
+#Allow file backups on server
+filebucket { main: server=>"puppet" }
+
+#Global defaults include backups
+File { backup=> main }
+Exec { path => "/usr/bin:/usr/sbin/:/bin:/sbin:/usr/local/bin:/usr/local/sbin" }
+
+#Need to mix up2date and Yum with this hack,
+#see http://reductivelabs.com/trac/puppet/wiki/LanguageTutorial#conditionals
+if $operatingsystem == "RedHat" {
+    Package {
+        provider => $operatingsystemrelease ? {
+        "4" => up2date,
+        default => yum
+        }
+    }
+} else {
+    Package {
+        provider => $operatingsystem ? {
+            debian => aptitude,
+            centos => yum,
+            ubuntu => aptitude
+        }
+    }
+}
+
