@@ -1,0 +1,110 @@
+###############
+## WARNING:
+## This file is managed by puppet.  Local changes will be lost.  Modify it on github
+###############
+
+NameVirtualHost *
+
+<VirtualHost *>
+        ServerName      www.nature.com
+        ServerAlias     secure.nature.com
+        ServerAlias     natureeducation.nature.com
+
+        DocumentRoot    /var/www/natureeducation/htdocs
+
+        LogFormat       "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\"" varnishcombined
+        CustomLog       /var/www/natureeducation/logs/access_log varnishcombined
+        LogFormat       "%{X-Forwarded-For}i %{X-Forwarded-Host}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+
+        Header add nodename "<%= hostname %>"
+
+        AddType application/vnd.adobe.air-application-installerpackage+ zip .air .dmg
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+
+        ###################TCS adds them for performance improvemnt######################
+        #STEPS FOR DEPLOYING EXPIRES HEADER
+        #LoadModule expires_module modules/mod_expires.so
+        ExpiresActive On
+        ExpiresByType image/gif "access plus 2 years"
+        ExpiresByType image/jpg "access plus 2 years"
+        ExpiresByType image/jpeg "access plus 2 years"
+        ExpiresByType text/x-js "access plus 2 years"
+
+        <Directory "/usr/local/tomcat/webapps/scitable/nated/natedjs/jscripts/tiny_mce" >
+         ExpiresActive On
+         ExpiresByType image/gif "access plus 1 seconds"
+         ExpiresByType image/jpg "access plus 1 seconds"
+         ExpiresByType image/jpeg "access plus 1 seconds"
+         ExpiresByType application/x-javascript "access plus 1 seconds"
+         ExpiresByType text/x-js "access plus 1 seconds"
+         ExpiresByType application/javascript "access plus 1 seconds"
+         ExpiresByType text/javascript "access plus 1 seconds"
+         ExpiresByType text/css "access plus 1 seconds"
+        </Directory>
+
+        # Added for NLS
+        <Directory "/usr/local/tomcat-nls6/webapps/principles/nated/natedjs/jscripts/tiny_mce" >
+         ExpiresActive On
+         ExpiresByType image/gif "access plus 1 seconds"
+         ExpiresByType image/jpg "access plus 1 seconds"
+         ExpiresByType image/jpeg "access plus 1 seconds"
+         ExpiresByType application/x-javascript "access plus 1 seconds"
+         ExpiresByType text/x-js "access plus 1 seconds"
+         ExpiresByType application/javascript "access plus 1 seconds"
+         ExpiresByType text/javascript "access plus 1 seconds"
+         ExpiresByType text/css "access plus 1 seconds"
+        </Directory>
+
+        ExpiresByType application/x-javascript "access plus 2 years"
+        ExpiresByType text/css "access plus 2 years"
+        ExpiresByType text/javascript "access plus 2 years"
+        ExpiresByType application/javascript "access plus 2 years"
+
+        #STEPS FOR DEPLOYING EXPIRES DEFLATE
+        #LoadModule deflate_module modules/mod_deflate.so
+        SetOutputFilter DEFLATE
+        DeflateFilterNote ratio
+        SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
+        SetEnvIfNoCase Request_URI \.(?:exe|t?gz|zip|bz2|sit|rar)$ no-gzip dont-vary
+        SetEnvIfNoCase Request_URI \.pdf$ no-gzip dont-vary
+
+        #The following lines are needed only if logging of gzip is needed .
+        #DeflateFilterNote Input input_info
+        #DeflateFilterNote Output output_info
+        #DeflateFilterNote Ratio ratio_info
+        #LogFormat '"%r" %{output_info}n/%{input_info}n (%{ratio_info}n%%)' deflate
+        #CustomLog /etc/httpd/logs/deflate_log deflate
+
+
+        RewriteEngine On
+        RewriteRule ^/server-status - [L]
+        RewriteRule ^/server-info - [L]
+
+        Include /etc/httpd/conf.d/natedUrlRewrite_modified.cfg
+        Include /etc/httpd/conf.d/natureeducation_microsite.cfg
+        Include /etc/httpd/conf.d/principles_urlrewrite.cfg
+
+
+        ProxyPass /scitable/nated ajp://localhost:8009/scitable/nated
+        ProxyPassReverse /scitable/nated ajp://localhost:8009/scitable/nated
+
+        ProxyPass /scitable/natedcollab ajp://10.1.1.47:8008/scitable/natedcollab
+        ProxyPassReverse /scitable/natedcollab ajp://10.1.1.47:8008/scitable/natedcollab
+
+        ProxyPass /scitable ajp://localhost:8009/scitable/nated
+        ProxyPassReverse /scitable ajp://localhost:8009/scitable/nated
+
+        ProxyPass /principles/nated ajp://localhost:8010/principles/nated
+        ProxyPassReverse /principles/nated ajp://localhost:8010/principles/nated
+
+        ProxyPass /principles ajp://localhost:8010/principles/nated
+        ProxyPassReverse /principles ajp://localhost:8010/principles/nated
+
+        ProxyPass /npgreporting ajp://localhost:8011/npgreporting
+        ProxyPassReverse /npgreporting ajp://localhost:8011/npgreporting
+</VirtualHost>

@@ -1,0 +1,99 @@
+###############
+## WARNING:
+## This file is managed by puppet.  Local changes will be lost.  Modify it on hg.nature.com and npgutil (puppetmaster)
+###############
+
+
+NameVirtualHost *:81
+
+<VirtualHost *:81>
+        ServerName      staging-www.nature.com
+	ServerAlias	staging-secure.nature.com
+        ServerAlias     natureeducation.staging.nature.com 
+
+	DocumentRoot	/var/www/natureeducation/htdocs
+
+	LogFormat       "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\"" customNPG
+	CustomLog	/var/www/natureeducation/logs/access_log customNPG
+	ErrorLog	/var/www/natureeducation/logs/error_log
+
+  Header add nodename "<%= hostname %>"
+  # Added on 12-SEPT-2011
+  AddType application/vnd.adobe.air-application-installerpackage+ zip .air .dmg
+
+	CookieTracking on
+	CookieName SaneID
+	CookieExpires "1 day"
+	CookieDomain .staging-www.nature.com
+
+
+	###################TCS adds them for performance improvemnt######################
+        ExpiresActive On
+        ExpiresByType image/gif "access plus 2 years"
+        ExpiresByType image/jpg "access plus 2 years"
+        ExpiresByType image/jpeg "access plus 2 years"
+		ExpiresByType text/x-js "access plus 2 years"
+
+        <Directory "/usr/local/tomcat/webapps/scitable/nated/natedjs/jscripts/tiny_mce" >
+			ExpiresActive On
+			ExpiresByType image/gif "access plus 1 seconds"
+			ExpiresByType image/jpg "access plus 1 seconds"
+			ExpiresByType image/jpeg "access plus 1 seconds"
+			ExpiresByType application/x-javascript "access plus 1 seconds"
+			ExpiresByType text/x-js "access plus 1 seconds"
+			ExpiresByType application/javascript "access plus 1 seconds"
+			ExpiresByType text/javascript "access plus 1 seconds"
+			ExpiresByType text/css "access plus 1 seconds"
+        </Directory>
+
+	# Added for NLS
+	<Directory "/usr/local/tomcat-nls6/webapps/principles/nated/natedjs/jscripts/tiny_mce" >
+                        ExpiresActive On
+                        ExpiresByType image/gif "access plus 1 seconds"
+                        ExpiresByType image/jpg "access plus 1 seconds"
+                        ExpiresByType image/jpeg "access plus 1 seconds"
+                        ExpiresByType application/x-javascript "access plus 1 seconds"
+                        ExpiresByType text/x-js "access plus 1 seconds"
+                        ExpiresByType application/javascript "access plus 1 seconds"
+                        ExpiresByType text/javascript "access plus 1 seconds"
+                        ExpiresByType text/css "access plus 1 seconds"
+	</Directory>
+
+        ExpiresByType application/x-javascript "access plus 2 years"
+        ExpiresByType text/css "access plus 2 years"
+        ExpiresByType text/javascript "access plus 2 years"
+        ExpiresByType application/javascript "access plus 2 years"
+
+        SetOutputFilter DEFLATE
+        DeflateFilterNote ratio
+        SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
+        SetEnvIfNoCase Request_URI \.(?:exe|t?gz|zip|bz2|sit|rar)$ no-gzip dont-vary
+        SetEnvIfNoCase Request_URI \.pdf$ no-gzip dont-vary
+
+        RewriteEngine On
+        RewriteRule ^/server-status - [L]
+        RewriteRule ^/server-info - [L]
+
+	Include /etc/httpd/conf.d/natedUrlRewrite_modified.cfg
+	Include /etc/httpd/conf.d/natureeducation_microsite.cfg
+	Include /etc/httpd/conf.d/principles_urlrewrite.cfg
+
+	ProxyPass /scitable/docs ajp://localhost:8011/scitable/docs
+	ProxyPassReverse /scitable/docs ajp://localhost:8011/scitable/docs
+
+	ProxyPass /scitable/nated ajp://localhost:8011/scitable/nated
+	ProxyPassReverse /scitable/nated ajp://localhost:8011/scitable/nated
+
+	ProxyPass /scitable ajp://localhost:8011/scitable/nated
+	ProxyPassReverse /scitable ajp://localhost:8011/scitable/nated
+
+	# Entries for NLS
+	ProxyPass /principles/nated ajp://localhost:8012/principles/nated
+  ProxyPassReverse /principles/nated ajp://localhost:8012/principles/nated
+
+	ProxyPass /principles ajp://localhost:8012/principles/nated
+	ProxyPassReverse /principles ajp://localhost:8012/principles/nated
+
+  ProxyPass /npgreporting ajp://localhost:8010/npgreporting
+  ProxyPassReverse /npgreporting ajp://localhost:8010/npgreporting
+</VirtualHost>

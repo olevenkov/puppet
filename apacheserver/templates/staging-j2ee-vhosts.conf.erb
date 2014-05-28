@@ -1,0 +1,3651 @@
+##
+## Managed by Puppet
+##
+
+
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+	ServerName	staging-www.nature.com
+	ServerAlias	foxtrot.nature.com staging-www-int.nature.com
+	ServerAlias	staging-secure.nature.com
+	DocumentRoot /mnt/fs/web/NPG
+	ErrorDocument 500 /server-error.html
+	ErrorDocument 501 /server-error.html
+	ErrorDocument 502 /server-error.html
+	ErrorDocument 503 /server-error.html
+	AccessFileName .htaccess
+
+	Setenv VLOG /var/www/staging-www.nature.com/logs
+	ErrorLog /var/www/staging-www.nature.com/logs/error_log
+	#LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	TransferLog /var/www/staging-www.nature.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+	AllowEncodedSlashes on
+
+	ScriptAlias /cgi-bin/ /var/www/cgi-bin/
+	AddHandler cgi-script .cgi .pl 
+
+	AddType application/vnd.openxmlformats-officedocument.spreadsheetml.sheet .xlsx
+	AddType text/application/x-research-info-systems        .ris
+	AddType application/text	.ris
+	AddType chemical/x-cdx                                  cdx
+	#AddType application/rdf+xml .rdf
+	AddType text/csv        .csv
+
+	Alias /big_monitor/ /var/www/staging-www.nature.com/htdocs/big_monitor/
+	RewriteRule ^/big_monitor(.*) - [L]
+
+	RewriteEngine on
+    #   RewriteLogLevel 1
+    #   RewriteLog /tmp/rw.log
+    #Block mercury-qa machine if it's crashing and nobody is watching
+#    RewriteCond %{REMOTE_ADDR} ^192\.168\.88\.158$
+#    RewriteRule (.*) - [F,L]
+
+    #IT-11523 - COMMENTING BLOCK
+    #RewriteRule ^/commenting    - [F]
+
+        #Allow akamai races without worrying about slow app servers
+	RewriteRule ^/akamai-sureroute-test-object.htm - [L]
+
+        #Bypass Jetty for publicized relaunch URL
+	RewriteRule ^/rediscover/ - [L]
+        #Bypass Jetty for webfonts
+	RewriteRule ^/webfonts/ - [L]
+
+	# Gateways
+	AddType text/html .shtml
+	AddHandler server-parsed .shtml
+
+	#Block mysterious curl queries from London
+	RewriteCond %{HTTP_USER_AGENT} ^curl
+	RewriteCond %{REMOTE_ADDR} ^195.138.194.1$
+	RewriteCond %{REMOTE_ADDR} ^31.221.45.4$
+	RewriteRule ^/(.*) - [F,L]
+	#RewriteCond %{REQUEST_URI} ^/contentstore_uploader/(.*)
+	#RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.88.222
+	#RewriteCond %{REMOTE_ADDR} ^192.168.88.222
+	#RewriteRule ^/contentstore_uploader/(.*) - [F,L]
+
+	RewriteCond %{REMOTE_ADDR} (.*)
+	RewriteRule .* - [E=R_A:%1]
+	RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+        ########################################POLOPOLY News START#############################
+	### Polopoly start
+	    # for epub we serve thumbnail images from the FS.
+	    #RewriteRule ^/news/([0-9]{4})/(.*).(gif|jpg|png)$ /news/$1/$2.$3 [L]
+  
+	    # map old news site
+	    #RewriteRule ^/news/foxtrot/svc/(.*) http://localhost:7080/foxtrot/svc/$1 [P,L]
+	    #RewriteRule ^/news/webfeeds/$ /news/webfeeds/index.html [L]
+
+	    # old NEWS homepage
+	    #RewriteRule ^/news/$ http://localhost:7080/xb3/news/index.html [P,L]
+	    #RewriteRule ^/news/(.*)/$ http://localhost:7080/xb3/news/$1/index.html [P,L]
+	    #RewriteRule ^/news/index.html http://localhost:7080/xb3/news/index.html [P,L]
+
+	    # map old news archive /news/YYYY/ to XB3
+	    #RewriteRule ^/news/([0-9]{4})/(.*) http://localhost:7080/xb3/news/$1/$2 [P,L]
+	    #RewriteRule ^/news/archive/(.*) http://localhost:7080/xb3/news/archive/$1 [P,L]
+	    #RewriteRule ^/news/opinion/(.*) http://localhost:7080/xb3/news/opinion/$1 [P,L]
+	    #RewriteRule ^/news/images/(.*) /news/images/$1 [L]
+	    #RewriteRule ^/news/scripts/(.*) /news/scripts/$1 [L]
+	    #RewriteRule ^/news/style/(.*) /news/style/$1 [L]
+
+	    # NPHYS stuff
+	    #RewriteRule ^/nphys/index.html http://staging-poly-web1.nature.com/nphys/ [P,L]
+	    #RewriteRule ^/nphys/(.*) http://staging-poly-web1.nature.com/nphys/$1 [P,L]
+
+	    # new NEWS pages
+	    #RewriteRule ^/news/index_new.html http://staging-poly-web1.nature.com/news/ [P,L]
+	    #RewriteRule ^/news/(.*) http://staging-poly-web1.nature.com/news/$1 [P,L]
+	    #RewriteRule ^/polopoly_(.*) http://staging-poly-web1.nature.com/polopoly_$1 [P,L]
+	    ### Polopoly end 
+
+        #RewriteRule ^/news-new/index.html http://staging-poly-web1.nature.com/news-new/ [P,L]
+        #RewriteRule ^/news-new/(.*) http://staging-poly-web1.nature.com/news-new/$1 [P,L]
+        #RewriteRule ^/polopoly_(.*) http://staging-poly-web1.nature.com/polopoly_$1 [P,L]
+
+        ########################################################################################
+         # = BDJ Jobs =
+          RewriteCond /home/bdjjobs/apps/bdjjobs/current/public/%{REQUEST_FILENAME} !-f
+          RewriteRule ^/bdjjobs/(.*) http://localhost:9918/bdjjobs/$1 [P,L]
+          RewriteRule ^/bdjjobs/? http://localhost:9918/bdjjobs [P,L]
+          <Location /bdjjobs>
+           ExpiresActive Off
+          </Location>
+
+
+
+	# Scitable Nature Education (hosts its own images, css, etc.)
+        #RewriteRule ^/natureeducation(.*)       balancer://scitablecluster%{REQUEST_URI} [P,L]
+        #RewriteRule ^/nature_education(.*)      balancer://scitablecluster%{REQUEST_URI} [P,L]
+
+
+  #-------- BoneKEy Community
+  RewriteRule ^/bonekey/community/(.*)$ http://192.168.88.137:8093/bonekey/community/$1 [P,L]
+  RewriteRule ^/bonekey/community$ http://192.168.88.137:8093/bonekey/community [P,L]
+
+  #-------- ENCODE
+  RewriteRule ^/encode/(.*)$ http://192.168.88.137:8093/encode/$1 [P,L]
+  RewriteRule ^/encode$ http://192.168.88.137:8093/encode [P,L]
+
+	#-------- SPOT ON
+  RewriteRule ^/spoton/(.*)$ http://192.168.88.137:8093/spoton/$1 [P,L]
+  RewriteRule ^/spoton$ http://192.168.88.137:8093/spoton [P,L]
+
+	#-------- Marketplace 
+  RewriteRule ^/marketplace/(.*)$ http://192.168.88.137:8093/marketplace/$1 [P,L]
+  RewriteRule ^/marketplace$ http://192.168.88.137:8093/marketplace [P,L]
+
+	RewriteCond %{REQUEST_URI} !^/news/rss/(.*)
+	RewriteCond %{REQUEST_URI} !^/nindia/rss/(.*)
+	RewriteCond %{REQUEST_URI} !^/nmiddleeast/rss/(.*)
+	RewriteCond %{REQUEST_URI} !^/natureevents/(.*).xml
+	RewriteCond %{REQUEST_URI} !^/natureevents/(.*).rss
+	#RewriteCond %{REQUEST_URI} !^/scitable(.*)
+	#RewriteCond %{REQUEST_URI} !^/naturelearningsystem(.*)
+	#RewriteCond %{REQUEST_URI} !^/principles(.*)
+	RewriteCond %{REQUEST_URI} !^/protocolexchange(.*)
+	RewriteCond %{REQUEST_URI} !^/bdje(.*)
+	RewriteCond %{REQUEST_URI} !^/bdjjobs(.*)
+	RewriteCond %{REQUEST_URI} !^/naturejobs/science(.*)
+	RewriteCond %{REQUEST_URI} !^/naturejobs/graduatesurvey(.*)
+  RewriteCond %{REQUEST_URI} !^/access-info-api/(.*)
+
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|wmv|swf|docx|xlsx|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl|svg|icb)$ - [L]
+
+
+	#Dropping post calls from sandboxes
+	RewriteCond %{REMOTE_ADDR} ^192.168.88.200 [OR]
+	RewriteCond %{REMOTE_ADDR} ^192.168.88.19 
+	#RewriteCond %{REMOTE_ADDR} ^195.138.194.1$
+	RewriteRule ^(.*)$ - [F]
+
+	#Scitable	
+	# IT-5138
+	#
+	#<Proxy balancer://scitablecluster>
+        #	BalancerMember http://192.168.88.202
+	#</Proxy> 
+
+	#<Proxy balancer://nlscluster>
+        #  BalancerMember http://192.168.88.199 route=stagingeducation2
+        #  BalancerMember http://192.168.88.202 route=stagingeducation3
+
+          #ProxySet stickysession=JSESSIONID
+  	#</Proxy>
+
+	#RewriteRule ^/scitable/natedcollab(.*) http://192.168.88.197:8081/scitable/natedcollab$1 [P,L]
+	#RewriteRule ^/scitable(.*) balancer://scitablecluster%{REQUEST_URI} [P,L]
+	#RewriteRule ^/scitable(.*) http://192.168.88.202/scitable$1 [P,L]
+	#RewriteRule ^/dimdim(.*) http://192.168.88.202/dimdim$1 [P,L]
+	#RewriteRule ^/scitable(.*) - [F,L]
+	#RewriteRule ^/dimdim(.*) - [F,L]
+
+	#RewriteRule ^/naturelearningsystem(.*) balancer://nlscluster%{REQUEST_URI} [P,L]
+	#RewriteRule ^/principles(.*) balancer://nlscluster%{REQUEST_URI} [P,L]
+        
+	#Force staging-www hostname if we got here some other way
+	#RewriteCond %{HTTP_HOST} !^staging-www\.nature\.com
+	RewriteCond %{HTTP_HOST} ^foxtrot\.nature\.com
+	RewriteRule (.*) http://staging-www.nature.com$1 [R=301,L]
+
+	Include conf/redirects.conf
+
+	#IT-8956
+	RewriteRule ^/press-site/internal/(.*) /press-site/ [R,L]
+
+        #IT-7804
+	RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7080/nams/svc/shibbolethin [P,L] 
+	RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7080/nams/svc/shibbolethin [P,L] 
+
+	 # = BDJ Jobs =
+         # RewriteCond /home/bdjjobs/apps/bdjjobs/current/public/%{REQUEST_FILENAME} !-f
+         # RewriteRule ^/bdjjobs/(.*) http://localhost:9918/bdjjobs/$1 [P,L]
+         # RewriteRule ^/bdjjobs/? http://localhost:9918/bdjjobs [P,L]
+         # <Location /bdjjobs>
+         #  ExpiresActive Off
+         # </Location> 
+	#RewriteRule ^/bdjjobs$ /bdjjobs/index.html [R,N]
+	#RewriteRule ^/bdjjobs/(.*) http://bdj-beta.nature.com/bdjjobs/$1 [P,L]
+
+	RewriteRule ^/server-error(.*) - [L]
+	RewriteRule ^/rest/docs/(.*) - [L]
+	RewriteRule ^/survey/(.*) - [L]
+	RewriteRule ^/server-status     - [L]
+	RewriteRule ^/perfmon     - [L]
+
+	# Preserve hostname when proxying to tomcat
+	ProxyPreserveHost on
+
+
+    ########################################POLOPOLY NATURE PHYSICS RELAUNCH START#############################
+    #How to submit - page
+    RewriteRule ^/nphys-new/authors/submit/index.html   http://staging-poly-web1.nature.com/nphys/guide-to-authors/how-to-submit  [P,L]
+    RewriteRule ^/nphys-new/authors/submit/ http://staging-poly-web1.nature.com/nphys/guide-to-authors/how-to-submit  [P,L]
+    RewriteRule ^/nphys-new/authors/submit http://staging-poly-web1.nature.com/nphys/guide-to-authors/how-to-submit  [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/how-to-submit/ http://staging-poly-web1.nature.com/nphys/guide-to-authors/how-to-submit [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/how-to-submit http://staging-poly-web1.nature.com/nphys/guide-to-authors/how-to-submit [P,L]
+  
+    #Content types - page
+    RewriteRule ^/nphys-new/authors/article_types/index.html http://staging-poly-web1.nature.com/nphys/guide-to-authors/content-types  [P,L]
+    RewriteRule ^/nphys-new/authors/article_types http://staging-poly-web1.nature.com/nphys/guide-to-authors/content-types  [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/content-types/ http://staging-poly-web1.nature.com/nphys/guide-to-authors/content-types  [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/content-types http://staging-poly-web1.nature.com/nphys/guide-to-authors/content-types  [P,L]
+  
+  
+  
+  
+    #editorial process - page
+    RewriteRule ^/nphys-new/authors/ed_process/index.html http://staging-poly-web1.nature.com/nphys/guide-to-authors/editorial-process  [P,L]
+    RewriteRule ^/nphys-new/authors/ed_process http://staging-poly-web1.nature.com/nphys/guide-to-authors/editorial-process  [P,L]
+    RewriteRule ^/nphys-new/authors/ed_process/ http://staging-poly-web1.nature.com/nphys/guide-to-authors/editorial-process  [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/editorial-process/ http://staging-poly-web1.nature.com/nphys/guide-to-authors/editorial-process  [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/editorial-process http://staging-poly-web1.nature.com/nphys/guide-to-authors/editorial-process  [P,L]
+    
+    RewriteRule ^/nphys-new/about/about_eds/index.html http://staging-poly-web1.nature.com/nphys/guide-to-authors/about-the-editors  [P,L]
+    RewriteRule ^/nphys-new/about/about_eds http://staging-poly-web1.nature.com/nphys/guide-to-authors/about-the-editors  [P,L]
+    RewriteRule ^/nphys-new/about/about_eds/ http://staging-poly-web1.nature.com/nphys/guide-to-authors/about-the-editors  [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/about-the-editors/ http://staging-poly-web1.nature.com/nphys/guide-to-authors/about-the-editors  [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/about-the-editors http://staging-poly-web1.nature.com/nphys/guide-to-authors/about-the-editors  [P,L]
+  
+  
+    RewriteRule ^/nphys-new/contact/index.html http://staging-poly-web1.nature.com/nphys/contact-the-journal  [P,L]
+    RewriteRule ^/nphys-new/contact http://staging-poly-web1.nature.com/nphys/contact-the-journal  [P,L]
+    RewriteRule ^/nphys-new/contact/ http://staging-poly-web1.nature.com/nphys/contact-the-journal  [P,L]
+    RewriteRule ^/nphys-new/contact-the-journal/ http://staging-poly-web1.nature.com/nphys/contact-the-journal  [P,L]
+    RewriteRule ^/nphys-new/contact-the-journal http://staging-poly-web1.nature.com/nphys/contact-the-journal  [P,L]
+  
+    RewriteRule ^/nphys-new/site/index.html http://staging-poly-web1.nature.com/nphys/about-this-site  [P,L]
+    RewriteRule ^/nphys-new/site/ http://staging-poly-web1.nature.com/nphys/about-this-site  [P,L]
+    RewriteRule ^/nphys-new/site http://staging-poly-web1.nature.com/nphys/about-this-site  [P,L]
+    RewriteRule ^/nphys-new/about-this-site/ http://staging-poly-web1.nature.com/nphys/about-this-site  [P,L]
+    RewriteRule ^/nphys-new/about-this-site http://staging-poly-web1.nature.com/nphys/about-this-site  [P,L]
+  
+    #Guide to authors - page
+    RewriteRule ^/nphys-new/authors/index.html http://staging-poly-web1.nature.com/nphys/guide-to-authors   [P,L]
+    RewriteRule ^/nphys-new/authors/ http://staging-poly-web1.nature.com/nphys/guide-to-authors   [P,L]
+    RewriteRule ^/nphys-new/authors http://staging-poly-web1.nature.com/nphys/guide-to-authors   [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors/ http://staging-poly-web1.nature.com/nphys/guide-to-authors   [P,L]
+    RewriteRule ^/nphys-new/guide-to-authors http://staging-poly-web1.nature.com/nphys/guide-to-authors   [P,L]
+  
+    RewriteRule ^/nphys-new/index.html http://staging-poly-web1.nature.com/nphys/  [P,L]
+    RewriteRule ^/nphys-new/ http://staging-poly-web1.nature.com/nphys/  [P,L]
+    ########################################POLOPOLY NATURE PHYSICS RELAUNCH ENDS#############################
+
+
+	# Draper facade for Open Innovation Challenges. 
+        RewriteRule ^/draper/(.+)$ http://localhost:7380/draper/$1 [P,L] 
+
+	# Naturejobs
+  RewriteRule ^/naturejobs(/|/index.html|/science|/science/welcome/?)?$ /naturejobs/science/ [R=301,L]
+	RewriteRule ^/naturejobs/science/system/(.*) /mnt/fs/Web/NPG/naturejobs/shared/system/$1 [L]
+	RewriteRule ^/naturejobs/science/(.*) http://localhost:8080/naturejobs/science/$1 [P,L]
+	RewriteRule ^/naturejobs/graduatesurvey(.*) http://localhost:9918/naturejobs/graduatesurvey$1 [P,L]
+	RewriteRule ^/naturejobs/graduatesurvey/(.*) http://localhost:9918/naturejobs/graduatesurvey/$1 [P,L]
+
+	# Protocol Exchange
+	#RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+	#RewriteRule ^/protocolexchange/(.*) http://localhost:7380/protocolexchange/$1 [P,L]
+    RewriteRule ^/protocolexchange/?$ http://localhost:7380/protocolexchange/index.html [P,L]
+    RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+    RewriteRule ^/protocolexchange/(.+)$ http://localhost:7380/protocolexchange/$1 [P,L]
+
+	# BDJE
+	#RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+	#RewriteRule ^/bdje/(.*) http://localhost:7380/bdje/$1 [P,L]
+	#RewriteRule ^/bdje/? http://localhost:7380/bdje [P,L]
+        RewriteRule ^/bdje/(.*) /bdjeducation/$1 [R,L]
+        RewriteRule ^/bdje/?$ /bdjeducation [R,L]
+        
+ 
+        RewriteCond /home/bdje/apps/bdje/current/public/%{REQUEST_FILENAME} !-f
+        
+        RewriteRule ^/bdjeducation/(.*) http://localhost:9918/bdjeducation/$1 [P,L]
+        RewriteRule ^/bdjeducation/? http://localhost:9918/bdjeducation [P,L]
+        <Location /bdjeducation>
+          ExpiresActive Off
+        </Location>
+
+
+	# Naturejobs Salary Survey - DEPLOY-329
+	RewriteRule ^/naturejobs/salary/survey/search/(.*) http://localhost:7380/naturejobs/salary/survey/search/$1 [P,L]
+	RewriteRule ^/naturejobs/salary/survey/search/? http://localhost:7380/naturejobs/salary/survey/search [P,L]
+
+
+	RewriteRule ^/search/(.*).html http://localhost:7080/search/$1.html [P,L]
+
+	RewriteRule ^/search/versioninfo(.*) http://localhost:7080/mlsearch-web/versioninfo$1 [P,L]
+	RewriteRule ^/search/adv_search(.*) http://localhost:7080/mlsearch-web/search/executeSearch$1 [P,L]
+	RewriteRule ^/search/laban/adv_search(.*) http://localhost:7080/mlsearch-web/laban/search/executeSearch$1 [P,L]
+	RewriteRule ^/sciam/search/adv_search(.*) http://localhost:7080/mlsearch-web/sciam/search/executeSearch$1 [P,L]
+	RewriteRule ^/sciam/search(.*) http://localhost:7080/mlsearch-web/sciam/search$1 [P,L]
+	RewriteRule ^/laban/search(.*) http://localhost:7080/mlsearch-web/laban/search$1 [P,L]
+	RewriteRule ^/search(.*) http://localhost:7080/mlsearch-web/search$1 [P,L]
+
+
+	#ISN Network
+	#RewriteRule ^/isn/network$ /isn/network/ [R,N]
+        #RewriteRule ^/isn/network/(.*) http://beta-isn-network.nature.com:6100/isn/network/$1 [P,L]
+        #RewriteRule ^/isn2/network/(.*) http://beta-isn-network.nature.com/isn/network/$1 [P,L]
+	RewriteRule ^/isn/network/(.*) http://staging-isn-network.nature.com:6100/isn/network/$1 [P,L]
+	    #RewriteRule ^/isn/kieditions http://staging-www.nature.com:6100/isn/network/$1 [P,L]
+    #RewriteRule ^/isn2/network/(.*) http://staging-isn-network.nature.com/isn/network/$1 [P,L]
+    #RewriteRule ^/isn/search(.*) http://staging-www.isn-online.org/isn/search$1 [R,L]
+    #RewriteRule ^/isn/news/(.*) http://staging-www.isn-online.org/isn/news/$1 [R,L]
+    #RewriteRule ^/isn/(.*) http://staging-www.isn-online.org/isn/$1 [R,L]
+        #RewriteRule ^/isn(.*) http://staging-www.isn-online.org/$1 [R,L]
+
+
+	#Gateways
+    RewriteRule ^/(aba|fg|cmg|cmg_update|pid)   -   [L]
+
+	#rest - old service
+	RewriteRule ^/rest/verify/(.*)$ http://localhost:7080/api/verify/$1 [P,N] 
+    RewriteRule ^/rest/docs/(.*)$ http://localhost:7080/api/docs/$1 [P,N]
+    RewriteRule ^/rest/doi/(.*)$ http://localhost:7080/api/doi/$1 [P,N]
+    RewriteRule ^/rest/user/(.*)$ http://localhost:7080/api/user/$1 [P,N]
+    RewriteRule ^/rest/users(.*)$ http://localhost:7080/api/users$1 [P,N]
+    RewriteRule ^/rest/users/(.*)$ http://localhost:7080/api/users/$1 [P,N]
+    RewriteRule ^/rest/articling/(.*)$ http://localhost:7080/api/articling/$1 [P,N]
+    RewriteRule ^/rest/article/doi/(.*)$ http://localhost:7080/api/article/doi/$1 [P,N]
+    RewriteRule ^/rest/purchase/(.*)$ http://localhost:7080/api/purchase/$1 [P,N]
+   
+    #rest dispatcher
+    RewriteRule ^/rest/(.*)$ http://localhost:3333/rest/$1 [P,N]
+ 
+    # rest anything else
+    RewriteRule ^/proxy/rest/(.*) http://localhost:7080/api/$1 [P,L]
+
+	RewriteRule ^/dispatcher_staging/(.*)$ http://localhost:3333/rest/$1 [P,N]
+
+	# Clean up URLs
+    RewriteRule ^/password/reset http://localhost:7080/nams/svc/lostpassword?alternate=y [P,N]
+
+	RewriteRule ^/news/foxtrot/svc/(.*) http://localhost:7080/foxtrot/svc/$1 [P,L]
+	RewriteRule ^/news/$ /news/index.html [R]
+	RewriteRule ^/news/webfeeds/$ /news/webfeeds/index.html [N]
+	RewriteRule ^/news/archive$ http://staging-www.nature.com/news/archive/date/index.html [R,L]
+	RewriteRule ^/news/archive/$ http://staging-www.nature.com/news/archive/date/index.html [R,L]
+	RewriteRule ^/news/archive/date$ http://staging-www.nature.com/news/archive/date/index.html [R,L]
+	RewriteRule ^/news/archive/date/$ http://staging-www.nature.com/news/archive/date/index.html [R,L]
+	RewriteRule ^/news/archive/date/([0-9]+)$ http://staging-www.nature.com/news/archive/date/$1/index.html [R,L]
+	RewriteRule ^/news/specials$ http://staging-www.nature.com/news/specials/index.html [R,L]
+	RewriteRule ^/news/specials/$ http://staging-www.nature.com/news/specials/index.html [R,L]
+	RewriteRule ^/news/specials/([0-9a-zA-Z]+)$ http://staging-www.nature.com/news/specials/$1/index.html [R,L]
+	RewriteRule ^/news/opinion$ http://staging-www.nature.com/news/opinion/index.html [R,L]
+	RewriteRule ^/news/opinion/$ http://staging-www.nature.com/news/opinion/index.html [R,L]
+	RewriteRule ^/news/news-features$ http://staging-www.nature.com/news/news-features/index.html [R,L]
+	RewriteRule ^/news/news-features/$ http://staging-www.nature.com/news/news-features/index.html [R,L]
+	RewriteRule ^/news/archive/subject$ http://staging-www.nature.com/news/archive/subject/index.html [R,L]
+	RewriteRule ^/news/archive/subject/$ http://staging-www.nature.com/news/archive/subject/index.html [R,L]
+	RewriteRule ^/news/archive/category$ http://staging-www.nature.com/news/archive/category/index.html [R,L]
+	RewriteRule ^/news/archive/category/$ http://staging-www.nature.com/news/archive/category/index.html [R,L]
+	RewriteRule ^/news/(.*)/$ /news/$1/index.html [R,N]
+
+	# Proxy /news/* to tomcat xb3
+	RewriteRule ^/news/(.*) http://localhost:7080/xb3/news/$1 [P,L]
+    RewriteRule  ^/nature-newbio/foxtrot/svc/mailafriend/(.*) http://localhost:7080/$1 [P,L]
+    RewriteRule  ^/nature-newbio/journal/(.*) http://localhost:7080/xb3/nature-newbio/journal/$1 [P,L]
+    RewriteRule  ^/nature-physci/foxtrot/svc/mailafriend/(.*) http://localhost:7080/$1 [P,L]
+    RewriteRule  ^/nature-physci/journal/(.*) http://localhost:7080/xb3/nature-physci/journal/$1 [P,L]
+	#RewriteRule ^/nature-newbio/(.*) http://localhost:7080/xb3/nature-newbio/$1 [P,L]
+	#RewriteRule ^/nature-physci/(.*) http://localhost:7080/xb3/nature-physci/$1 [P,L]
+
+  	
+	# Restrict API access
+    RewriteCond %{REMOTE_ADDR} ^65.199.186.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^65.199.186.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.88.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.88.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.89.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.89.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.92.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.92.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.89.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.10.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.10.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^192.168.12.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.12.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^166.111.120.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^166.111.120.*$ [OR]
+        #RewriteCond %{REMOTE_ADDR} ^219.127.212.*$ [OR]
+        #RewriteCond %{HTTP:NPG_SRC_ADDR} ^219.127.212.*$ [OR]
+	RewriteCond %{REMOTE_ADDR} ^125.103.228.204$ [OR]
+	RewriteCond %{HTTP:NPG_SRC_ADDR} ^125.103.228.204$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^210.151.240.*$ [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^210.151.240.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^124.39.14.174 [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^124.39.14.174 [OR]
+    RewriteCond %{REMOTE_ADDR} ^127.0.0.1 [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^127.0.0.1 [OR]
+    RewriteCond %{HTTP:NPG_SRC_ADDR} ^10.1.1.*$ [OR]
+    RewriteCond %{REMOTE_ADDR} ^10.1.1.*$
+    RewriteRule ^/rest/(.*)$ http://localhost:7080/api/$1 [P,L]
+
+	#Nature Events
+	RewriteCond /home/natureevents/apps/natureevents/current/public/%{REQUEST_FILENAME} !-f 
+	RewriteRule ^/natureevents/?$ /natureevents/science
+	RewriteRule ^/natureevents/science/?$ http://localhost:9918/natureevents/science/index.html [P,L] 
+	RewriteRule ^/natureevents/(.*) http://localhost:9918/natureevents/$1 [P,L]
+
+	#Nature nindia
+	RewriteRule ^/nindia/archive$ http://staging-www.nature.com/nindia/archive/date/index.html [R,L]
+    RewriteRule ^/nindia/archive/$ http://staging-www.nature.com/nindia/archive/date/index.html [R,L]
+    RewriteRule ^/nindia/archive/date$ http://staging-www.nature.com/nindia/archive/date/index.html [R,L]
+    RewriteRule ^/nindia/archive/date/$ http://staging-www.nature.com/nindia/archive/date/index.html [R,L]
+    RewriteRule ^/nindia/archive/date/([0-9]+)$ http://staging-www.nature.com/nindia/archive/date/$1/index.html [R,L]
+	RewriteRule ^/nindia/ourpicks$ http://staging-www.nature.com/nindia/ourpicks/index.html [R,L]
+    RewriteRule ^/nindia/ourpicks/$ http://staging-www.nature.com/nindia/ourpicks/index.html [R,L]
+	RewriteRule ^/nindia/jobs$ http://staging-www.nature.com/nindia/jobs/index.html [R,L]
+    RewriteRule ^/nindia/jobs/$ http://staging-www.nature.com/nindia/jobs/index.html [R,L]
+	RewriteRule ^/nindia/events$ http://staging-www.nature.com/nindia/events/index.html [R,L]
+    RewriteRule ^/nindia/events/$ http://staging-www.nature.com/nindia/events/index.html [R,L]
+	RewriteRule ^/nindia/archive/subject$ http://staging-www.nature.com/nindia/archive/subject/index.html [R,L]
+    RewriteRule ^/nindia/archive/subject/$ http://staging-www.nature.com/nindia/archive/subject/index.html [R,L]
+    RewriteRule ^/nindia/archive/category$ http://staging-www.nature.com/nindia/archive/category/index.html [R,L]
+    RewriteRule ^/nindia/archive/category/$ http://staging-www.nature.com/nindia/archive/category/index.html [R,L]
+
+	RewriteRule ^/nindia/(.*)/$ /nindia/$1/index.html [R,N]
+	RewriteRule ^/nindia/(.*) http://localhost:7080/xb3/nindia/$1 [P,L]
+
+	#Nature Middle East
+	RewriteRule ^/nmiddleeast/$ /nmiddleeast/index.html [N]
+	RewriteRule ^/nmiddleeast/(.*) http://localhost:7080/xb3/nmiddleeast/$1 [P,L]
+
+
+	#Nature Archive
+    RewriteRule ^/nature/(.*)/$ /nature/$1/index.html [N]
+	#RewriteRule ^/nature/journal/v(\d)(\d?)/(.*) http://localhost:7080/xb3/nature/journal/v$1$2/$3 [P,L]
+
+    #Vol 150-159
+	#RewriteRule ^/nature/journal/v1([0-5])(\d)/(.*) http://localhost:7080/xb3/nature/journal/v1$1$2/$3 [P,L]
+
+    #Vol 160-164
+	#RewriteRule ^/nature/journal/v16([0-4])/(.*) http://localhost:7080/xb3/nature/journal/v16$1/$2 [P,L]
+
+    ### ADDED for DEPLOY-545 #####
+    ### COMMENTED for DEPLOY-775 #####
+
+    # v1-99
+    #RewriteRule ^/nature/journal/v(\d)(\d?)/n([0-9]+)/index.html http://localhost:7080/xb3/nature/journal/v$1$2/n$3/index.html [P,L]
+    #RewriteRule ^/nature/journal/v(\d)(\d?)/n([0-9]+)/abs/(.*) http://localhost:7080/xb3/nature/journal/v$1$2/n$3/abs/$4 [P,L]
+       
+    #Vol 100-159
+    #RewriteRule ^/nature/journal/v1([0-5])(\d)/n([0-9]+)/index.html http://localhost:7080/xb3/nature/journal/v1$1$2/n$3/index.html [P,L]
+    #RewriteRule ^/nature/journal/v1([0-5])(\d)/n([0-9]+)/abs/(.*) http://localhost:7080/xb3/nature/journal/v1$1$2/n$3/abs/$4 [P,L]
+
+    #Vol 160-164
+    #RewriteRule ^/nature/journal/v16([0-4])/n([0-9]+)/index.html http://localhost:7080/xb3/nature/journal/v16$1/n$2/index.html [P,L]
+    #RewriteRule ^/nature/journal/v16([0-4])/n([0-9]+)/abs/(.*) http://localhost:7080/xb3/nature/journal/v16$1/n$2/abs/$3 [P,L] 
+
+    ### END DEPLOY-545 #####
+
+	#IT-1885 Nature Climate Change redirect
+	RewriteRule ^/(natureclimatechange)(.*) /nclimate$2 [R,L]
+
+	#Special/static pages
+	#RewriteRule ^/nature/journal/listdecades.html(.*) http://localhost:7080/xb3/nature/journal/listdecades.html$1 [P,L]
+	RewriteRule ^/nature/archive/1869archive/(.*) http://localhost:7080/nature/journal/listdecades.html [P,L]
+	#RewriteRule ^/nature/journal/currentdecade.html(.*) http://localhost:7080/xb3/nature/journal/currentdecade.html$1 [P,L]
+	#RewriteRule ^/nature/journal/currentdecade.xml(.*) http://localhost:7080/xb3/nature/journal/currentdecade.xml$1 [P,L] 
+
+    # end Nature 1869 Archive
+
+	# Example to avoid slashdotting; serve static page from apache only
+	    #RewriteRule     ^/news/2007/070604/full/447618a.html$  - [L]
+    RewriteRule ^/nsu/([^/]+)/([^.]+)\..*$ http://staging-www.nature.com/doifinder/10.1038/news$2
+	RewriteRule ^/w3c/p3p.xml$ - [L]
+	RewriteRule ^/scifoo/(.*)$ - [L]
+
+	RewriteRule ^/oaicat(.*) http://localhost:7080/oaicat$1 [P,L]
+
+	#IT-3145
+	    #RewriteRule ^/oai/(.*) http://127.0.0.1:7080/oai/$1 [P,L]
+	ProxyPass /oai	http://127.0.0.1:7080/oai
+	ProxyPassReverse /oai http://127.0.0.1:7080/oai
+
+	#OpenSearch
+    ProxyPass /opensearch http://127.0.0.1:7080/opensearch
+    ProxyPassReverse /opensearch http://127.0.0.1:7080/opensearch
+
+
+	#IT-4390
+	RewriteRule ^/npg/$ /npg_/index_npg.html [R]
+
+	#SUP-303
+    RewriteRule ^/external_data/repec/      -       [P]
+
+	#IT-9945
+	RewriteRule ^/openurl(.*)	http://staging-external.nature.com/openurl$1	[P,L]
+
+  # IT-14780
+  #RewriteRule ^/contentstore_uploader/insert_journal http://staging-integral.nature.com/contentstore_uploader/insert_journal [P,L]
+
+    # Send everything else to jetty
+    RewriteRule ^/(.*) http://localhost:7080/$1 [P] 
+
+	SetEnvIf User-Agent ^remi repec-agent
+
+	<Directory /mnt/fs/Web/NPG/cgi-bin/>
+    		AllowOverride None
+    		Options ExecCGI
+    		Order allow,deny
+    		Allow from all
+	</Directory>
+
+
+	#Access restrictions
+        <Location />
+                AuthType Basic
+                AuthName "NPG Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+		        Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+		        Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+		        Allow from 192.168.4		# Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DMZ
+                Allow from 192.168.10           # DMZ
+                Allow from 192.168.13           # DMZ
+		        Allow from 192.168.6		# Eclipse live
+                Allow from 192.168.89           # DR
+		        Allow from 65.199.186		# NPG - MCI Verizon Business
+		        Allow from 65.201.138.2         # NPG - MCI Verizon Business
+		        Allow from 65.242.181           # NPG - MCI Verizon Business
+		        Allow from 50.201.24           # NPG - MCI Verizon Business
+            Allow from 199.168.13		# Reston DC
+            Allow from 199.168.12 # Reston public 2
+		        # ----- Offices
+		        Allow from 63.64.195.2		# SF VPN
+                Allow from 195.138.194.1	# Macmillan UK
+                Allow from 31.221.45.4	# Macmillan UK
+                Allow from 195.138.194.7	# Macmillan UK
+		        Allow from 194.129.50.164	# Macmillan UK
+	        	Allow from 203.101.103.162      # Macmillan India
+		        Allow from 210.151.240.82	# NPG Japan
+		        Allow from 210.169.171.2	# NPG Japan
+		        Allow from 210.169.171.32	# NPG Japan
+		        Allow from 122.160.227.17	# MPS India
+			Allow from 122.184.53.192	# ATT Team - IT-10246
+			Allow from 202.54.243.228	# ATT Team
+		        Allow from 202.144.44.115       # Bangalore Web Production
+		        Allow from 61.246.62.130	# Bangalore Web Production - New
+		        # ----- External
+		        Allow from 216.64.169.240       # WebTrends
+		        Allow from 99.179.165.138       # WebTrends
+                Allow from 74.125.75            # Google Sitemap
+                Allow from 66.228.83		# Towerstream, RI - ?
+                Allow from 24.184.44.72		# Optimum online ?
+                Allow from 68.39.154.79	# Comcast Cable MikeB
+                Allow from 198.202.75		# San Diego Supercomputer Center
+                Allow from 128.84.154.156	# Cornell University
+		        Allow from 68.162.253.244       # Thoughtbot
+                Allow from 70.84.12.186		# Thoughtbot velidator - REQ-285
+                Allow from 216.254.85.209	# Thoughtbot ? - REQ-292
+		        Allow from 63.237.233.40        # Allen Institute for Brain Science
+                Allow from 18.91.0.96           # MIT
+                Allow from 18.91.0.231          # MIT
+                Allow from 137.187.66.207       # NIH
+                Allow from 216.64.169.240       # Webtrends IT-5099
+		        Allow from 194.178.120          # BIBIT
+                Allow from 155.136.66           # BIBIT
+                Allow from 89.206.148           # British Dental Association - IT-1785
+                Allow from 128.143.21.106	# University of Virginia - DART-42
+                Allow from 208.254.38.84        # CrossRef - REQ-247
+		        Allow from 71.7.236.14		# Heather Rankin
+		        Allow from 124.124.239.253	# Chennai office - IT-3539
+		        Allow from 115.113.232.2	# Chennai office - IT-4630
+		        Allow from 220.225.218.253	# Chennai office - IT-4630
+		        Allow from env=repec-agent      # SUP-868
+		        Allow from 69.42.0.229          # IT-3701
+		        #Allow from 125.103.228.204     # NPG Tokyo office - IT-1493
+		        #Allow from 194.129.50.189 195.128.194.7 # UK Office IT-165
+                #Allow from 72.51.34.164  (Temporary, to ttest websiteoptimization)
+		        Allow from 203.200.189.6	# TCS Offshore 1
+		Allow from 203.200.192.98       # TCS Offshore 1
+		        Allow from 203.197.96.43	# TCS Offshore 2
+    			Allow from 80.67.64.10 # Cambridge IT-8138
+                Allow from 81.145.36.61 # London IT-8138
+                Allow from 217.111.194.201 # Paris IT-8138
+                Allow from 173.12.87.28 # FLORIDA IT-8138
+                Allow from 208.75.86.67  # SUP-1225
+                Allow from 94.193.96.179  #SUP-1225
+                Allow from 75.101.163.131 #IT-10762
+		Allow from 195.138.194.116 #IT-11360
+            Allow from 107.20.166.27 # ec2-util with ShowSlow
+                        Allow from 60.10.59.134 #IT-11841 Chatsworth Beijing
+                        Allow from 124.65.176.186 #IT-11841 Chatsworth Beijing
+                        Allow from 220.194.17.65 #IT-11841 Chatsworth Beijing
+                        Allow from 220.194.20 #IT-11841 Chatsworth Beijing
+                        Allow from 188.92.136.5 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.48 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.49 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.50 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.51 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.45 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.46 # DEPLOY-780 OpenAthens
+    Allow from 202.64.21.36 # IT-11914
+
+		        # Generate this list with:
+		        #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+		Allow from 46.165.195.139
+		Allow from 69.59.28.19
+		Allow from 178.255.154.2
+		Allow from 178.255.153.2
+		Allow from 178.255.155.2
+		Allow from 64.237.55.3
+		Allow from 178.255.152.2
+		Allow from 64.141.100.136
+		Allow from 212.84.74.156
+		Allow from 50.23.94.74
+		Allow from 46.20.45.18
+		Allow from 199.87.228.66
+		Allow from 76.72.167.90
+		Allow from 94.247.174.83
+		Allow from 69.64.56.47
+		Allow from 176.31.228.137
+		Allow from 184.75.210.186
+		Allow from 108.62.115.226
+		Allow from 94.46.4.1
+		Allow from 173.204.85.217
+		Allow from 173.248.147.18
+		Allow from 72.46.130.42
+		Allow from 74.52.50.50
+		Allow from 83.170.113.102
+		Allow from 95.211.87.85
+		Allow from 207.218.231.170
+		Allow from 207.97.207.200
+		Allow from 67.192.120.134
+		Allow from 78.136.27.223
+		Allow from 67.205.112.79
+		Allow from 204.152.200.42
+		Allow from 85.25.176.167
+		Allow from 94.46.240.121
+		Allow from 208.43.68.59
+		Allow from 67.228.213.178
+		Allow from 96.31.66.245
+		Allow from 82.103.128.63
+		Allow from 174.34.156.130
+		Allow from 70.32.40.2
+		Allow from 174.34.162.242
+		Allow from 188.138.124.110
+		Allow from 85.17.156.99
+		Allow from 85.17.156.11
+		Allow from 85.17.156.76
+		Allow from 72.46.153.26
+		Allow from 208.64.28.194
+		Allow from 76.164.194.74
+		Allow from 184.75.210.90
+		Allow from 184.75.208.210
+		Allow from 184.75.209.18
+		Allow from 74.53.193.66
+		Allow from 188.138.118.184
+
+
+		        # --- misc
+                Require valid-user
+                Satisfy any
+        </Location>
+
+        <Location /scibx>
+                AuthType Basic
+                AuthName "BioCentury"
+                AuthUserFile /etc/httpd/conf/passwd_bio
+                Order deny,allow
+                Deny from all
+                Allow from 127.0.0.1
+                Allow from 195.138.194.1
+                Allow from 31.221.45.4
+                Allow from 195.138.194.7
+                Allow from 68.162.253.244
+                Allow from 202.144.44.115 # Bangalore Web Production IT-211
+                Allow from 172.26
+                Allow from 194.129.50.164
+                Allow from 65.201.138.2
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 66.228.83.
+                Allow from 63.64.195.2
+                Allow from 65.199.186.2
+                Allow from 24.184.44.72
+                Allow from 192.168.88
+                Allow from 192.168.92           # DMZ
+		Allow from 122.184.53.192	# ATT Team - IT-10246
+		Allow from 202.54.243.228	# ATT Team
+                Allow from 203.101.103.162
+                Allow from 210.151.240.82
+		Allow from 68.39.154.79
+                Allow from 198.202.75.64
+                Allow from 198.202.75
+                Allow from 198.202.75.58
+                Allow from 127.0.0.1
+                # From openarchives per Mat (11/15)
+                Allow from 208.254.38.84        # REQ-247
+                Allow from 68.162.253.244       # Thoughtbot per Emily
+                Allow from 172.25.  # UK VPN
+                Allow from 172.17.  # UK VPN
+                Allow from 202.144.44.115  # IT-211
+                Allow from 81.171.194.4      # IT-1785
+                Allow from 199.168.13 # Reston
+                Allow from 199.168.12 # Reston 2
+            		Allow from 192.168.4
+                Require valid-user
+                Satisfy any
+        </Location>
+
+	<Location /mobileapps>
+		Order allow,deny
+		Allow from all
+	</Location>
+
+	<Location /mobileapps/admin>
+                order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 50.201.24            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+        </Location>
+
+	    #<Location /common>
+        #        Order Allow,Deny
+        #        Allow from all
+        #</Location>
+
+        #<Location /foxtrot>
+        #        AuthType Basic
+        #        AuthName "NPG Staging /foxtrot"
+        #        AuthUserFile /etc/httpd/conf/passwd
+        #        order deny,allow
+        #        Options Includes Indexes
+        #        Deny from all
+        #        Allow from athensams.net        # IT-1470
+        #        Allow from eduserv.org.uk       # IT-1470
+        #        Allow from niss.ac.uk           # IT-1470
+        #</Location>
+
+	<Location /perfmon>
+                AuthType Basic
+                AuthName "NPG Staging /perfmon"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+        	Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DMZ
+        </Location>
+
+	<Location /scitable>
+		AuthType Basic
+                AuthName "NPG Staging Scitable"
+                AuthUserFile /etc/httpd/conf/passwd
+		Order deny,allow
+                Options Includes Indexes
+                Deny from all
+		# ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6    # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+            		Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12       # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+		Allow from 122.184.53.192	# ATT Team - IT-10246
+		Allow from 202.54.243.228	# ATT Team
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+		# ----- Misc
+		Allow from 203.200.189.6        # TCS Offshore 1
+		Allow from 203.200.192.98       # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 121.241.218.132	# TCS Kolkata, IT-6793
+		Allow from 203.202.189.55	# TCS Kolkata, IT-6793
+		Allow from env=repec-agent      # SUP-868
+                Allow from 69.42.0.229          # TCS Boston, IT-3701
+                Allow from 50.201.24            # NPG Boston
+		Require valid-user
+                Satisfy any
+	</Location>
+
+	<Location /principles>
+                AuthType Basic
+                AuthName "NPG Staging Principles"
+                AuthUserFile /etc/httpd/conf/passwd
+                Order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6    # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- Misc
+                Allow from 202.54.243.228       # Tata Communication
+                Allow from 203.200.189.6        # TCS Offshore 1
+		Allow from 203.200.192.98       # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 121.241.218.132      # TCS Kolkata, IT-6793
+                Allow from 203.202.189.55       # TCS Kolkata, IT-6793
+                Allow from env=repec-agent      # SUP-868
+                Allow from 69.42.0.229          # TCS Boston, IT-3701
+                Allow from 50.201.24            # NPG Boston
+                Allow from 99.246.127.145       # IT-9109
+                Allow from 76.206.4.238         # IT-9109
+                Allow from 174.123.14.253       # IT-9835 CRE for Scitable
+                Allow from 64.71.26.218         # IT-10963  Scitable
+                Allow from 195.222.85.160       # IT-10963  Scitable
+                Allow from 86.57.158.170        # IT-10963  Scitable
+                Allow from 213.184.224.37       # IT-10963  Scitable
+                Allow from 190.86.215.58        # IT-10963  Scitable
+                Allow from 80.92.229.74         # IT-10963  Scitable
+                Allow from 76.102.12.105         # IT-11056  Scitable
+                Allow from 109.86.215.58         # IT-11056  Scitable
+                Allow from 24.60.27.250          # IT-11056  Scitable
+                Allow from 96.233.26.30         # IT-11056  Scitable
+                Require valid-user
+                Satisfy any
+        </Location>
+
+	<Location /scientificamerican>
+		AuthType Basic
+		AuthName "Staging Scientific American"
+		AuthUserFile /etc/httpd/conf/passwd_sciam
+		Order deny,allow
+		Deny from all
+		# ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 50.201.24            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Allow from 122.184.53.192       # ATT Team IT-12195
+		Require valid-user
+		Satisfy any
+	</Location>
+<Location /naturejobs/science/admin/robots>
+   AuthType Basic
+   AuthName "Jobs Admin"
+   AuthUserFile /etc/httpd/conf/jobspasswd
+   order deny,allow
+   Deny from all
+   Require valid-user
+   Satisfy any
+</Location>
+<Location /nbt/focus/epigenetics>
+   AuthType Basic
+   AuthName "NPG NBT Access"
+   AuthUserFile /etc/httpd/conf/jobspasswd
+   order deny,allow
+   Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6    # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+   Require valid-user
+   Satisfy any
+</Location>
+
+        # Force PDF download - IT-11096
+        <Location /nrn/journal/v10/n4/extref>
+                ForceType application/octet-stream
+                Header set Content-Disposition attachment
+        </Location>
+
+
+        <Directory "/mnt/fs/web/NPG">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        <Location /naturejobs/salary/survey/search>
+                ExpiresActive Off
+        </Location>
+
+        <Location /protocolexchange>
+            ExpiresActive Off
+        </Location>
+
+	<Location /natureevents/science> 
+		ExpiresActive Off 
+	</Location> 
+</VirtualHost>
+
+
+<VirtualHost *:80>
+    	ServerName	staging-www.palgrave-journals.com
+	#ServerAlias	foxtrot.palgrave-journals.com
+    	ServerAlias	staging-j2ee.palgrave-journals.com
+    	ServerAdmin s.mccool@natureny.com
+    	DocumentRoot    /mnt/fs/web/palgrave/
+        
+    	ErrorLog logs/foxtrot.palgrave-journals.com-error_log
+    	CustomLog logs/foxtrot.palgrave-journals.com-access_log combined
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .palgrave-journals.com
+
+	Include conf/palgrave_redirects.conf
+    
+    	RewriteEngine on 
+        RewriteCond %{REMOTE_ADDR} (.*)
+         RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+    	#RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml)$ - [L]
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl|bib|BIB)$ - [L]
+
+	# IT-4125
+        RewriteRule ^(/.*);jsessionid=.*$ $1
+
+	RewriteRule ^/$ /pal/index.html [R,L]
+        RewriteRule ^/index.html$ /pal/index.html [R,L]
+	RewriteRule ^/search/versioninfo(.*) http://localhost:7280/mlsearch-palweb/versioninfo$1 [P,L]
+	RewriteRule ^/search/(.*).html http://localhost:7280/search/$1.html [P,L]
+	RewriteRule ^/search/adv_search(.*) http://localhost:7280/mlsearch-palweb/search/executeSearch$1 [P,L]
+	RewriteRule ^/search(.*) http://localhost:7280/mlsearch-palweb/search$1 [P,L]
+	RewriteRule ^/iaor/search/adv_search(.*) http://localhost:7280/mlsearch-palweb/iaor/search/executeSearch$1 [P,L]
+	RewriteRule ^/iaor/search(.*) http://localhost:7280/mlsearch-palweb/iaor/search$1 [P,L]
+    	RewriteRule ^/(.*)       http://localhost:7280/$1 [P,L]
+
+	
+	<Location />
+                AuthType Basic
+                AuthName "Palgrave-Journals Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                #Allow from 194.129.50.189 195.128.194.7 # UK Office IT-165
+                #Allow from 72.51.34.164  (Temporary, to ttest websiteoptimization)
+                Allow from 195.138.194.1
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7
+                Allow from 68.162.253.244
+                Allow from 202.144.44.115 # Bangalore Web Production IT-211
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Allow from 203.200.192.98       # Bangalore Web Production - New
+                Allow from 172.26
+                Allow from 194.129.50.164
+                Allow from 65.201.138.2
+                Allow from 66.228.83.
+                Allow from 63.64.195.2
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 65.199.186.2
+                Allow from 24.184.44.72
+                Allow from 192.168.88
+                Allow from 192.168.92           # DMZ
+		Allow from 122.184.53.192	# ATT Team - IT-10246
+                Allow from 202.54.243.228	# ATT Team
+                Allow from 68.39.154.79
+                Allow from 203.101.103.162
+                Allow from 210.151.240.82
+                # Allow Signaling Gateway people
+                Allow from 198.202.75.64
+                Allow from 198.202.75
+                Allow from 198.202.75.58
+                Allow from 127.0.0.1
+                # From openarchives per Mat (11/15)
+                Allow from 128.84.154.156
+                Allow from 70.84.12.186  # REQ-285
+                Allow from 216.254.85.209 # REQ-292
+                # Per Emily for affiliates
+                Allow from 63.237.233.40
+                Allow from 18.91.0.96
+                Allow from 137.187.66.207
+                # end per emily 10/06
+                # Per emily http://powerplant.nature.com/jira/browse/REQ-215
+                Allow from 18.91.0.231
+                # end per emily 11/30/06
+                Allow from 128.143.21.106  # UVA CMG per JIRA DART-42
+                Allow from 208.254.38.84        # REQ-247
+                Allow from 68.162.253.244       # Thoughtbot per Emily
+                Allow from 172.25.  # UK VPN
+                Allow from 172.17.  # UK VPN
+                Allow from 202.144.44.115       # IT-211
+                Allow from env=repec-agent      # SUP-868
+                Allow from 81.171.194.4      # IT-1785
+		Allow from 124.124.239.253       # Chennai office - IT-3539
+		Allow from 115.113.232.2        # Chennai office - IT-4630
+		Allow from 220.225.218.253	# Chennai office - IT-4630
+                #Allow from 125.103.228.204     # IT-1493
+		Allow from athensams.net        # IT-3806
+                Allow from eduserv.org.uk       # IT-3806
+                Allow from niss.ac.uk           # IT-3806
+		Allow from 122.160.227.17       # MPS India
+    Allow from 199.168.13           # Reston
+    Allow from 199.168.12           # ""
+		Allow from 192.168.4
+                        Allow from 188.92.136.5 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.48 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.49 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.50 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.51 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.45 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.46 # DEPLOY-780 OpenAthens
+
+                Require valid-user
+                Satisfy any
+        </Location>
+
+	ProxyPreserveHost on
+    	ProxyPassReverse / http://localhost:7280/
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName staging-www.labanimal.com
+        ServerAlias labanimal.com
+        DocumentRoot /mnt/fs/Web/NPG/
+        AccessFileName .htaccess
+        Setenv VLOG /var/staging-www.labanimal.com/logs
+        ErrorLog /var/staging-www.labanimal.com/logs/error_log
+        #LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/staging-www.labanimal.com/logs/access_log
+        AllowEncodedSlashes on
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .labanimal.com
+	RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+        ProxyPreserveHost on
+        RewriteEngine on
+
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+        RewriteRule ^/la/renew08 https://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=R80201&strmatchkey=#nmky# [R]
+        RewriteRule ^/renewal08 https://www.sunbeltfs.com/forms/lb/lookup.asp?arq=renew&eid=R80601&strmatchkey=#nmky# [R]
+        RewriteRule ^/index.html http://staging-www.labanimal.com/laban/index.html [R]
+        RewriteRule ^/offers http://staging-www.labanimal.com/laban/offers/index.html [R]
+        RewriteRule ^/labanimaloffers http://staging-www.labanimal.com/laban/laboffers/index.html [R]
+	#RewriteRule ^/laban/search/executeSearch(.*) http://localhost:7080/mlsearch-labanweb/search.html$1 [P,L]
+	RewriteRule ^/laban/search/adv_search(.*) http://localhost:7080/mlsearch-labanweb/laban/search/executeSearch$1 [P,L]
+	 RewriteRule ^/search/versioninfo(.*) http://localhost:7080/mlsearch-labanweb/versioninfo$1 [P,L]
+	RewriteRule ^/laban/search(.*) http://localhost:7080/mlsearch-labanweb/laban/search$1 [P,L]
+
+        RewriteRule ^/$ http://staging-www.labanimal.com/laban/index.html [R,L]
+        #RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|jar|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT)$ - [L]
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L] 
+
+#IT-12614 
+# 	Add Rewrite Rule to Staging vhosts.conf for staging-www.labanimal.com
+        RewriteRule ^/foxtrot/svc/mailform(.*)$ http://staging-www.labanimal.com/laban/foxtrot/svc/mailform [R,L]
+        RewriteRule (.*)/$ http://staging-www.labanimal.com$1/index.html [R]
+        RewriteRule ^/laban/(.*) http://localhost:7080/laban/$1 [P,L]
+        RewriteRule ^/includes/(.*) http://localhost:7080/includes/$1 [P,L]
+        RewriteRule ^/guide/(.*) http://localhost:7080/guide/$1 [P,L]
+        RewriteRule ^/images/(.*) http://localhost:7080/images/$1 [P,L]
+        RewriteRule ^/common/(.*) http://localhost:7080/common/$1 [P,L]
+        RewriteRule ^/templates/(.*) http://localhost:7080/templates/$1 [P,L]
+        #RewriteRule (.*) - [F]
+
+        <Location />
+                AuthType Basic
+                AuthName "Labanimal Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                #Allow from 194.129.50.189 195.128.194.7 # UK Office IT-165
+                #Allow from 72.51.34.164  (Temporary, to ttest websiteoptimization)
+                Allow from 195.138.194.1
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7
+                Allow from 68.162.253.244
+                Allow from 202.144.44.115 # Bangalore Web Production IT-211
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+		Allow from 203.200.192.98       # TCS Offshore 1
+                Allow from 172.26
+                Allow from 194.129.50.164
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 65.201.138.2
+                Allow from 66.228.83.
+                Allow from 63.64.195.2
+                Allow from 65.199.186.2
+                Allow from 24.184.44.72
+                Allow from 192.168.88
+                Allow from 192.168.92           # DMZ
+		Allow from 122.184.53.192       # ATT Team - IT-10246
+                Allow from 202.54.243.228	#ATT Team
+                Allow from 68.39.154.79
+                Allow from 203.101.103.162
+                Allow from 210.151.240.82 
+                # Allow Signaling Gateway people
+                Allow from 198.202.75.64
+                Allow from 198.202.75
+                Allow from 198.202.75.58
+                Allow from 127.0.0.1
+                # From openarchives per Mat (11/15)
+                Allow from 128.84.154.156
+                Allow from 70.84.12.186  # REQ-285
+                Allow from 216.254.85.209 # REQ-292
+                # Per Emily for affiliates
+                Allow from 63.237.233.40
+                Allow from 18.91.0.96
+                Allow from 137.187.66.207
+                # end per emily 10/06
+                # Per emily http://powerplant.nature.com/jira/browse/REQ-215
+                Allow from 18.91.0.231
+                # end per emily 11/30/06
+                Allow from 128.143.21.106  # UVA CMG per JIRA DART-42
+                Allow from 208.254.38.84        # REQ-247
+                Allow from 68.162.253.244       # Thoughtbot per Emily
+                Allow from 172.25.  # UK VPN
+                Allow from 172.17.  # UK VPN    
+                Allow from 202.144.44.115       # IT-211
+                Allow from env=repec-agent      # SUP-868
+                Allow from 81.171.194.4      # IT-1785
+                #Allow from 125.103.228.204     # IT-1493
+                Allow from 199.168.13           # Reston
+                Allow from 199.168.12           # ""
+		Allow from 192.168.4
+                        Allow from 188.92.136.5 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.48 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.49 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.50 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.51 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.45 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.46 # DEPLOY-780 OpenAthens
+
+                Require valid-user
+                Satisfy any
+        </Location>
+
+        <Directory "/mnt/fs/Web/NPG">
+                AllowOverride All
+                Options None
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName staging-press.nature.com
+        ServerAlias     staging-www.press.nature.com
+        #DocumentRoot /var/www/press.nature.com/htdocs
+        #DocumentRoot /mnt/fs/Web/NPG/press
+        DocumentRoot /mnt/fs/Web/NPG
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/press.nature.com/logs
+        ErrorLog /var/www/press.nature.com/logs/error_log
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+        TransferLog /var/www/press.nature.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+        AllowEncodedSlashes on
+        RewriteEngine on
+	RewriteRule \.wma$ - [L]
+	RewriteRule \.(css|CSS|wma|jpg|tif|docx|xlsx|doc|WMA|JPG|TIF|DOC|MP3|mp3|mov|MOV|xls|XLS|gif|GIF|wav|WAV)$ - [L]
+        RewriteRule ^/pdf/press_files/(.*) http://localhost:7080/pdf/press_files/$1 [P,L]
+        RewriteRule ^/GetWebOrderDetails(.*) - [F]
+        RewriteRule ^/press/$ /press [R,N]
+        RewriteRule ^/$ /press [R,N]
+        RewriteRule ^/index.html /press [R,N]
+        RewriteRule ^/press(.*) http://localhost:7080/press$1 [P,L]
+        RewriteRule ^/npress(.*) http://localhost:7080/npress$1 [P,L]
+        RewriteRule ^/nams(.*) http://localhost:7080/npress$1 [P,L]
+        RewriteRule ^/includes/(.*) http://localhost:7080/includes/$1 [P,L]
+        RewriteRule ^/templates/(.*) http://localhost:7080/templates/$1 [P,L]
+        RewriteRule ^/common/(.*) http://localhost:7080/common/$1 [P,L]
+        RewriteRule (.*)/press_files/(.*) http://localhost:7080$1/press_files/$2 [P,L]
+        RewriteRule ^/(.*) http://press.nature.com/press [R]
+        #RewriteRule \.(css|CSS|wma|jpg|tif|docx|xlsx|doc|WMA|JPG|TIF|DOC|MP3|mp3|mov|MOV|xls|XLS|gif|GIF|wav|WAV)$ - [L]
+
+        <Location />
+                AuthType Basic
+                AuthName "Press Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                #Allow from 194.129.50.189 195.128.194.7 # UK Office IT-165
+                #Allow from 72.51.34.164  (Temporary, to ttest websiteoptimization)
+                Allow from 195.138.194.1
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7
+                Allow from 68.162.253.244
+                Allow from 202.144.44.115 # Bangalore Web Production IT-211
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Allow from 172.26
+                Allow from 194.129.50.164
+                Allow from 65.201.138.2
+                Allow from 66.228.83.
+                Allow from 63.64.195.2
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 65.199.186.2
+                Allow from 24.184.44.72
+                Allow from 192.168.88
+                Allow from 192.168.92           # DMZ
+		Allow from 122.184.53.192       # ATT Team - IT-10246
+                Allow from 202.54.243.228	# ATT Team
+                Allow from 68.39.154.79
+                Allow from 203.101.103.162
+                Allow from 210.151.240.82 
+                # Allow Signaling Gateway people
+                Allow from 198.202.75.64
+                Allow from 198.202.75
+                Allow from 198.202.75.58
+                Allow from 127.0.0.1
+                # From openarchives per Mat (11/15)
+                Allow from 128.84.154.156
+                Allow from 70.84.12.186  # REQ-285
+                Allow from 216.254.85.209 # REQ-292
+                # Per Emily for affiliates
+                Allow from 63.237.233.40
+                Allow from 18.91.0.96
+                Allow from 137.187.66.207
+                # end per emily 10/06
+                # Per emily http://powerplant.nature.com/jira/browse/REQ-215
+                Allow from 18.91.0.231
+                # end per emily 11/30/06
+                Allow from 128.143.21.106  # UVA CMG per JIRA DART-42
+                Allow from 208.254.38.84        # REQ-247
+                Allow from 68.162.253.244       # Thoughtbot per Emily
+                Allow from 172.25.  # UK VPN
+                Allow from 172.17.  # UK VPN    
+                Allow from 202.144.44.115       # IT-211
+                Allow from env=repec-agent      # SUP-868
+                Allow from 81.171.194.4      # IT-1785
+                #Allow from 125.103.228.204     # IT-1493
+                Allow from 199.168.13           # Reston
+                Allow from 199.168.12           # ""
+		Allow from 192.168.4
+                Require valid-user
+                Satisfy any
+        </Location>
+
+        #<Directory "/var/www/press.nature.com/htdocs">
+        <Directory "/mnt/fs/Web/NPG/press">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+	ServerName	staging-www.palgraveconnect.com
+	Setenv VLOG /var/www/staging-www.palgraveconnect.com/logs
+	ErrorLog	/var/www/staging-www.palgraveconnect.com/logs/error_log
+	LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	TransferLog	/var/www/staging-www.palgraveconnect.com/logs/access_log
+
+        DocumentRoot /mnt/fs/Web/palgrave/
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .palgraveconnect.com
+
+	#P3P for IT-4073
+	Header append P3P 'CP="CAO DSP LAW IVA IVD HIS OUR UNR STP UNI COM"' 
+        Include conf/palgraveconnect_redirects.conf
+
+        RewriteEngine On
+        #RewriteLog /tmp/pc.rw.log
+        #RewriteLogLevel 1
+        RewriteCond %{REMOTE_ADDR} (.*)
+        RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+                #Strip out the /pc/ if we got it; this is ugly but it should keep it from appearing to users
+
+  # DEPLOY-1132
+  RewriteRule ^/crossdomain.xml$ /pc/crossdomain.xml [L]
+
+	#Serve static content directly
+        #RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml)$ - [L]
+        #Deploy-1082 haitsaadi has removed PDF from below Rewrirte on 16-08-2012
+	#RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|mrc|PDF|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L] 
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|mrc|CDX|GIF|JPG|PNG|CSS|TXT|CGI|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L] 
+	#RewriteRule (.*) - [L]
+
+        RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7280/nams/svc/shibbolethin [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7280/nams/svc/shibbolethin [P,L]
+
+        #Block requests we're not supposed to serve on this domain
+        #RewriteRule !^(/pc|/common|/browse|/index\.html|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /index.html [R,L]
+	#RewriteRule !^(/pc|/common|/browse|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /pc/index.html [R,L] 
+	#ADDED cap for capod deployments
+    RewriteRule !^(/pc|/pcadmin|/cap|/openurl|/common|/browse|/index\.html|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /index.html [R,L]
+
+	#DEPLOY-594
+	RewriteRule ^/pcadmin(.*) http://localhost:7280/pcadmin$1 [P,L]
+
+        #Proxy common to jetty directly
+        RewriteRule ^/common/(.*) http://localhost:7280/$1 [P,L]
+
+        RewriteRule ^/openurl(.*) http://localhost:7280/pc/openurl [P,L]
+
+	#IT-2691
+        #RewriteRule ^/pc/doifinder/(.*) /doifinder/$1 [R,L]
+        #RewriteRule ^/doifinder/(.*) http://localhost:7280/pc/doifinder/$1 [P,L]
+	##DEPLOY-870
+	##RewriteRule ^/cap(.*) http://localhost:7280/cap$1 [P,L]
+
+	#DEPLOY-9
+	RewriteRule ^/doifinder/(.*) /pc/doifinder/$1 [R,L]
+
+        RewriteRule ^/$ http://localhost:7280/pc/index.html [P,L]
+        RewriteRule ^/index.html$ http://localhost:7280/pc/index.html [P,L]
+
+        #Proxy all else by prefixing it with /pc/
+        RewriteRule (.*) http://localhost:7280$1 [P,L]
+         
+        ProxyPreserveHost on
+
+	<Location />
+		AuthType Basic
+                AuthName "PalgraveConnect"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+		Allow from 192.168.88
+                Allow from 192.168.92           # DMZ
+		Allow from 172.26
+                Allow from 195.138.194.1
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7
+                Allow from 68.162.253.244
+                Allow from 202.144.44.115 # Bangalore Web Production IT-211
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 194.129.50.164
+                Allow from 65.201.138.2
+                Allow from 66.228.83.
+                Allow from 63.64.195.2
+                Allow from 65.199.186.2
+                Allow from 24.184.44.72
+                Allow from 192.168.88
+                Allow from 192.168.92           # DMZ
+		Allow from 122.184.53.192       # ATT Team - IT-10246
+                Allow from 202.54.243.228	# ATT Team
+                Allow from 68.39.154.79
+                Allow from 203.101.103.162
+                Allow from 210.151.240.82
+		Allow from 75.101.159.17 #Glennis McGregor
+		Allow from athensams.net        # IT-3729
+                Allow from eduserv.org.uk       # IT-3729
+                Allow from niss.ac.uk           # IT-3729
+                Allow from 199.168.13           # Reston
+                Allow from 199.168.12           # ""
+                Allow from 75.101.163.131 # IT-14688
+		Allow from 192.168.4
+		Require valid-user
+		Satisfy any
+	</Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+	ServerName      status.nature.com
+        DocumentRoot    /var/www/status.nature.com/html
+        ErrorLog	/var/www/status.nature.com/logs/error_log
+        CustomLog	/var/www/status.nature.com/logs/access_log      combined
+
+        AddDefaultCharset	UTF-8
+        AddCharset		UTF-8   .html
+
+	DirectoryIndex	index.shtml
+
+        <Location />
+		AddHandler server-parsed .shtml
+                AddType text/html .shtml
+                Options +Includes
+                Order allow,deny
+                Allow from all
+        </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName	webservices.nature.com
+        DocumentRoot    /mnt/fs/web/webservices/Stats
+	ErrorLog	/var/www/webservices.nature.com/logs/error_log
+        TransferLog	/var/www/webservices.nature.com/logs/access_log
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+	<Location />
+		Options Indexes FollowSymLinks
+		Order Deny,Allow
+		Deny from all
+		# ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+		Allow from 192.168.4		# Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 199.168.13		# Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+		Allow from 66.228.83		# NPG Boston
+                Allow from 50.201.24            # NPG Boston
+		Allow from 203.26.59.4		# NPG Melbourne
+		# ----- Others
+                Allow from 216.64.169.240	# WebTrends
+                Allow from 74.125.75		# Google Sitemap
+                Allow from 66.228.83.114        # Thoughtbot's
+                Allow from 66.228.83.115        # Thoughtbot's
+                Allow from 66.228.83.116        # Thoughtbot's
+                Allow from 66.228.83.117        # Thoughtbot's
+                Allow from 66.228.83.118        # Thoughtbot's
+                Allow from 64.131.191.145       # caitlin from home
+                Allow from 68.162.253           # Thoughtbot Boston
+                Allow from 216.254.85.209       # Thoughtbot NYC
+            Satisfy any
+	</Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+	ServerName	staging-lipidmaps.nature.com
+	ServerAlias	staging-lipidomics.nature.com
+	DocumentRoot	/mnt/fs/web/NPG/lipidmaps
+	ErrorLog	/var/www/staging-lipidmaps.nature.com/logs/error.log
+	CustomLog	/var/www/staging-lipidmaps.nature.com/logs/access.log common
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+	RewriteEngine on
+  	RewriteLog /var/log/httpd/lipidmaps-rw.log
+  	RewriteLogLevel 3
+
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|rdf)$ - [L]
+  
+	ProxyPreserveHost on
+
+	# append index.html
+	RewriteRule ^/$ http://localhost:7080/lipidmaps/index.html [P,L]
+
+	# everything else goes to Java
+	RewriteRule ^/(.*) http://localhost:7080/lipidmaps/$1 [P] 
+  
+	# The same as you Document Root
+	<Directory "/mnt/fs/web/NPG/lipidmaps">
+	  AllowOverride All
+	  Options FollowSymLinks
+	  Order allow,deny
+	  Allow from all
+	</Directory>
+
+	<Location />
+                AuthType Basic
+                AuthName "Staging Lipid Maps"
+                AuthUserFile /etc/httpd/conf/passwd_lipidmaps
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                #Allow from 194.129.50.189 195.128.194.7 # UK Office IT-165
+                #Allow from 72.51.34.164  (Temporary, to ttest websiteoptimization)
+                Allow from 195.138.194.1
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 172.26
+                Allow from 172.25.  # UK VPN
+                Allow from 172.17.  # UK VPN
+                Allow from env=repec-agent      # SUP-868
+                Allow from 216.64.169.240 # WebTrends
+                Allow from 192.168.89 # DR
+                Allow from 74.125.75 # Google Sitemap
+		Allow from 127.0.0.1
+                Require valid-user
+                Satisfy any
+        </Location>
+</VirtualHost>
+
+#ISN-550
+<VirtualHost *:80>
+	ServerName staging-www.isn-online.org
+	ErrorLog /var/www/staging-www.isn-online.org/logs/error_log
+	CustomLog /var/www/staging-www.isn-online.org/logs/access_log combined
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .isn-online.org
+	ProxyPreserveHost On
+
+	DocumentRoot /mnt/fs/Web/NPG
+
+	RewriteEngine On
+
+		#Permit static content 
+	RewriteRule ^/robots.txt$ - [L]
+
+        RewriteRule ^/(ki|nrneph|npg|npg_|webfeeds|help|info|news|naturejobs|naturedotcom|scitable|ncpcardio|search)/(.*) http://staging-www.nature.com/$1/$2 [R,L]
+
+	RewriteRule ^/isn/join /isn/society/membership/index.html [R,L] 
+        RewriteRule ^/isn/network(.*) http://staging-isn-network.nature.com/isn/network$1 [P,L]
+
+	RewriteCond %{REQUEST_URI} ^/(isn|__chars|common|foxtrot|nams|super|images)/(.*)
+        RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|rdf)$ - [L]
+
+        RewriteRule ^/(.*) http://localhost:7080/$1 [P,L]
+
+                #Catch all
+        RewriteRule (.*) /isn/index.html [R,L]
+
+        ProxyPreserveHost On
+
+</VirtualHost>
+
+#IT-5286
+<VirtualHost *:80> 
+        ServerName staging-www.sa-decade2.com
+	ServerAlias staging.sa-decade2.com
+        ErrorLog /var/www/staging-www.sa-decade2.com/logs/error_log
+	CustomLog /var/www/staging-www.sa-decade2.com/logs/access_log combined
+        DocumentRoot /mnt/fs/Web/sciam/decade2/site
+</VirtualHost>
+
+
+<VirtualHost *:80>
+
+        ServerName      staging-network.nature.com
+        ServerAlias     staging-network-int.nature.com
+        ErrorLog /var/www/staging-network.nature.com/logs/error_log
+        CustomLog /var/www/staging-network.nature.com/logs/access_log combined
+
+        DocumentRoot /mnt/fs/Web/NPG/nn
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+        ExpiresActive on
+        ExpiresDefault  "access plus 0 days"
+        ExpiresByType image/gif "access plus 60 minutes"
+        ExpiresByType image/jpeg "access plus 60 minutes"
+        ExpiresByType image/png "access plus 60 minutes"
+        ExpiresByType text/css "access plus 60 minutes"
+        ExpiresByType application/x-javascript "access plus 60 minutes"
+
+        Alias /system/gadgets /mnt/fs/Web/NPG/nn/uploaded_images/gadgets
+        Alias /system/user /mnt/fs/Web/NPG/nn/uploaded_images/user
+        Alias /system/group /mnt/fs/Web/NPG/nn/uploaded_images/group
+        Alias /system/hub /mnt/fs/Web/NPG/nn/uploaded_images/hub
+        Alias /system/screencast /mnt/fs/Web/NPG/nn/uploaded_images/screencast
+        Alias /system/photo /mnt/fs/Web/NPG/nn/uploaded_images/photo
+
+        Alias /style /mnt/fs/Web/NPG/nn/assets/style
+        Alias /scripts /mnt/fs/Web/NPG/nn/assets/scripts
+        Alias /gadgets /mnt/fs/Web/NPG/nn/gadgets
+
+        RewriteEngine On
+        RewriteLog              /var/www/staging-network.nature.com/logs/rewrite_log
+	RewriteLogLevel 2
+        ProxyPreserveHost on
+        # Include our redirects
+        Include conf/network-redirects.conf
+
+
+	
+	RewriteMap host_map txt:/etc/httpd/conf.d/vhosts/nature_network.hosts
+    RewriteRule ^/test/error(/)?$  ${host_map:java}/error [P,L]
+	RewriteRule /oauth/ ${host_map:java}/oauth/ [P,L]
+
+	RewriteRule ^/javascripts(.*) ${host_map:rails}/javascripts$1 [P,L]
+	RewriteRule ^/stylesheets(.*) ${host_map:rails}/stylesheets$1 [P,L]
+    RewriteRule ^/email-verification/([^/]+)$ ${host_map:java}/process-email-verification?keyword=$1 [P,L]
+
+	
+  RewriteCond /mnt/fs/Web/NPG/nn/assets%{REQUEST_URI} -f [OR]
+  RewriteCond /mnt/fs/Web/NPG/nn%{REQUEST_URI} -f
+  RewriteRule ^/(style|scripts|gadgets)/(.*) - [L]
+
+	RewriteCond %{REQUEST_URI} !^/system/user/(.*)
+	RewriteCond %{REQUEST_URI} !^/system/group/(.*)
+	RewriteCond %{REQUEST_URI} !^/system/gadgets/(.*)
+	
+	RewriteRule ^/super(.*) ${host_map:java}/super$1 [P,L]
+	RewriteRule ^/common(.*) ${host_map:java}/common$1 [P,L]
+	RewriteRule ^/config(.*) ${host_map:java}/config$1 [P,L]
+
+	RewriteCond /mnt/fs/Web/NPG/nn/assets%{REQUEST_URI}  !-f  
+	RewriteRule ^/images(.*) ${host_map:rails}/images$1 [P,L] 
+	RewriteRule ^/favicon.ico ${host_map:rails}/favicon.ico [P,L]
+
+	Alias /images /mnt/fs/Web/NPG/nn/assets/images
+
+	RewriteRule \.(ris|gif|jpg|jpeg|png|css|txt|cgi|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|JPEG|PNG|CSS|TXT|CGI|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|md5|rdf|RDF|sbml|SBML|ico)$ - [L]
+
+  # Permanent (301) Redirects to take care of existing URLs that have been miodified as part of redesign
+	RewriteRule ^/people/([^/]+)/profile$ /profile/$1 [R=301,L]
+
+	# Routing rules
+	RewriteRule ^/$ ${host_map:rails}/ [P,L]
+	RewriteRule ^/admin(.*) ${host_map:rails}/admin$1 [P,L]
+	RewriteRule ^/forums(.*) ${host_map:rails}/forums$1 [P,L]
+	RewriteRule ^/groups(.*) ${host_map:rails}/groups$1 [P,L]
+	RewriteRule ^/search(.*) ${host_map:rails}/search$1 [P,L]
+	RewriteRule ^/site/(.*) ${host_map:rails}/site/$1 [P,L]
+	RewriteRule /blog[s]?(.*) ${host_map:rails}/blogs$1 [P,L]
+	RewriteRule ^/hubs(.*) ${host_map:rails}/hubs$1 [P,L]
+	RewriteRule ^/affiliations(.*) ${host_map:rails}/affiliations$1 [P,L]
+	RewriteRule ^/tags(.*) ${host_map:rails}/tags$1 [P,L]
+	RewriteRule ^/people(.*) ${host_map:rails}/people$1 [P,L]
+	RewriteRule ^/me(.*) ${host_map:rails}/me$1 [P,L]
+	RewriteRule ^/invitations(.*) ${host_map:rails}/invitations$1 [P,L]
+
+	
+	# TCS Java application rules
+	########### For Static Resources, OpenSocial and OAuth (applicable accross all modules)
+	RewriteRule ^/social(.*) ${host_map:java}/social$1 [P,L]
+	RewriteRule ^/ifr(.*) ${host_map:java}/ifr$1 [P,L]
+	RewriteRule ^/user/(.*) ${host_map:java}/$1 [P,L]
+	########### For Registration and Sign-in/Sign-out
+	RewriteRule ^/login(/)?$  ${host_map:java}/login [P,L]
+	RewriteRule ^/do-login$  ${host_map:java}/do-login [P,L]
+	RewriteRule ^/logout(/)?$  ${host_map:java}/logout?cmd=closeXMPPCon [P,L]
+	RewriteRule ^/create-account(/)?$ ${host_map:java}/create-account [P,L]
+	RewriteRule ^/register(/)?$ ${host_map:java}/register [P,L]
+	RewriteRule ^/register-user$ ${host_map:java}/register-user [P,L]
+	RewriteRule ^/register-member$ ${host_map:java}/register-member [P,L]
+	RewriteRule ^/register-member-details$ ${host_map:java}/register-member-details [P,L]
+	########### For User Profile
+	RewriteRule ^/profile/me/(.*) ${host_map:java}/profile/$1 [P,L]
+	RewriteRule ^/profile/me$ ${host_map:java}/profile/viewProfile [P,L]
+	RewriteRule ^/profile/([^/]+)/education$ ${host_map:java}/profile/education?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/publication$ ${host_map:java}/profile/publication?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/work-experience$ ${host_map:java}/profile/work-experience?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/affiliation$ ${host_map:java}/profile/affiliation?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/web-activities$ ${host_map:java}/profile/web-activities?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)/activities$ ${host_map:java}/profile/activities?userid=$1 [P,L]
+    RewriteRule ^/profile/([^/]+)/connections$ ${host_map:java}/profile/contacts?userid=$1 [P,L]
+    RewriteRule ^/profile/([^/]+)/contacts$ ${host_map:java}/profile/contacts?userid=$1 [P,L]
+	RewriteRule ^/profile/([^/]+)$ ${host_map:java}/profile/viewProfile?userid=$1 [P,L]
+	########### For workbench and related Gadgets
+	RewriteRule ^/workbench(/)?$ ${host_map:java}/workbench/loadWorkbenchPage [P,L]
+	RewriteRule ^/workbench/([^/]+)/add-gadgets(/)?$ ${host_map:java}/workbench/add-gadgets?userid=$1 [P,L]
+	RewriteRule ^/workbench/([^/]+)/people-tracker(/)?$ ${host_map:java}/workbench/loadTrackingPage?userid=$1 [P,L]
+	RewriteRule ^/workbench/([^/]+)/people-tracker-feed/([^/]+)$ ${host_map:java}/workbench/getPeopleTrackerFeed?keyWords=$1&feedtype=$2 [P,L]
+	RewriteRule ^/workbench/([^/]+)/my-network/?(.*) ${host_map:java}/workbench/loadMyNetworkPage?userid=$1&displayTab=$2 [P,L]
+    RewriteRule ^/workbench/([^/]+)/my-contacts/?(.*) ${host_map:java}/workbench/loadMyNetworkPage?userid=$1&displayTab=$2 [P,L]
+	RewriteRule ^/workbench/([^/]+)/questions-answers(/)?$ ${host_map:java}/workbench/loadQAGadget?userid=$1 [P,L]
+	RewriteRule ^/loadCanvasPage(.*) ${host_map:java}/workbench/loadCanvasPage$1 [P,L]
+	RewriteRule ^/gadgets(.*) ${host_map:java}/gadgets$1 [P,L]
+	########### For Questions & Answers
+	RewriteRule ^/questions-answers(/)?$ ${host_map:java}/questions-answers/loadQAHomePage [P,L]
+	RewriteRule ^/questions-answers/search$ ${host_map:java}/questions-answers/searchQAHomePage [P,L]
+	RewriteRule ^/questions-answers/question/([^/]+)-([^/]+)$ ${host_map:java}/questions-answers/viewSingleQuestion?questionID=$2 [P,L]
+  RewriteRule ^/welcome/([^/]+)(/)?$ ${host_map:java}/loadSignedInPage?userid=$1 [P,L]
+	########### For Site Admin
+  RewriteRule ^/siteadmin/([^/]+)/fields(/)?$ ${host_map:java}/admin/fields?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/search-fields(/)?$ ${host_map:java}/admin/search-fields?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/upload-field(/)?$ ${host_map:java}/admin/upload-field?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/remap-field(/)?$ ${host_map:java}/admin/remap-field?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/gadgets(/)?$ ${host_map:java}/admin/gadgets?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/search-gadgets(/)?$ ${host_map:java}/admin/search-gadgets?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)/questions-answers(/)?$ ${host_map:java}/admin/questions-answers?userid=$1 [P,L]
+  RewriteRule ^/siteadmin/([^/]+)(/)?$ ${host_map:java}/admin/loadSiteAdminPage?userid=$1 [P,L]
+
+
+
+	RewriteRule ^/(.*)$ ${host_map:rails}/$1 [P,L]
+
+
+        <Location />
+                AuthType        Basic
+                AuthName        "Beta Network"
+                AuthUserFile    /etc/httpd/conf/network-passwd
+                Options Includes Indexes
+                Order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.88           # DMZ                Allow from 192.168.89           # DR
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DMZ                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+    # ----- Misc
+    Allow from 68.39.154.79
+    Allow from 66.228.83.114        # Thoughtbot's
+    Allow from 66.228.83.115        # Thoughtbot's
+    Allow from 66.228.83.116        # Thoughtbot's
+    Allow from 66.228.83.117        # Thoughtbot's
+    Allow from 66.228.83.118        # Thoughtbot's
+    Allow from 68.162.253           # Thoughtbot Boston
+                Allow from 50.201.24            # NPG Boston
+    Allow from 216.254.85.209       # Thoughtbot NYC
+	Allow from 91.208.163.140	# IT-10180 Semantico
+                Require valid-user
+                Satisfy any
+        </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName      staging-precedings.nature.com
+        DocumentRoot    /mnt/fs/Web/NPG/natureprecedings
+
+        ErrorLog        /var/www/staging-precedings.nature.com/logs/error.log
+        CustomLog       /var/www/staging-precedings.nature.com/logs/access.log common
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+        ProxyPreserveHost On
+
+        RewriteEngine on
+        # RewriteLog /tmp/natureprecedings-rw.log
+        # RewriteLogLevel 3
+
+	# all images, css etc are served by Apache
+        #RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF)$ - [L]
+
+        # everything else goes to Java
+        RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+        RewriteRule ^/(.*) http://localhost:9918/$1 [P,L]
+
+
+        # The same as your Document Root
+        <Directory "/mnt/fs/Web/NPG/natureprecedings">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+        <Location />
+                AuthType Basic
+                AuthName "NPG Precedings Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                Options Includes Indexes
+                Order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 50.201.24            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+		Allow from 122.184.53.192       # ATT Team - IT-10246
+		Allow from 202.54.243.228       # ATT Team - IT-3004
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- Misc
+                #Allow from 68.39.154.79
+                #Allow from 66.228.83.114        # Thoughtbot's
+                #Allow from 66.228.83.115        # Thoughtbot's
+                #Allow from 66.228.83.116        # Thoughtbot's
+                #Allow from 66.228.83.117        # Thoughtbot's
+                #Allow from 66.228.83.118        # Thoughtbot's
+                #Allow from 68.162.253           # Thoughtbot Boston
+                #Allow from 216.254.85.209       # Thoughtbot NYC
+                #Allow from 208.82.13.114        # Thoughtbot NYC backup line
+                Allow from 216.64.169.240       # WebTrends - IT-3383
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName      staging-blogs.nature.com
+        DocumentRoot    /mnt/fs/Web/NPG/natureblogs
+        ErrorLog        /var/www/staging-blogs.nature.com/logs/error_log
+        CustomLog       /var/www/staging-blogs.nature.com/logs/access_log common
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+    RewriteEngine On
+    ProxyPreserveHost on
+
+        <Directory "/mnt/fs/Web/NPG/natureblogs">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+
+
+        # all images, css etc are served by Apache
+        RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF)$ - [L]
+
+
+
+
+        # everything else goes to Java
+        RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+        RewriteRule ^/(.*) http://localhost:9918/$1 [P,L]
+
+
+
+    <Location />
+                Order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 50.201.24            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+                Allow from 122.184.53.192       # ATT Team - IT-10246
+                Allow from 202.54.243.228       # ATT Team - IT-3004
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- Misc
+                #Allow from 68.39.154.79
+                #Allow from 66.228.83.114        # Thoughtbot's
+                #Allow from 66.228.83.115        # Thoughtbot's
+                #Allow from 66.228.83.116        # Thoughtbot's
+                #Allow from 66.228.83.117        # Thoughtbot's
+                #Allow from 66.228.83.118        # Thoughtbot's
+                #Allow from 68.162.253           # Thoughtbot Boston
+                #Allow from 216.254.85.209       # Thoughtbot NYC
+        	#Allow from 208.82.13.114        # Thoughtbot NYC backup line
+                Allow from 216.64.169.240       # WebTrends - IT-3383
+		Allow from 91.208.163.140   # IT-10180 Semantico
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>
+
+<VirtualHost *:80>
+        ServerName doi.crossref.org
+        DocumentRoot /tmp/doi/
+        ErrorLog /tmp/doi-error_log
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /tmp/doi-access_log
+        RewriteEngine On
+        RewriteRule (.*) - [F,L]
+</VirtualHost>
+
+
+<VirtualHost *:80>
+    ServerName  staging-lipidmaps.nature.com
+    DocumentRoot    /mnt/fs/Web/NPG/lipidmaps
+    ErrorLog    /var/www/staging-lipidmaps.nature.com/logs/error.log
+    CustomLog   /var/www/staging-lipidmaps.nature.com/logs/access.log common
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+    ProxyPreserveHost On
+
+    RewriteEngine on
+
+    # all images, css etc are served by Apache
+    RewriteRule \.(ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|ris|swf|docx|xlsx|doc|xls|ppt|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF)$ - [L]
+
+    # everything else goes to Java
+    RewriteRule ^/(.*) http://localhost:7080/lipidmaps/$1 [P,L]
+
+    # The same as you Document Root
+    <Directory "/mnt/fs/Web/NPG/lipidmaps">
+        AllowOverride All
+        Options FollowSymLinks
+        Order allow,deny
+        Allow from all
+    </Directory>
+
+    <Location />
+                AuthType Basic
+                AuthName "NPG Development Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston Subnet .4.x
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 170.224.106          # NJ DC - IBM
+        Allow from 65.242.181         # NPG - MCI Verizon Business
+        Allow from 199.168.13           # Reston DC
+        Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 66.228.83            # NPG Boston
+                Allow from 50.201.24            # NPG Boston
+                Allow from 203.26.59.4          # NPG Melbourne
+		Allow from 122.184.53.192       # ATT Team - IT-10246
+                Allow from 202.54.243.228       # ATT Team - IT-3004
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- Misc
+                Allow from 68.39.154.79
+                #Allow from 66.228.83.114        # Thoughtbot's
+                #Allow from 66.228.83.115        # Thoughtbot's
+                #Allow from 66.228.83.116        # Thoughtbot's
+                #Allow from 66.228.83.117        # Thoughtbot's
+                #Allow from 66.228.83.118        # Thoughtbot's
+                Allow from 64.131.191.145       # caitlin from home
+                Allow from 96.39.253.69     # Barzel
+        	#Allow from 68.162.253           # Thoughtbot Boston
+                #Allow from 216.254.85.209       # Thoughtbot NYC
+                Allow from 216.64.169.240       # WebTrends - IT-3383
+                Allow from 203.200.189.6        # TCS Offshore 1
+		Allow from 203.200.192.98       # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 216.64.169.240       # Jeff @ Webtrends IT-5202
+
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>
+
+<VirtualHost *:80>
+  ServerName staging-phoenix.nature.com
+  DocumentRoot /home/phoenix/apps/phoenix/current/public
+  Setenv VLOG /var/www/staging-phoenix.nature.com/logs
+  ErrorLog /var/www/staging-phoenix.nature.com/logs/error_log
+  LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+  TransferLog /var/www/staging-phoenix.nature.com/logs/access_log
+  CookieTracking on
+  CookieName SaneID
+  CookieExpires "1 day"
+  CookieDomain .nature.com
+  AddOutputFilterByType DEFLATE text/html application/json application/x-javascript text/css text/javascript
+
+  ModPagespeed on
+  ModPagespeedDomain http://staging-phoenix.nature.com
+  ModPagespeedFileCachePath "/var/www/mod_pagespeed/cache/"
+  ModPagespeedGeneratedFilePrefix "/var/www/mod_pagespeed/files/"
+  KeepAlive On
+  KeepAliveTimeout 5
+
+  ExpiresActive off
+  RewriteEngine On
+
+  AllowEncodedSlashes on
+  ProxyPreserveHost On
+
+  RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+  RewriteRule ^(.*)$ http://127.0.0.1:5100$1 [P,L]
+
+  #Access restrictions
+  <Location />
+    AuthType Basic
+    AuthName "NPG Staging Site"
+    AuthUserFile /etc/httpd/conf/passwd_mynature
+    order deny,allow
+    Options Includes Indexes
+    Deny from all
+    # ----- Internal
+    Allow from 127.0.0.1
+    Allow from 172.26               # IT Internal
+    Allow from 172.25               # UK VPN
+    Allow from 172.17               # UK VPN
+    Allow from 192.168.4            # Reston subnet 4
+    Allow from 192.168.88           # DMZ
+    Allow from 192.168.92           # DMZ
+    Allow from 192.168.6            # Eclipse live
+    Allow from 192.168.89           # DR
+    Allow from 65.199.186           # NPG - MCI Verizon Business
+    Allow from 65.201.138.2         # NPG - MCI Verizon Business
+    Allow from 65.242.181           # NPG - MCI Verizon Business
+    Allow from 199.168.13           # Reston DC
+    Allow from 199.168.12           # ""
+    # ----- Offices
+    Allow from 63.64.195.2          # SF VPN
+    Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+    Allow from 195.138.194.7        # Macmillan UK
+    Allow from 194.129.50.164       # Macmillan UK
+    Allow from 203.101.103.162      # Macmillan India
+    Allow from 210.151.240.82       # NPG Japan
+    Allow from 210.169.171.2        # NPG Japan
+    Allow from 210.169.171.32       # NPG Japan
+    Allow from 122.160.227.17       # MPS India
+    Allow from 202.144.44.115       # Bangalore Web Production
+    Allow from 61.246.62.130        # Bangalore Web Production - New
+    # ----- External
+    Allow from 216.64.169.240       # WebTrends
+    Allow from 99.179.165.138       # WebTrends
+    Allow from 216.64.169.240       # Webtrends IT-5099
+    # ---- Pingdom
+    # Generate this list with:
+    #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+    # --- misc
+    Allow from 46.165.195.139
+    Allow from 69.59.28.19
+    Allow from 178.255.154.2
+    Allow from 178.255.153.2
+    Allow from 178.255.155.2
+    Allow from 64.237.55.3
+    Allow from 178.255.152.2
+    Allow from 64.141.100.136
+    Allow from 212.84.74.156
+    Allow from 50.23.94.74
+    Allow from 46.20.45.18
+    Allow from 199.87.228.66
+    Allow from 76.72.167.90
+    Allow from 94.247.174.83
+    Allow from 69.64.56.47
+    Allow from 176.31.228.137
+    Allow from 184.75.210.186
+    Allow from 108.62.115.226
+    Allow from 94.46.4.1
+    Allow from 173.204.85.217
+    Allow from 173.248.147.18
+    Allow from 72.46.130.42
+    Allow from 74.52.50.50
+    Allow from 83.170.113.102
+    Allow from 95.211.87.85
+    Allow from 207.218.231.170
+    Allow from 207.97.207.200
+    Allow from 67.192.120.134
+    Allow from 78.136.27.223
+    Allow from 67.205.112.79
+    Allow from 204.152.200.42
+    Allow from 85.25.176.167
+    Allow from 94.46.240.121
+    Allow from 208.43.68.59
+    Allow from 67.228.213.178
+    Allow from 96.31.66.245
+    Allow from 82.103.128.63
+    Allow from 174.34.156.130
+    Allow from 70.32.40.2
+    Allow from 174.34.162.242
+    Allow from 188.138.124.110
+    Allow from 85.17.156.99
+    Allow from 85.17.156.11
+    Allow from 85.17.156.76
+    Allow from 72.46.153.26
+    Allow from 208.64.28.194
+    Allow from 76.164.194.74
+    Allow from 184.75.210.90
+    Allow from 184.75.208.210
+    Allow from 184.75.209.18
+    Allow from 74.53.193.66
+    Allow from 188.138.118.184
+
+    Require valid-user
+    Satisfy any
+  </Location>
+</VirtualHost>
+
+<VirtualHost *:80>
+    ServerName staging-my.nature.com
+    DocumentRoot /home/phoenix/apps/phoenix/current/public
+
+    Setenv VLOG /var/www/staging-my.nature.com/logs
+    ErrorLog /var/www/staging-my.nature.com/logs/error_log
+    LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+    TransferLog /var/www/staging-my.nature.com/logs/access_log
+
+    CookieTracking on
+    CookieName SaneID
+    CookieExpires "1 day"
+    CookieDomain .nature.com
+    AddOutputFilterByType DEFLATE text/html application/json application/x-javascript text/css text/javascript
+
+    ModPagespeed                    on
+    ModPagespeedDomain              http://staging-my.nature.com
+    ModPagespeedFileCachePath       "/var/www/mod_pagespeed/cache/"
+    ModPagespeedGeneratedFilePrefix "/var/www/mod_pagespeed/files/"
+
+    KeepAlive On
+    KeepAliveTimeout 5
+
+    ExpiresActive off
+    RewriteEngine On
+
+    AllowEncodedSlashes on
+    ProxyPreserveHost On
+
+    RewriteCond %{DOCUMENT_ROOT}/%{REQUEST_FILENAME} !-f
+    RewriteRule ^(.*)$ http://127.0.0.1:5100$1 [P,L]
+
+    <LocationMatch "^/assets/.*$">
+        # Use of ETag is discouraged when Last-Modified is present
+        Header unset ETag
+        FileETag None
+        # RFC says only cache for 1 year
+        ExpiresActive On
+        ExpiresDefault "access plus 1 year"
+    </LocationMatch>
+
+    #Access restrictions
+    <Location />
+        AuthType Basic
+        AuthName "NPG Staging Site"
+        AuthUserFile /etc/httpd/conf/passwd_mynature
+        order deny,allow
+        Options Includes Indexes
+        Deny from all
+        # ----- Internal
+        Allow from 127.0.0.1
+        Allow from 172.26               # IT Internal
+        Allow from 172.25               # UK VPN
+        Allow from 172.17               # UK VPN
+        Allow from 192.168.4            # Reston subnet 4
+        Allow from 192.168.88           # DMZ
+        Allow from 192.168.92           # DMZ
+        Allow from 192.168.6            # Eclipse live
+        Allow from 192.168.89           # DR
+        Allow from 65.199.186           # NPG - MCI Verizon Business
+        Allow from 65.201.138.2         # NPG - MCI Verizon Business
+        Allow from 65.242.181           # NPG - MCI Verizon Business
+        Allow from 199.168.13           # Reston DC
+        Allow from 199.168.12           # ""
+        # ----- Offices
+        Allow from 63.64.195.2          # SF VPN
+        Allow from 195.138.194.1        # Macmillan UK
+        Allow from 31.221.45.4        # Macmillan UK
+        Allow from 195.138.194.7        # Macmillan UK
+        Allow from 194.129.50.164       # Macmillan UK
+        Allow from 203.101.103.162      # Macmillan India
+        Allow from 210.151.240.82       # NPG Japan
+        Allow from 210.169.171.2        # NPG Japan
+        Allow from 210.169.171.32       # NPG Japan
+        Allow from 122.160.227.17       # MPS India
+        Allow from 202.144.44.115       # Bangalore Web Production
+        Allow from 61.246.62.130        # Bangalore Web Production - New
+        # ----- External
+        Allow from 216.64.169.240       # WebTrends
+        Allow from 99.179.165.138       # WebTrends
+        Allow from 216.64.169.240       # Webtrends IT-5099
+        # ---- Pingdom
+        # Generate this list with:
+        #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+        Allow from 46.165.195.139
+        Allow from 69.59.28.19
+        Allow from 178.255.154.2
+        Allow from 178.255.153.2
+        Allow from 178.255.155.2
+        Allow from 64.237.55.3
+        Allow from 178.255.152.2
+        Allow from 64.141.100.136
+        Allow from 212.84.74.156
+        Allow from 50.23.94.74
+        Allow from 46.20.45.18
+        Allow from 199.87.228.66
+        Allow from 76.72.167.90
+        Allow from 94.247.174.83
+        Allow from 69.64.56.47
+        Allow from 176.31.228.137
+        Allow from 184.75.210.186
+        Allow from 108.62.115.226
+        Allow from 94.46.4.1
+        Allow from 173.204.85.217
+        Allow from 173.248.147.18
+        Allow from 72.46.130.42
+        Allow from 74.52.50.50
+        Allow from 83.170.113.102
+        Allow from 95.211.87.85
+        Allow from 207.218.231.170
+        Allow from 207.97.207.200
+        Allow from 67.192.120.134
+        Allow from 78.136.27.223
+        Allow from 67.205.112.79
+        Allow from 204.152.200.42
+        Allow from 85.25.176.167
+        Allow from 94.46.240.121
+        Allow from 208.43.68.59
+        Allow from 67.228.213.178
+        Allow from 96.31.66.245
+        Allow from 82.103.128.63
+        Allow from 174.34.156.130
+        Allow from 70.32.40.2
+        Allow from 174.34.162.242
+        Allow from 188.138.124.110
+        Allow from 85.17.156.99
+        Allow from 85.17.156.11
+        Allow from 85.17.156.76
+        Allow from 72.46.153.26
+        Allow from 208.64.28.194
+        Allow from 76.164.194.74
+        Allow from 184.75.210.90
+        Allow from 184.75.208.210
+        Allow from 184.75.209.18
+        Allow from 74.53.193.66
+        Allow from 188.138.118.184
+
+        Require valid-user
+        Satisfy any
+    </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+	ServerName staging-entities.nature.com
+	#DocumentRoot /mnt/fs/Web/addon/mynature
+	Setenv VLOG /var/www/staging-entities.nature.com/logs
+        ErrorLog /var/www/staging-entities.nature.com/logs/error_log
+        LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/staging-entities.nature.com/logs/access_log
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+	RewriteEngine On
+        AllowEncodedSlashes on
+        ProxyPreserveHost On
+
+	RewriteRule ^(.*)$ http://127.0.0.1:9918$1 [P,L] 
+
+	#Access restrictions
+        <Location />
+                AuthType Basic
+                AuthName "NPG Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd_entities
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6            # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 210.169.171.2        # NPG Japan
+                Allow from 210.169.171.32       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- External
+                Allow from 216.64.169.240       # WebTrends
+                Allow from 99.179.165.138       # WebTrends
+		Allow from 216.64.169.240       # Webtrends IT-5099
+		# ---- Pingdom
+                # Generate this list with:
+                #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+                # --- misc
+		Allow from 46.165.195.139
+		Allow from 69.59.28.19
+		Allow from 178.255.154.2
+		Allow from 178.255.153.2
+		Allow from 178.255.155.2
+		Allow from 64.237.55.3
+		Allow from 178.255.152.2
+		Allow from 64.141.100.136
+		Allow from 212.84.74.156
+		Allow from 50.23.94.74
+		Allow from 46.20.45.18
+		Allow from 199.87.228.66
+		Allow from 76.72.167.90
+		Allow from 94.247.174.83
+		Allow from 69.64.56.47
+		Allow from 176.31.228.137
+		Allow from 184.75.210.186
+		Allow from 108.62.115.226
+		Allow from 94.46.4.1
+		Allow from 173.204.85.217
+		Allow from 173.248.147.18
+		Allow from 72.46.130.42
+		Allow from 74.52.50.50
+		Allow from 83.170.113.102
+		Allow from 95.211.87.85
+		Allow from 207.218.231.170
+		Allow from 207.97.207.200
+		Allow from 67.192.120.134
+		Allow from 78.136.27.223
+		Allow from 67.205.112.79
+		Allow from 204.152.200.42
+		Allow from 85.25.176.167
+		Allow from 94.46.240.121
+		Allow from 208.43.68.59
+		Allow from 67.228.213.178
+		Allow from 96.31.66.245
+		Allow from 82.103.128.63
+		Allow from 174.34.156.130
+		Allow from 70.32.40.2
+		Allow from 174.34.162.242
+		Allow from 188.138.124.110
+		Allow from 85.17.156.99
+		Allow from 85.17.156.11
+		Allow from 85.17.156.76
+		Allow from 72.46.153.26
+		Allow from 208.64.28.194
+		Allow from 76.164.194.74
+		Allow from 184.75.210.90
+		Allow from 184.75.208.210
+		Allow from 184.75.209.18
+		Allow from 74.53.193.66
+		Allow from 188.138.118.184
+
+                Require valid-user
+                Satisfy any
+        </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+    ServerName    staging-ps.naturejobs.com
+    DocumentRoot  /mnt/fs/web/NPG
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .naturejobs.com
+
+    ExpiresActive off
+    RewriteEngine On
+    AllowEncodedSlashes on
+    ProxyPreserveHost On
+
+    RewriteRule ^(.*)$ http://127.0.0.1:8080$1 [P,L]
+
+    #Access restrictions
+    <Location />
+                AuthType Basic
+                AuthName "NPG Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6            # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 210.169.171.2        # NPG Japan
+                Allow from 210.169.171.32       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- External
+                Allow from 216.64.169.240       # WebTrends
+                Allow from 99.179.165.138       # WebTrends
+                Allow from 216.64.169.240       # Webtrends IT-5099
+                # ----- Pingdom
+                # Generate this list with:
+                #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+                # --- misc
+		Allow from 46.165.195.139
+		Allow from 69.59.28.19
+		Allow from 178.255.154.2
+		Allow from 178.255.153.2
+		Allow from 178.255.155.2
+		Allow from 64.237.55.3
+		Allow from 178.255.152.2
+		Allow from 64.141.100.136
+		Allow from 212.84.74.156
+		Allow from 50.23.94.74
+		Allow from 46.20.45.18
+		Allow from 199.87.228.66
+		Allow from 76.72.167.90
+		Allow from 94.247.174.83
+		Allow from 69.64.56.47
+		Allow from 176.31.228.137
+		Allow from 184.75.210.186
+		Allow from 108.62.115.226
+		Allow from 94.46.4.1
+		Allow from 173.204.85.217
+		Allow from 173.248.147.18
+		Allow from 72.46.130.42
+		Allow from 74.52.50.50
+		Allow from 83.170.113.102
+		Allow from 95.211.87.85
+		Allow from 207.218.231.170
+		Allow from 207.97.207.200
+		Allow from 67.192.120.134
+		Allow from 78.136.27.223
+		Allow from 67.205.112.79
+		Allow from 204.152.200.42
+		Allow from 85.25.176.167
+		Allow from 94.46.240.121
+		Allow from 208.43.68.59
+		Allow from 67.228.213.178
+		Allow from 96.31.66.245
+		Allow from 82.103.128.63
+		Allow from 174.34.156.130
+		Allow from 70.32.40.2
+		Allow from 174.34.162.242
+		Allow from 188.138.124.110
+		Allow from 85.17.156.99
+		Allow from 85.17.156.11
+		Allow from 85.17.156.76
+		Allow from 72.46.153.26
+		Allow from 208.64.28.194
+		Allow from 76.164.194.74
+		Allow from 184.75.210.90
+		Allow from 184.75.208.210
+		Allow from 184.75.209.18
+		Allow from 74.53.193.66
+		Allow from 188.138.118.184
+
+                Require valid-user
+                Satisfy any
+    </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+    	ServerName	staging-secure.nature.com
+    	DocumentRoot /mnt/fs/web/NPG
+      ErrorDocument 500 /server-error.html
+      ErrorDocument 501 /server-error.html
+      ErrorDocument 502 /server-error.html
+      ErrorDocument 503 /server-error.html
+    	AccessFileName .htaccess
+
+    	Setenv VLOG /var/www/staging-secure.nature.com/logs
+    	ErrorLog /var/www/staging-secure.nature.com/logs/error_log
+	    LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+   	  TransferLog /var/www/staging-secure.nature.com/logs/access_log
+
+      CookieTracking on
+      CookieName SaneID
+      CookieExpires "1 day"
+      CookieDomain .nature.com
+
+    	AllowEncodedSlashes on
+
+	    SSLEngine on
+      SSLCipherSuite HIGH:MEDIUM
+      SSLProtocol all -SSLv2
+      SSLCertificateKeyFile /etc/httpd/conf/ssl/naturecom/naturecom.key
+      SSLCertificateFile /etc/httpd/conf/ssl/naturecom/_.nature.com.crt
+      SSLCertificateChainFile /etc/httpd/conf/ssl/naturecom/gd_bundle.crt
+
+	    ScriptAlias /cgi-bin/ /var/www/cgi-bin/
+	    AddHandler cgi-script .cgi .pl 
+
+	    AddType text/application/x-research-info-systems        .ris
+	    AddType application/text	.ris
+	    AddType chemical/x-cdx                                  cdx
+	    #AddType application/rdf+xml .rdf
+	    AddType text/csv        .csv
+
+	    RewriteEngine on
+	    RewriteRule ^/akamai-sureroute-test-object.htm - [L]
+
+	    RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7080/nams/svc/shibbolethin [P,L] 
+	    RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7080/nams/svc/shibbolethin [P,L] 
+
+    	# Gateways
+    	AddType text/html .shtml
+    	AddHandler server-parsed .shtml
+
+	    #Block mysterious curl queries from London
+    	RewriteCond %{HTTP_USER_AGENT} ^curl
+	    RewriteCond %{REMOTE_ADDR} ^195.138.194.1$
+	    RewriteRule ^/(.*) - [F,L]
+
+
+	    RewriteCond %{REMOTE_ADDR} (.*)
+      RewriteRule .* - [E=R_A:%1]
+      RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+
+	    <Proxy balancer://scitablesecurecluster>
+          BalancerMember http://192.168.88.202
+      </Proxy>
+
+      <Proxy balancer://nlssecurecluster>
+          BalancerMember http://192.168.88.202
+      </Proxy>
+
+      RewriteRule ^/scitable/natedcollab(.*) http://192.168.88.197:8081/scitable/natedcollab$1 [P,L]
+      RewriteRule ^/scitable(.*) balancer://scitablesecurecluster%{REQUEST_URI} [P,L]
+	    RewriteRule ^/principles(.*) balancer://nlssecurecluster%{REQUEST_URI} [P,L]
+
+	    RewriteRule ^/server-error(.*) - [L]
+	    RewriteRule ^/rest/docs/(.*) - [L]
+	    RewriteRule ^/survey/(.*) - [L]
+    	RewriteRule ^/server-status     - [L]
+    	RewriteRule ^/perfmon     - [L]
+
+	    # Restrict API access
+    	RewriteCond %{REMOTE_ADDR} ^65.199.186.*$ [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^65.199.186.*$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^108.203.169.225 [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^108.203.169.225 [OR]
+    	RewriteCond %{REMOTE_ADDR} ^192.168.88.*$ [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.88.*$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^192.168.89.*$ [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.89.*$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^192.168.92.*$ [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.92.*$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^192.168.10.*$ [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.10.*$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^192.168.12.*$ [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^192.168.12.*$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^166.111.120.*$ [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^166.111.120.*$ [OR]
+	    RewriteCond %{REMOTE_ADDR} ^125.103.228.204$ [OR]
+	    RewriteCond %{HTTP:NPG_SRC_ADDR} ^125.103.228.204$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^210.151.240.*$ [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^210.151.240.*$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^124.39.14.174 [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^124.39.14.174 [OR]
+    	RewriteCond %{REMOTE_ADDR} ^127.0.0.1 [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^127.0.0.1 [OR]
+    	RewriteCond %{HTTP:NPG_SRC_ADDR} ^10.1.1.*$ [OR]
+    	RewriteCond %{REMOTE_ADDR} ^10.1.1.*$
+    	RewriteRule ^/rest/(.*)$ http://localhost:7080/api/$1 [P,L]
+
+      # Send traffic which doesn't need to be secure back to www
+      RewriteRule ^/$ http://staging-www.nature.com/ [R]
+      RewriteRule ^/nature(.*) http:/staging-www.nature.com/nature$1 [R]
+      RewriteRule ^/news(.*) http://staging-www.nature.com/news$1 [R]
+
+    	# Send everything else to jetty
+    	RewriteRule ^/(.*) http://localhost:7080/$1 [P] 
+
+	    SetEnvIf User-Agent ^remi repec-agent
+
+	    <Directory /mnt/fs/Web/NPG/cgi-bin/>
+    	  	AllowOverride None
+    	  	Options ExecCGI
+    	  	Order allow,deny
+    	  	Allow from all
+	    </Directory>
+
+
+	    #Access restrictions
+      <Location />
+                AuthType Basic
+                AuthName "NPG Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+		            Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+		            Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+		            Allow from 192.168.4		# Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+		            Allow from 192.168.6		# Eclipse live
+                Allow from 192.168.89           # DR
+		            Allow from 65.199.186		# NPG - MCI Verizon Business
+		            Allow from 65.201.138.2         # NPG - MCI Verizon Business
+		            Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13		# Reston DC
+                Allow from 199.168.12           # ""
+		            # ----- Offices
+		            Allow from 63.64.195.2		# SF VPN
+                Allow from 195.138.194.1	# Macmillan UK
+                Allow from 31.221.45.4	# Macmillan UK
+                Allow from 195.138.194.7	# Macmillan UK
+		            Allow from 194.129.50.164	# Macmillan UK
+	        	    Allow from 203.101.103.162      # Macmillan India
+		            Allow from 210.151.240.82	# NPG Japan
+		            Allow from 122.160.227.17	# MPS India
+		            Allow from 202.144.44.115       # Bangalore Web Production
+		            Allow from 61.246.62.130	# Bangalore Web Production - New
+		            # ----- External
+		            Allow from 216.64.169.240       # WebTrends
+		            Allow from 99.179.165.138       # WebTrends
+                Allow from 74.125.75            # Google Sitemap
+                Allow from 66.228.83		# Towerstream, RI - ?
+                Allow from 24.184.44.72		# Optimum online ?
+                Allow from 69.253.44.235	# Comcast Cable MikeB
+		            Allow from 202.54.243.228       # Tata Communication
+                Allow from 198.202.75		# San Diego Supercomputer Center
+                Allow from 128.84.154.156	# Cornell University
+		            Allow from 68.162.253.244       # Thoughtbot
+                Allow from 70.84.12.186		# Thoughtbot velidator - REQ-285
+                Allow from 216.254.85.209	# Thoughtbot ? - REQ-292
+		            Allow from 63.237.233.40        # Allen Institute for Brain Science
+                Allow from 18.91.0.96           # MIT
+                Allow from 18.91.0.231          # MIT
+                Allow from 137.187.66.207       # NIH
+                Allow from 216.64.169.240       # Webtrends IT-5099
+		            Allow from 194.178.120          # BIBIT
+                Allow from 155.136.66           # BIBIT
+                Allow from 89.206.148           # British Dental Association - IT-1785
+                Allow from 128.143.21.106	# University of Virginia - DART-42
+                Allow from 208.254.38.84        # CrossRef - REQ-247
+		            Allow from 71.7.236.14		# Heather Rankin
+		            Allow from 124.124.239.253	# Chennai office - IT-3539
+		            Allow from 115.113.232.2	# Chennai office - IT-4630
+		            Allow from 220.225.218.253	# Chennai office - IT-4630
+		            Allow from env=repec-agent      # SUP-868
+		            Allow from 69.42.0.229          # IT-3701
+		            Allow from 203.200.189.6	# TCS Offshore 1
+		Allow from 203.200.192.98       # TCS Offshore 1
+		            Allow from 203.197.96.43	# TCS Offshore 2
+		            Allow from 99.246.127.145       # IT-9109
+                Allow from 76.206.4.238         # IT-9109
+		 	          # ---- Pingdom
+		            # Generate this list with:
+		            #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+		            # --- misc
+		Allow from 46.165.195.139
+		Allow from 69.59.28.19
+		Allow from 178.255.154.2
+		Allow from 178.255.153.2
+		Allow from 178.255.155.2
+		Allow from 64.237.55.3
+		Allow from 178.255.152.2
+		Allow from 64.141.100.136
+		Allow from 212.84.74.156
+		Allow from 50.23.94.74
+		Allow from 46.20.45.18
+		Allow from 199.87.228.66
+		Allow from 76.72.167.90
+		Allow from 94.247.174.83
+		Allow from 69.64.56.47
+		Allow from 176.31.228.137
+		Allow from 184.75.210.186
+		Allow from 108.62.115.226
+		Allow from 94.46.4.1
+		Allow from 173.204.85.217
+		Allow from 173.248.147.18
+		Allow from 72.46.130.42
+		Allow from 74.52.50.50
+		Allow from 83.170.113.102
+		Allow from 95.211.87.85
+		Allow from 207.218.231.170
+		Allow from 207.97.207.200
+		Allow from 67.192.120.134
+		Allow from 78.136.27.223
+		Allow from 67.205.112.79
+		Allow from 204.152.200.42
+		Allow from 85.25.176.167
+		Allow from 94.46.240.121
+		Allow from 208.43.68.59
+		Allow from 67.228.213.178
+		Allow from 96.31.66.245
+		Allow from 82.103.128.63
+		Allow from 174.34.156.130
+		Allow from 70.32.40.2
+		Allow from 174.34.162.242
+		Allow from 188.138.124.110
+		Allow from 85.17.156.99
+		Allow from 85.17.156.11
+		Allow from 85.17.156.76
+		Allow from 72.46.153.26
+		Allow from 208.64.28.194
+		Allow from 76.164.194.74
+		Allow from 184.75.210.90
+		Allow from 184.75.208.210
+		Allow from 184.75.209.18
+		Allow from 74.53.193.66
+		Allow from 188.138.118.184
+
+                        Allow from 188.92.136.5 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.48 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.49 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.50 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.51 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.45 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.46 # DEPLOY-780 OpenAthens
+
+
+                Require valid-user
+                Satisfy any
+        </Location>
+
+
+        <Location /scitable>
+		            AuthType Basic
+                AuthName "NPG Staging Scitable"
+                AuthUserFile /etc/httpd/conf/passwd
+		            Order deny,allow
+                Options Includes Indexes
+                Deny from all
+		            # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6    # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+		            Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4	# Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+		            # ----- Misc
+		            Allow from 202.54.243.228       # Tata Communication
+		            Allow from 203.200.189.6        # TCS Offshore 1
+		Allow from 203.200.192.98       # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 121.241.218.132	# TCS Kolkata, IT-6793
+		            Allow from 203.202.189.55	# TCS Kolkata, IT-6793
+		            Allow from env=repec-agent      # SUP-868
+                Allow from 69.42.0.229          # TCS Boston, IT-3701
+                Allow from 50.201.24            # NPG Boston
+                Allow from 99.246.127.145       # IT-9109
+                Allow from 76.206.4.238         # IT-9109
+		            Allow from 174.123.14.253       # IT-9835 CRE for Scitable
+                Allow from 64.57.214.169        # IT-9835 CRE for Scitable
+	              Require valid-user
+                Satisfy any
+        </Location>
+
+        <Location /principles>
+                AuthType Basic
+                AuthName "NPG Staging Principles"
+                AuthUserFile /etc/httpd/conf/passwd
+                Order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6    # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4	# Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Allow from 122.184.53.192        # Bangalore Web Production - New
+                # ----- Misc
+                Allow from 202.54.243.228       # Tata Communication
+                Allow from 203.200.189.6        # TCS Offshore 1
+		Allow from 203.200.192.98       # TCS Offshore 1
+                Allow from 203.197.96.43        # TCS Offshore 2
+                Allow from 121.241.218.132      # TCS Kolkata, IT-6793
+                Allow from 203.202.189.55       # TCS Kolkata, IT-6793
+                Allow from env=repec-agent      # SUP-868
+                Allow from 69.42.0.229          # TCS Boston, IT-3701
+                Allow from 50.201.24            # NPG Boston
+                Allow from 99.246.127.145       # IT-9109
+                Allow from 76.206.4.238         # IT-9109
+                Allow from 174.123.14.253       # IT-9835 CRE for Scitable
+                Allow from 64.71.26.218         # IT-10963  Scitable
+                Allow from 195.222.85.160       # IT-10963  Scitable
+                Allow from 86.57.158.170        # IT-10963  Scitable
+                Allow from 213.184.224.37       # IT-10963  Scitable
+                Allow from 190.86.215.58        # IT-10963  Scitable
+                Allow from 80.92.229.74         # IT-10963  Scitable
+                Allow from 76.102.12.105         # IT-11056  Scitable
+                Allow from 109.86.215.58         # IT-11056  Scitable
+                Allow from 24.60.27.250          # IT-11056  Scitable
+                Allow from 96.233.26.30         # IT-11056  Scitable
+                Require valid-user
+                Satisfy any
+        </Location>
+
+        <Directory "/mnt/fs/web/NPG">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+    	ServerName	staging-secure.palgrave-journals.com
+    	ServerAdmin	s.mccool@natureny.com
+    	DocumentRoot    /mnt/fs/web/palgrave/
+    	ErrorLog /var/www/staging-secure.palgrave-journals.com/logs/error_log
+    	CustomLog /var/www/staging-secure.palgrave-journals.com/logs/access_log combined
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .palgrave-journals.com
+
+	SSLEngine on
+        SSLCipherSuite HIGH:MEDIUM
+        SSLProtocol all -SSLv2
+        SSLCertificateKeyFile /etc/httpd/conf/ssl/palgrave/_.palgrave-journals.com.key
+        SSLCertificateFile /etc/httpd/conf/ssl/palgrave/palgrave-journals.com.crt
+        SSLCertificateChainFile /etc/httpd/conf/ssl/palgrave/gd_bundle.crt
+
+    	RewriteEngine on 
+        RewriteCond %{REMOTE_ADDR} (.*)
+        RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+    	#RewriteRule \.(gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml)$ - [L]
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L] 
+
+	Include conf/palgrave_redirects.conf
+
+	# IT-4125
+        RewriteRule ^(/.*);jsessionid=.*$ $1
+
+	RewriteRule ^/$ /pal/index.html [R,L]
+        RewriteRule ^/index.html$ /pal/index.html [R,L]
+	RewriteRule ^/search/versioninfo(.*) http://localhost:7280/mlsearch-palweb/versioninfo$1 [P,L]
+	RewriteRule ^/search/(.*).html http://localhost:7280/search/$1.html [P,L]
+	RewriteRule ^/search/adv_search(.*) http://localhost:7280/mlsearch-palweb/search/executeSearch$1 [P,L]
+	RewriteRule ^/search(.*) http://localhost:7280/mlsearch-palweb/search$1 [P,L]
+	RewriteRule ^/iaor/search/adv_search(.*) http://localhost:7280/mlsearch-palweb/iaor/search/executeSearch$1 [P,L]
+	RewriteRule ^/iaor/search(.*) http://localhost:7280/mlsearch-palweb/iaor/search$1 [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7280/nams/svc/shibbolethin [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7280/nams/svc/shibbolethin [P,L] 
+    	RewriteRule ^/(.*)       http://localhost:7280/$1 [P,L]
+
+	
+	<Location />
+                AuthType Basic
+                AuthName "Palgrave-Journals Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                #Allow from 194.129.50.189 195.128.194.7 # UK Office IT-165
+                #Allow from 72.51.34.164  (Temporary, to ttest websiteoptimization)
+                Allow from 195.138.194.1
+                Allow from 31.221.45.4	# Macmillan UK
+                Allow from 195.138.194.7
+                Allow from 68.162.253.244
+                Allow from 202.144.44.115 # Bangalore Web Production IT-211
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Allow from 122.184.53.192        # Bangalore Web Production - New
+                Allow from 172.26
+                Allow from 194.129.50.164
+                Allow from 65.201.138.2
+                Allow from 66.228.83.
+                Allow from 63.64.195.2
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 65.199.186.2
+                Allow from 24.184.44.72
+                Allow from 192.168.88
+                Allow from 192.168.92           # DMZ
+                Allow from 202.54.243.228
+                Allow from 69.253.44.235
+                Allow from 203.101.103.162
+                Allow from 210.151.240.82
+                # Allow Signaling Gateway people
+                Allow from 198.202.75.64
+                Allow from 198.202.75
+                Allow from 198.202.75.58
+                Allow from 127.0.0.1
+                # From openarchives per Mat (11/15)
+                Allow from 128.84.154.156
+                Allow from 70.84.12.186  # REQ-285
+                Allow from 216.254.85.209 # REQ-292
+                # Per Emily for affiliates
+                Allow from 63.237.233.40
+                Allow from 18.91.0.96
+                Allow from 137.187.66.207
+                # end per emily 10/06
+                # Per emily http://powerplant.nature.com/jira/browse/REQ-215
+                Allow from 18.91.0.231
+                # end per emily 11/30/06
+                Allow from 128.143.21.106  # UVA CMG per JIRA DART-42
+                Allow from 208.254.38.84        # REQ-247
+                Allow from 68.162.253.244       # Thoughtbot per Emily
+                Allow from 172.25.  # UK VPN
+                Allow from 172.17.  # UK VPN
+                Allow from 202.144.44.115       # IT-211
+                Allow from env=repec-agent      # SUP-868
+                Allow from 81.171.194.4      # IT-1785
+		Allow from 124.124.239.253       # Chennai office - IT-3539
+		Allow from 115.113.232.2        # Chennai office - IT-4630
+		Allow from 220.225.218.253	# Chennai office - IT-4630
+                #Allow from 125.103.228.204     # IT-1493
+		Allow from athensams.net        # IT-3806
+                Allow from eduserv.org.uk       # IT-3806
+                Allow from niss.ac.uk           # IT-3806
+		Allow from 122.160.227.17       # MPS India
+    Allow from 199.168.13           # Reston
+    Allow from 199.168.12           # ""
+		Allow from 192.168.4
+                Allow from 99.246.127.145       # IT-9109
+                Allow from 76.206.4.238         # IT-9109
+                        Allow from 188.92.136.5 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.48 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.49 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.50 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.51 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.45 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.46 # DEPLOY-780 OpenAthens
+
+                Require valid-user
+                Satisfy any
+        </Location>
+
+	ProxyPreserveHost on
+    	ProxyPassReverse / http://localhost:7280/
+</VirtualHost>
+
+
+<VirtualHost *:80>
+	ServerName	staging-secure.palgraveconnect.com
+	DocumentRoot	/mnt/fs/Web/palgrave/
+	Setenv VLOG /var/www/staging-secure.palgraveconnect.com/logs
+	ErrorLog	/var/www/staging-secure.palgraveconnect.com/logs/error_log
+	LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	TransferLog	/var/www/staging-secure.palgraveconnect.com/logs/access_log
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .palgraveconnect.com
+
+	SSLEngine on
+        SSLCipherSuite HIGH:MEDIUM
+        SSLProtocol all -SSLv2
+        SSLCertificateKeyFile /etc/httpd/conf/ssl/palgrave/_.palgrave-journals.com.key
+        SSLCertificateFile /etc/httpd/conf/ssl/palgrave/palgrave-journals.com.crt
+        SSLCertificateChainFile /etc/httpd/conf/ssl/palgrave/gd_bundle.crt
+
+	#P3P for IT-4073
+	Header append P3P 'CP="CAO DSP LAW IVA IVD HIS OUR UNR STP UNI COM"' 
+
+        RewriteEngine On
+        RewriteCond %{REMOTE_ADDR} (.*)
+        RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+
+	#Serve static content directly
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|mrc|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L] 
+
+	Include conf/palgraveconnect_redirects.conf
+
+	#For shibboleth redirection
+        RewriteRule ^/Shibboleth.sso/SAML/POST$  http://localhost:7280/pc/foxtrot/svc/shibbolethin [P,L]
+        RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7280/pc/foxtrot/svc/shibbolethin [P,L]
+        #IT-7804
+    #RewriteRule ^/Shibboleth.sso/SAML/POST$ http://localhost:7280/nams/svc/shibbolethin [P,L]
+    #RewriteRule ^/Shibboleth.sso/SAML/Artifact$ http://localhost:7280/nams/svc/shibbolethin [P,L]
+
+        #Block requests we're not supposed to serve on this domain
+	RewriteRule !^(/pc|/common|/browse|/debug\.html|/collections|/category|/archive|/doifinder|(.*)/browse/inside/)(.*)$ /pc/index.html [R,L] 
+
+        #Proxy common to jetty directly
+        RewriteRule ^/common/(.*) http://localhost:7280/$1 [P,L]
+
+	#DEPLOY-9
+	RewriteRule ^/doifinder/(.*) /pc/doifinder/$1 [R,L]
+
+        RewriteRule ^/$ http://localhost:7280/pc/index.html [P,L]
+        RewriteRule ^/index.html$ http://localhost:7280/pc/index.html [P,L]
+
+        #Proxy all else by prefixing it with /pc/
+        RewriteRule (.*) http://localhost:7280$1 [P,L]
+         
+        ProxyPreserveHost on
+
+	<Location />
+		AuthType Basic
+                AuthName "PalgraveConnect"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+		Allow from 192.168.88
+                Allow from 192.168.92           # DMZ
+		Allow from 172.26
+                Allow from 195.138.194.1
+                Allow from 31.221.45.4	# Macmillan UK
+                Allow from 195.138.194.7
+                Allow from 68.162.253.244
+                Allow from 202.144.44.115 # Bangalore Web Production IT-211
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Allow from 122.184.53.192        # Bangalore Web Production - New
+		Allow from 65.242.181         # NPG - MCI Verizon Business
+                Allow from 194.129.50.164
+                Allow from 65.201.138.2
+                Allow from 66.228.83.
+                Allow from 63.64.195.2
+                Allow from 65.199.186.2
+                Allow from 24.184.44.72
+                Allow from 192.168.88
+                Allow from 202.54.243.228
+                Allow from 69.253.44.235
+                Allow from 203.101.103.162
+                Allow from 210.151.240.82
+		Allow from 75.101.159.17 #Glennis McGregor
+		Allow from athensams.net        # IT-3729
+                Allow from eduserv.org.uk       # IT-3729
+                Allow from niss.ac.uk           # IT-3729
+                Allow from 199.168.13           # Reston
+                Allow from 199.168.12           # ""
+		Allow from 192.168.4
+                Allow from 99.246.127.145       # IT-9109
+                Allow from 76.206.4.238         # IT-9109
+                        Allow from 188.92.136.5 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.48 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.49 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.50 # DEPLOY-780 OpenAthens
+                        Allow from 188.92.136.51 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.45 # DEPLOY-780 OpenAthens
+                        Allow from 83.137.208.46 # DEPLOY-780 OpenAthens
+
+		Require valid-user
+		Satisfy any
+	</Location>
+</VirtualHost>
+
+<VirtualHost *:80>
+  ServerName staging-curi.nature.com
+  Setenv VLOG /var/www/staging-curi.nature.com/logs
+  ErrorLog /var/www/staging-curi.nature.com/logs/error_log
+  LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+  TransferLog /var/www/staging-curi.nature.com/logs/access_log
+
+  CookieTracking on
+  CookieName SaneID
+  CookieExpires "1 day"
+  CookieDomain .nature.com
+
+  ModPagespeed off
+  ModPagespeedFileCachePath /tmp/cache
+  ModPagespeedGeneratedFilePrefix /tmp/files
+
+  ExpiresActive off
+
+  ProxyPreserveHost on
+  RewriteEngine on
+
+  RewriteRule ^(.*)$ http://127.0.0.1:9919$1 [P,L]
+
+  #Access restrictions
+        <Location />
+                AuthType Basic
+                AuthName "NPG Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd_curi
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6            # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 210.169.171.2        # NPG Japan
+                Allow from 210.169.171.32       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- External
+                Allow from 216.64.169.240       # WebTrends
+                Allow from 99.179.165.138       # WebTrends
+                Allow from 216.64.169.240       # Webtrends IT-5099
+                # ---- Pingdom
+                # Generate this list with:
+                #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+                # --- misc
+                		Allow from 46.165.195.139
+		Allow from 69.59.28.19
+		Allow from 178.255.154.2
+		Allow from 178.255.153.2
+		Allow from 178.255.155.2
+		Allow from 64.237.55.3
+		Allow from 178.255.152.2
+		Allow from 64.141.100.136
+		Allow from 212.84.74.156
+		Allow from 50.23.94.74
+		Allow from 46.20.45.18
+		Allow from 199.87.228.66
+		Allow from 76.72.167.90
+		Allow from 94.247.174.83
+		Allow from 69.64.56.47
+		Allow from 176.31.228.137
+		Allow from 184.75.210.186
+		Allow from 108.62.115.226
+		Allow from 94.46.4.1
+		Allow from 173.204.85.217
+		Allow from 173.248.147.18
+		Allow from 72.46.130.42
+		Allow from 74.52.50.50
+		Allow from 83.170.113.102
+		Allow from 95.211.87.85
+		Allow from 207.218.231.170
+		Allow from 207.97.207.200
+		Allow from 67.192.120.134
+		Allow from 78.136.27.223
+		Allow from 67.205.112.79
+		Allow from 204.152.200.42
+		Allow from 85.25.176.167
+		Allow from 94.46.240.121
+		Allow from 208.43.68.59
+		Allow from 67.228.213.178
+		Allow from 96.31.66.245
+		Allow from 82.103.128.63
+		Allow from 174.34.156.130
+		Allow from 70.32.40.2
+		Allow from 174.34.162.242
+		Allow from 188.138.124.110
+		Allow from 85.17.156.99
+		Allow from 85.17.156.11
+		Allow from 85.17.156.76
+		Allow from 72.46.153.26
+		Allow from 208.64.28.194
+		Allow from 76.164.194.74
+		Allow from 184.75.210.90
+		Allow from 184.75.208.210
+		Allow from 184.75.209.18
+		Allow from 74.53.193.66
+		Allow from 188.138.118.184
+		Require valid-user
+                Satisfy any
+        </Location>
+</VirtualHost>
+
+
+<VirtualHost *:80>
+        ServerName      staging-www.admin.palgraveconnect.com
+        DocumentRoot    /mnt/fs/Web/palgrave/admin
+        ErrorLog        /var/www/staging-www.admin.palgraveconnect.com/logs/error_log
+        CustomLog       /var/www/staging-www.admin.palgraveconnect.com/logs/access_log combined
+
+        RewriteEngine On
+        # Preserve hostname when proxying to tomcat
+        ProxyPreserveHost on
+
+        RewriteCond %{REMOTE_ADDR} (.*)
+        RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .palgraveconnect.com
+
+        RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|mrc|PDF|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L]
+
+
+        RewriteRule ^/capod(.*)$        http://localhost:7180/capod$1 [P,L]
+
+        <Location />
+                AuthType Basic
+                AuthName "NPG Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6            # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4	# Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 210.169.171.2        # NPG Japan
+                Allow from 210.169.171.32       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- External
+                Allow from 216.64.169.240       # WebTrends
+                Allow from 99.179.165.138       # WebTrends
+                Allow from 216.64.169.240       # Webtrends IT-5099
+                # ---- Pingdom
+                # Generate this list with:
+                #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+                # --- misc
+		Allow from 46.165.195.139
+		Allow from 69.59.28.19
+		Allow from 178.255.154.2
+		Allow from 178.255.153.2
+		Allow from 178.255.155.2
+		Allow from 64.237.55.3
+		Allow from 178.255.152.2
+		Allow from 64.141.100.136
+		Allow from 212.84.74.156
+		Allow from 50.23.94.74
+		Allow from 46.20.45.18
+		Allow from 199.87.228.66
+		Allow from 76.72.167.90
+		Allow from 94.247.174.83
+		Allow from 69.64.56.47
+		Allow from 176.31.228.137
+		Allow from 184.75.210.186
+		Allow from 108.62.115.226
+		Allow from 94.46.4.1
+		Allow from 173.204.85.217
+		Allow from 173.248.147.18
+		Allow from 72.46.130.42
+		Allow from 74.52.50.50
+		Allow from 83.170.113.102
+		Allow from 95.211.87.85
+		Allow from 207.218.231.170
+		Allow from 207.97.207.200
+		Allow from 67.192.120.134
+		Allow from 78.136.27.223
+		Allow from 67.205.112.79
+		Allow from 204.152.200.42
+		Allow from 85.25.176.167
+		Allow from 94.46.240.121
+		Allow from 208.43.68.59
+		Allow from 67.228.213.178
+		Allow from 96.31.66.245
+		Allow from 82.103.128.63
+		Allow from 174.34.156.130
+		Allow from 70.32.40.2
+		Allow from 174.34.162.242
+		Allow from 188.138.124.110
+		Allow from 85.17.156.99
+		Allow from 85.17.156.11
+		Allow from 85.17.156.76
+		Allow from 72.46.153.26
+		Allow from 208.64.28.194
+		Allow from 76.164.194.74
+		Allow from 184.75.210.90
+		Allow from 184.75.208.210
+		Allow from 184.75.209.18
+		Allow from 74.53.193.66
+		Allow from 188.138.118.184
+
+                Require valid-user
+                Satisfy any
+        </Location>
+</VirtualHost>
+<VirtualHost *:80>
+        ServerName      staging-xmlgateway.nature.com
+        DocumentRoot    /mnt/fs/Web/NPG
+        ErrorLog        /var/www/staging-xmlgateway.nature.com/logs/error_log
+        CustomLog       /var/www/staging-xmlgateway.nature.com/logs/access_log combined
+
+        RewriteEngine On
+        # Preserve hostname when proxying to tomcat
+        ProxyPreserveHost on
+
+        RewriteCond %{REMOTE_ADDR} (.*)
+        RewriteRule .* - [E=R_A:%1]
+        RequestHeader add NPG_SRC_ADDR %{R_A}e
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+        RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|swf|docx|xlsx|doc|xls|ppt|cdx|mrc|PDF|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl)$ - [L]
+
+
+        RewriteRule ^/gateway/(.*)$        http://localhost:7190/$1 [P,L]
+        RewriteRule ^/gateway/resources/css/(.*) http://localhost:7190/gateway/resources/css//$1 [P,L]
+        RewriteRule ^/gateway/resources/images/(.*) http://localhost:7190/gateway/resources/images//$1 [P,L]
+        <Location />
+                AuthType Basic
+                AuthName "NPG Staging Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.6            # Eclipse live
+                Allow from 192.168.89           # DR
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                Allow from 65.201.138.2         # NPG - MCI Verizon Business
+                Allow from 65.242.181           # NPG - MCI Verizon Business
+                Allow from 199.168.13           # Reston DC
+                Allow from 199.168.12           # ""
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4	# Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 210.169.171.2        # NPG Japan
+                Allow from 210.169.171.32       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                # ----- External
+                Allow from 216.64.169.240       # WebTrends
+                Allow from 99.179.165.138       # WebTrends
+                Allow from 216.64.169.240       # Webtrends IT-5099
+                # ---- Pingdom
+                # Generate this list with:
+                #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+                # --- misc
+		Allow from 46.165.195.139
+		Allow from 69.59.28.19
+		Allow from 178.255.154.2
+		Allow from 178.255.153.2
+		Allow from 178.255.155.2
+		Allow from 64.237.55.3
+		Allow from 178.255.152.2
+		Allow from 64.141.100.136
+		Allow from 212.84.74.156
+		Allow from 50.23.94.74
+		Allow from 46.20.45.18
+		Allow from 199.87.228.66
+		Allow from 76.72.167.90
+		Allow from 94.247.174.83
+		Allow from 69.64.56.47
+		Allow from 176.31.228.137
+		Allow from 184.75.210.186
+		Allow from 108.62.115.226
+		Allow from 94.46.4.1
+		Allow from 173.204.85.217
+		Allow from 173.248.147.18
+		Allow from 72.46.130.42
+		Allow from 74.52.50.50
+		Allow from 83.170.113.102
+		Allow from 95.211.87.85
+		Allow from 207.218.231.170
+		Allow from 207.97.207.200
+		Allow from 67.192.120.134
+		Allow from 78.136.27.223
+		Allow from 67.205.112.79
+		Allow from 204.152.200.42
+		Allow from 85.25.176.167
+		Allow from 94.46.240.121
+		Allow from 208.43.68.59
+		Allow from 67.228.213.178
+		Allow from 96.31.66.245
+		Allow from 82.103.128.63
+		Allow from 174.34.156.130
+		Allow from 70.32.40.2
+		Allow from 174.34.162.242
+		Allow from 188.138.124.110
+		Allow from 85.17.156.99
+		Allow from 85.17.156.11
+		Allow from 85.17.156.76
+		Allow from 72.46.153.26
+		Allow from 208.64.28.194
+		Allow from 76.164.194.74
+		Allow from 184.75.210.90
+		Allow from 184.75.208.210
+		Allow from 184.75.209.18
+		Allow from 74.53.193.66
+		Allow from 188.138.118.184
+
+                Require valid-user
+                Satisfy any
+        </Location>
+</VirtualHost>
+

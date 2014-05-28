@@ -1,0 +1,21 @@
+NameVirtualHost *:<%= port %>
+<VirtualHost *:<%= port %>>
+	ServerName <%= name %>
+        <%if serveraliases.is_a? Array -%>
+		<%	serveraliases.each  do   |name|   -%> <%="
+                                ServerAlias #{name}\n" %> <% end -%>
+                        <% end -%>
+
+	DocumentRoot <%= docroot %>
+	LogFormat "\%h \"\%{NPG_SRC_ADDR}i\" \%l \%u \%t \"\%r\" \%>s \%b \"\%{Referer}i\" \"\%{User-agent}i\" \"\%{cookie}i\""
+	Transferlog <%= basedir %>/logs/access_log
+	ErrorLog <%= basedir %>/logs/error_log
+
+	RewriteEngine On
+
+	<%= acblock %>
+	<%= redirblock %>
+	<%= proxyblock %>
+
+	ProxyRequests off	# This is never required at NPG.
+</VirtualHost>
