@@ -1,0 +1,16 @@
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+	ServerName staging.npg-services.nature.com
+	#SerrAlias staging.npg-services.nature.com
+	Setenv VLOG /var/www/staging.npg-services.nature.com/logs
+	ErrorLog /var/www/staging.npg-services.nature.com/logs/error_log
+	TransferLog /var/www/staging.npg-services.nature.com/logs/access_log
+
+	RewriteEngine On
+	ProxyPreserveHost On
+	AllowEncodedSlashes On
+
+	ProxyPass / http://localhost:7080/ nocanon
+	ProxyPassReverse / http://localhost:7080/ nocanon
+</VirtualHost>

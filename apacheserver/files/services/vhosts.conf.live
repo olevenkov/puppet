@@ -1,0 +1,143 @@
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+        ServerName npg-services.nature.com
+        ServerAlias services.nature.com
+        ErrorLog /var/log/httpd/services-error_log
+        LogFormat "%h \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/log/httpd/services-access_log
+
+        RewriteEngine On
+	      ProxyPreserveHost On
+        AllowEncodedSlashes On
+
+        RewriteCond %{REQUEST_URI} ^/naturewebapi/(.*)
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^199.168.13.*$
+        RewriteCond %{REMOTE_ADDR} !^199.168.13.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.1$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.1$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.7$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.7$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4$
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^194.129.50.164$
+        RewriteCond %{REMOTE_ADDR} !^194.129.50.164$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteRule ^/naturewebapi/(.*) - [F]
+
+        RewriteCond %{REQUEST_URI} ^/naturewebapi-new/(.*)
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^199.168.13.*$
+        RewriteCond %{REMOTE_ADDR} !^199.168.13.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^65.199.186.*$
+        RewriteCond %{REMOTE_ADDR} !^65.199.186.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.1$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.1$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^195.138.194.7$
+        RewriteCond %{REMOTE_ADDR} !^195.138.194.7$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^31.221.45.4$
+        RewriteCond %{REMOTE_ADDR} !^31.221.45.4$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^194.129.50.164$
+        RewriteCond %{REMOTE_ADDR} !^194.129.50.164$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.4.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.4.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.10.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.10.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^192.168.88.*$
+        RewriteCond %{REMOTE_ADDR} !^192.168.88.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^10.1.1.*$
+        RewriteCond %{REMOTE_ADDR} !^10.1.1.*$
+        RewriteCond %{HTTP:NPG_SRC_ADDR} !^172.26.*$
+        RewriteCond %{REMOTE_ADDR} !^172.26.*$
+        RewriteRule ^/naturewebapi-new/(.*) - [F]
+
+        RewriteRule ^/server-status(.*) - [L]
+        RewriteRule ^$  / [R,L]
+	#Access restrictions
+        <Location />
+                AuthType Basic
+                AuthName "NPG Services Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+	        Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+	        Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 10.1.1               # UK VPN
+	        Allow from 192.168.4		# Reston subnet 4
+	        Allow from 192.168.10		# Reston subnet 10
+	        Allow from 192.168.13		# Reston subnet 13
+                Allow from 192.168.88           # DMZ
+                Allow from 192.168.92           # DMZ
+                Allow from 192.168.89           # DMZ
+	        Allow from 192.168.6		# Eclipse live
+                Allow from 192.168.89           # DR
+	        Allow from 65.199.186		# NPG - MCI Verizon Business
+	        Allow from 65.201.138.2         # NPG - MCI Verizon Business
+	        Allow from 65.242.181           # NPG - MCI Verizon Business
+	        Allow from 50.201.24            # NPG - MCI Verizon Business
+		Allow from 199.168.13		# Reston DC
+		Allow from 199.168.12 		# Reston public 2
+	        # ----- Offices
+	        Allow from 63.64.195.2		# SF VPN
+                Allow from 195.138.194.1	# Macmillan UK
+                Allow from 31.221.45.4		# Macmillan UK
+                Allow from 195.138.194.7	# Macmillan UK
+	        Allow from 194.129.50.164	# Macmillan UK
+	       	Allow from 203.101.103.162      # Macmillan India
+	        Allow from 210.151.240.82	# NPG Japan
+	        Allow from 210.169.171.2	# NPG Japan
+	        Allow from 210.169.171.32	# NPG Japan
+	        Allow from 122.160.227.17	# MPS India
+		Allow from 122.184.53.192	# ATT Team - IT-10246
+		Allow from 202.54.243.228	# ATT Team
+	        Allow from 202.144.44.115       # Bangalore Web Production
+	        Allow from 61.246.62.130	# Bangalore Web Production - New
+	        # ----- External
+                Allow from 66.228.83		# Towerstream, RI - ?
+                Allow from 24.184.44.72		# Optimum online ?
+                Allow from 68.39.154.79		# Comcast Cable MikeB
+		Allow from 203.200.189.6	# TCS Offshore 1
+		Allow from 203.200.192.98       # TCS Offshore 1
+		Allow from 203.197.96.43	# TCS Offshore 2
+		Allow from 75.101.163.131 	#IT-10762
+		Allow from 195.138.194.116 	#IT-11360
+		Allow from 60.10.59.134 	#IT-11841 Chatsworth Beijing
+		Allow from 124.65.176.186 	#IT-11841 Chatsworth Beijing
+		Allow from 220.194.17.65 	#IT-11841 Chatsworth Beijing
+		Allow from 220.194.20 		#IT-11841 Chatsworth Beijing
+		Allow from 202.64.21.36 	# IT-11914
+	        # --- misc
+                Require valid-user
+                Satisfy any
+        </Location>
+
+
+
+        ProxyPass / http://localhost:7080/ nocanon
+        ProxyPassReverse / http://localhost:7080/ nocanon
+
+        #RewriteRule ^/(.*)$ http://localhost:7080/$1 [P,L]
+</VirtualHost>
+
+<VirtualHost *:80>
+        ServerName npg-services-logs.nature.com
+        DocumentRoot  /usr/local/jetty-services/logs
+
+        <Location />
+          Options Indexes
+        </Location>
+</VirtualHost>
