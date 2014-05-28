@@ -1,0 +1,37 @@
+NameVirtualHost *
+
+<VirtualHost *:80>
+	ServerName	datastore.nature.com
+	DocumentRoot /var/www/html/
+
+	Setenv VLOG /var/www/datastore.nature.com/logs
+	ErrorLog /var/www/datastore.nature.com/logs/error_log
+	#LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	TransferLog /var/www/datastore.nature.com/logs/access_log
+	AllowEncodedSlashes on
+
+
+
+
+	RewriteEngine on
+
+
+
+
+	#Dropping post calls from sandboxes
+	#RewriteCond %{REMOTE_ADDR} ^192.168.88.200 [OR]
+	#RewriteCond %{REMOTE_ADDR} ^192.168.88.19 
+	##RewriteCond %{REMOTE_ADDR} ^195.138.194.1$
+	#RewriteRule ^(.*)$ - [F]
+
+
+
+	# Preserve hostname when proxying to tomcat
+	ProxyPreserveHost on
+
+    	#RewriteRule ^/(.*) http://localhost:7080/$1 [P] 
+	RewriteRule ^/extractor(.*) http://localhost:7080/triplestore-extractor$1 [P,L] 
+
+
+</VirtualHost>
