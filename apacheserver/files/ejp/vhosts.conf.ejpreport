@@ -1,0 +1,12 @@
+<VirtualHost *>
+	ServerName ejpreport.nature.com
+	DocumentRoot /var/www/ejpreport
+	ErrorLog /var/www/ejpreport/logs/error.log
+        CustomLog /var/www/ejpreport/logs/access.log combined
+
+	RewriteEngine On
+	ProxyPreserveHost On
+	#RewriteLog "/var/log/rw.log
+
+	RewriteRule ^/(.*)	http://localhost:8080/$1	[P,L]
+</VirtualHost>
