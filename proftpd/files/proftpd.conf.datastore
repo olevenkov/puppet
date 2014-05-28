@@ -1,0 +1,44 @@
+#####
+## Managed by puppet at modules/proftpd
+#####
+
+AuthPAMConfig                   proftpd
+AuthOrder                       mod_auth_pam.c* mod_auth_unix.c
+
+ServerName			"NPG FTP Site"
+ServerType			standalone
+DefaultServer			on
+
+Port				21
+UseReverseDNS 			off
+
+# Umask 022 is a good standard umask to prevent new dirs and files
+# from being group and world writable.
+Umask				002
+ExtendedLog /var/log/proftpd.log
+LogFormat default "%h %l %u %t \"%r\" %s %b"
+
+# To prevent DoS attacks, set the maximum number of child processes
+# to 30.  If you need to allow more than 30 concurrent connections
+# at once, simply increase this value.  Note that this ONLY works
+# in standalone mode, in inetd mode you should use an inetd server
+# that allows you to limit maximum number of processes per service
+# (such as xinetd).
+#MaxInstances			45
+
+# Set the user and group under which the server will run.
+User				ftp
+Group				ftp
+
+# To cause every FTP user to be "jailed" (chrooted) into their home
+# directory, uncomment this line.
+#DefaultRoot ~
+
+# Normally, we want files to be overwriteable.
+<Directory />
+  AllowOverwrite		on
+</Directory>
+
+TimeoutIdle  3600
+TimeoutNoTransfer 3600
+ServerIdent on "Datastore FTP Site"
