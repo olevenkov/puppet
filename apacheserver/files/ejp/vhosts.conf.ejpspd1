@@ -1,0 +1,25 @@
+<VirtualHost *>
+  ServerName mts-spd.nature.com
+  ServerAlias www.mts-spd.nature.com
+  DocumentRoot /fs/sites/spd_www
+  ErrorLog /var/www/spd/logs/error_log
+  CustomLog /var/www/spd/logs/access_log combined
+
+  <Directory /fs/sites/spd_www/apps/api>
+    AllowOverride All
+    Options FollowSymLinks
+    Order deny,allow
+    Deny from all
+    Allow from 127.0.0.1
+    Allow from 192.168
+    Allow from 172.
+  </Directory>
+
+  <Location /apps>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+
+</VirtualHost>
