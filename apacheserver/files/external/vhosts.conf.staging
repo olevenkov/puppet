@@ -1,0 +1,168 @@
+NameVirtualHost 192.168.88.56:80
+
+<VirtualHost 192.168.88.56:80>
+	ServerName	staging-external.nature.com
+	ServerAlias	staging-api.nature.com
+	DocumentRoot /mnt/fs/web/NPG
+	ErrorDocument 500 /server-error.html
+	ErrorDocument 501 /server-error.html
+	ErrorDocument 502 /server-error.html
+	ErrorDocument 503 /server-error.html
+	AccessFileName .htaccess
+
+	Setenv VLOG /var/www/staging-external.nature.com/logs
+	ErrorLog /var/www/staging-external.nature.com/logs/error_log
+	#LogFormat "%a \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	LogFormat "%a \"%{x-forwarded-for}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+	TransferLog /var/www/staging-external.nature.com/logs/access_log
+	AllowEncodedSlashes on
+
+	ScriptAlias /cgi-bin/ /var/www/cgi-bin/
+	AddHandler cgi-script .cgi .pl 
+
+	AddType text/application/x-research-info-systems        .ris
+	AddType application/text	.ris
+	AddType chemical/x-cdx                                  cdx
+	#AddType application/rdf+xml .rdf
+	AddType text/csv        .csv
+
+	Alias /big_monitor/ /var/www/staging-external.nature.com/htdocs/big_monitor/
+	RewriteRule ^/big_monitor(.*) - [L]
+	RewriteRule ^/server-status     - [L]
+
+	RewriteEngine on
+    #   RewriteLogLevel 1
+    #   RewriteLog /tmp/rw.log
+    #Block mercury-qa machine if it's crashing and nobody is watching
+#    RewriteCond %{REMOTE_ADDR} ^192\.168\.88\.158$
+#    RewriteRule (.*) - [F,L]
+
+	RewriteRule ^/cerberus(.*) http://localhost:7080/cerberus$1 [L,P]
+
+	RewriteRule \.(sbml|pdb|sdf|jdx|cif|cml|mol|cdx|jar|ris|gif|jpg|png|css|txt|cgi|xml|mov|flv|js|avi|opml|mpg|wmv|swf|doc|xls|ppt|cdx|CDX|GIF|JPG|PNG|CSS|TXT|CGI|XML|MOV|FLV|JS|AVI|OPML|MPG|RIS|SWF|DOC|XLS|PPT|mp3|MP3|zip|ZIP|jpeg|JPEG|tiff|TIFF|md5|rss|rdf|wav|WAV|pl|svg|icb)$ - [L]
+
+
+	#Dropping post calls from sandboxes
+	RewriteCond %{REMOTE_ADDR} ^192.168.88.200 [OR]
+	RewriteCond %{REMOTE_ADDR} ^192.168.88.19 
+	#RewriteCond %{REMOTE_ADDR} ^195.138.194.1$
+	RewriteRule ^(.*)$ - [F]
+
+	Include conf/redirects.conf
+
+
+	# Preserve hostname when proxying to tomcat
+	ProxyPreserveHost on
+
+    	RewriteRule ^/(.*) http://localhost:7080/$1 [P] 
+
+
+	<Directory /mnt/fs/Web/NPG/cgi-bin/>
+    		AllowOverride None
+    		Options ExecCGI
+    		Order allow,deny
+    		Allow from all
+	</Directory>
+
+
+	#Access restrictions
+        <Location />
+                AuthType Basic
+                AuthName "NPG Staging External App Site"
+                AuthUserFile /etc/httpd/conf/passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                # ----- Internal
+		        Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+		        Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+		        Allow from 192.168.4		# Reston subnet 4
+                Allow from 192.168.88           # DMZ
+		        Allow from 192.168.6		# Eclipse live
+                Allow from 192.168.89           # DR
+		Allow from 74.125.75            # Google Sitemap
+                Allow from 66.228.83		# Towerstream, RI - ?
+                Allow from 24.184.44.72		# Optimum online ?
+                Allow from 68.39.154.79	# Comcast Cable MikeB
+		        Allow from 202.54.243.228       # Tata Communication
+                Allow from 198.202.75		# San Diego Supercomputer Center
+                Allow from 128.84.154.156	# Cornell University
+		        Allow from 68.162.253.244       # Thoughtbot
+                Allow from 70.84.12.186		# Thoughtbot velidator - REQ-285
+                Allow from 216.254.85.209	# Thoughtbot ? - REQ-292
+		        Allow from 63.237.233.40        # Allen Institute for Brain Science
+                Allow from 18.91.0.96           # MIT
+                Allow from 18.91.0.231          # MIT
+                Allow from 137.187.66.207       # NIH
+                Allow from 216.64.169.240       # Webtrends IT-5099
+		        Allow from 194.178.120          # BIBIT
+                Allow from 155.136.66           # BIBIT
+                Allow from 89.206.148           # British Dental Association - IT-1785
+                Allow from 128.143.21.106	# University of Virginia - DART-42
+                Allow from 208.254.38.84        # CrossRef - REQ-247
+		        Allow from 71.7.236.14		# Heather Rankin
+		        Allow from 124.124.239.253	# Chennai office - IT-3539
+		        Allow from 115.113.232.2	# Chennai office - IT-4630
+		        Allow from 220.225.218.253	# Chennai office - IT-4630
+		        Allow from env=repec-agent      # SUP-868
+		        Allow from 69.42.0.229          # IT-3701
+		        #Allow from 125.103.228.204     # NPG Tokyo office - IT-1493
+		        #Allow from 194.129.50.189 195.128.194.7 # UK Office IT-165
+                #Allow from 72.51.34.164  (Temporary, to ttest websiteoptimization)
+		        Allow from 203.200.189.6	# TCS Offshore 1
+		        Allow from 203.197.96.43	# TCS Offshore 2
+    			Allow from 80.67.64.10 # Cambridge IT-8138
+                Allow from 81.145.36.61 # London IT-8138
+                Allow from 217.111.194.201 # Paris IT-8138
+                Allow from 173.12.87.28 # FLORIDA IT-8138
+                Allow from 208.75.86.67  # SUP-1225
+                Allow from 94.193.96.179  #SUP-1225
+
+				
+		        # ---- Pingdom
+		        # Generate this list with:
+		        #  curl https://www.pingdom.com/rss/probe_servers.xml | grep 'IP:' | awk -F: '{print $2}' | awk -F\; '{print "\t\tAllow from"$1}'
+
+        Allow from 83.140.19.38
+        Allow from 70.32.40.2
+        Allow from 174.34.156.130
+        Allow from 82.103.128.63
+        Allow from 96.31.66.245
+        Allow from 67.228.213.178
+        Allow from 208.43.68.59
+        Allow from 94.46.240.121
+        Allow from 72.46.130.42
+        Allow from 173.248.147.18
+        Allow from 173.204.85.217
+        Allow from 174.34.162.242
+        Allow from 85.25.176.167
+        Allow from 67.205.112.79
+        Allow from 78.136.27.223
+        Allow from 67.192.120.134
+        Allow from 207.97.207.200
+        Allow from 207.218.231.170
+        Allow from 95.211.87.85
+        Allow from 83.170.113.102
+        Allow from 74.52.50.50
+        Allow from 74.53.193.66
+        Allow from 204.152.200.42
+        Allow from 212.84.74.156
+        Allow from 84.246.230.247
+
+		        # --- misc
+                Require valid-user
+                Satisfy any
+        </Location>
+
+
+        <Directory "/mnt/fs/web/NPG">
+                AllowOverride All
+                Options FollowSymLinks
+                Order allow,deny
+                Allow from all
+        </Directory>
+
+</VirtualHost>
+
