@@ -1,0 +1,19 @@
+input {
+  file {
+    type => puppet
+    path => "/var/log/puppet/*"
+    tags => [ "puppet" ]
+  }
+}
+
+output {
+  # Emit events to stdout for easy debugging of what is going through
+  # logstash.
+  # stdout { }
+
+  gelf {
+    host     => "staging-logs.nature.com"
+    facility => "%{@type}-%{@tags}"
+  }
+}
+

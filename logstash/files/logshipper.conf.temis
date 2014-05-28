@@ -1,0 +1,42 @@
+input {
+  file {
+    type => luxid
+    path => "/usr/local/temis/Luxid/AnnotationFactory/**/*.log"
+    tags => [ "AnnotationFactory" ]
+  }
+
+  file {
+    type => luxid
+    path => "/usr/local/temis/Luxid/InformationMart/**/*.log"
+    tags => [ "InformationMart" ]
+  }
+}
+
+filter {
+  # Make a generic attempt to keep multiline log messages in tact
+  multiline {
+    type    => luxid
+    pattern => "^\s"
+    what    => previous
+  }
+
+  filter {
+    grep {
+      type   => luxid
+      match  => ["@message", "^(INFO|DEBUG)"]
+      negate => true
+    }
+  }
+}
+
+output {
+  # Emit events to stdout for easy debugging of what is going through
+  # logstash.
+  # stdout { }
+
+  gelf {
+    host     => "staging-logs.nature.com"
+    facility => "%{@type}-%{@tags}"
+  }
+}
+

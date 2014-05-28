@@ -1,0 +1,8 @@
+#!/bin/sh
+exec 2>&1
+
+export JAVA_HOME="/usr/java/latest"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+cd /opt/logstash/
+exec java -Xms384M -Xmx512M -jar logstash-monolithic.jar agent -f /opt/logstash/logshipper.conf

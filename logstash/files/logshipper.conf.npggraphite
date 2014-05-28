@@ -1,0 +1,19 @@
+input {
+  file {
+    type => rabbitmq
+    path => "/var/log/rabbitmq/*"
+    tags => [ "rabbitmq" ]
+  }
+}
+
+output {
+  # Emit events to stdout for easy debugging of what is going through
+  # logstash.
+  # stdout { }
+
+  gelf {
+    host     => "staging-logs.nature.com"
+    facility => "%{@type}-%{@tags}"
+  }
+}
+
