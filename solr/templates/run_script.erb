@@ -1,0 +1,12 @@
+#!/bin/sh
+
+exec 2>&1
+
+[[ -e ~/.bash_profile ]] && source ~/.bash_profile
+
+export JAVA_HOME=/usr/java/latest
+export PATH=$JAVA_HOME/bin:$PATH
+export JAVA_OPTS="$JAVA_OPTS -javaagent:<%= solr_newrelic_jar %>"
+
+cd <%= solr_jetty_home  %>
+exec java $JAVA_OPTS -Djetty.port=<%= port %> -Dnewrelic.environment=<%= environment %> -Dsolr.solr.home=<%= solr_home %> -Dsolr.data.dir=<%= solr_data_home %> -jar <%= solr_jetty_jar %>
