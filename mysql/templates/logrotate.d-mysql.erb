@@ -1,0 +1,34 @@
+####
+## This file is managed by puppet, do not change it locally.
+##
+
+# If the root user has a password you have to create a
+# /root/.my.cnf configuration file with the following
+# content:
+#
+# [mysqladmin]
+# password = <secret>
+# user= root
+#
+# You can force logrotate to run with "logrotate -f /etc/logrotate.d/mysql"
+
+<% if has_variable?("files") then %><%= files %><% else %>/var/lib/mysql/logs/slow/mysql-slow.log /var/lib/mysql/logs/error/mysql-errors.err<% end %> {
+       	# daily
+	weekly
+        rotate <% if has_variable?("rotatedays") then %><%= rotatedays %><% else %>5<% end %>
+        missingok
+	# size 0 # Force Rotation even if empty. Usually only need for testing
+        create 755 mysql mysql
+        compress
+	# delaycompress
+	# mail o.levenkov@us.nature.com # Send a copy of the log to me (for testing)
+
+        postrotate
+        test -x /usr/bin/mysqladmin || exit 0
+
+        if ps cax | grep -q mysqld
+        then
+                env HOME=/root/ /usr/bin/mysqladmin <% if has_variable?("myflags") then %><%= myflags %><% else %>-h localhost -P 3306<% end %> flush-logs
+        fi
+        endscript
+}

@@ -1,0 +1,216 @@
+####
+## This file is managed by puppet, do not change it locally.
+##
+
+[mysqld_multi]
+mysqld     = /usr/bin/mysqld_safe
+mysqladmin = /usr/bin/mysqladmin
+user       = multi_admin
+password   = ****************
+
+######################### BEGIN  Nature MySQL my.cnf #########################
+
+[mysqld1]
+socket 			= /var/run/mysql/nature/mysql.sock
+port      	 	= 3306
+pid-file   		= /var/run/mysql/nature/mysqld.pid
+datadir    		= /var/lib/mysql/data/nature
+log-error  		= /var/lib/mysql/logs/nature/error/mysql-errors.err
+user       		= mysql
+# slow-query-log 		= 1
+# slow_query_log_file 	= /var/lib/mysql/nature/logs/slow/mysql-slow.log
+# slow_launch_time	= 1
+# log_queries_not_using_indexes
+server_id = 491
+replicate_ignore_db = mysql
+
+innodb_data_home_dir 	   = /var/lib/mysql/data/nature
+innodb_log_group_home_dir  = /var/lib/mysql/data/nature
+innodb_file_io_threads 	   = 4
+innodb_lock_wait_timeout   = 120
+innodb_log_files_in_group  = 2
+innodb_max_dirty_pages_pct = 90
+
+skip-name-resolve
+default-storage-engine 		= InnoDB
+lower_case_table_names 		= 0
+read_only
+
+log_bin_trust_function_creators	= 1
+ft_min_word_len 		= 3
+ft_max_word_len 		= 84
+
+max_connections 	= 100
+max_connect_errors 	= 100
+table_cache 		= 1024
+thread_cache_size 	= 100
+wait_timeout 		= 7200
+back_log 		= 100
+
+read_buffer_size 	 = 128K
+read_rnd_buffer_size 	 = 8M
+sort_buffer_size 	 = 256K
+join_buffer_size 	 = 512M
+max_allowed_packet 	 = 32M
+thread_stack 		 = 512K
+bulk_insert_buffer_size  = 64M
+
+query_cache_size 	  = 512M
+query_cache_limit 	  = 2M
+key_buffer		  = 512M
+query_cache_min_res_unit  = 2048
+delay_key_write 	  = OFF
+myisam_sort_buffer_size   = 256M
+myisam_max_sort_file_size = 5G
+myisam_repair_threads 	  = 2
+myisam_recover
+tmp_table_size 		  = 512M
+max_heap_table_size 	  = 512M
+#max_join_size 		  = 18446744073709551615
+
+innodb_additional_mem_pool_size = 20M
+innodb_flush_log_at_trx_commit  = 1
+innodb_log_buffer_size 		= 8M
+innodb_buffer_pool_size 	= 4G
+innodb_log_file_size 		= 256M
+innodb_data_file_path 		= ibdata1:500M:autoextend
+innodb_flush_method 		= O_DIRECT
+innodb_thread_concurrency 	= 32
+
+######################### BEGIN Polopoly MySQL my.cnf #########################
+
+[mysqld2]
+socket   		= /var/run/mysql/polopoly/mysql.sock
+port      		= 3307
+pid-file   		= /var/run/mysql/polopoly/mysqld.pid
+datadir 		= /var/lib/mysql/data/polopoly
+user 			= mysql
+log-error  		= /var/lib/mysql/logs/polopoly/error/mysql-errors.err
+# slow-query-log 		= 1
+# slow_query_log_file 	= /var/lib/mysql/polopoly/logs/slow/mysql-slow.log
+# slow_launch_time	= 1
+# log_queries_not_using_indexes
+server_id 		= 492
+replicate_ignore_db = mysql
+read_only
+
+innodb_data_home_dir 	   = /var/lib/mysql/data/polopoly
+innodb_log_group_home_dir  = /var/lib/mysql/data/polopoly
+innodb_file_io_threads 	   = 4
+innodb_lock_wait_timeout   = 120
+innodb_log_files_in_group  = 2
+innodb_max_dirty_pages_pct = 90
+
+skip-name-resolve
+default-storage-engine 		= InnoDB
+lower_case_table_names 		= 0
+# log_bin_trust_function_creators	= 1
+# ft_min_word_len 		= 3
+# ft_max_word_len 		= 84
+
+max_connections 	= 100
+max_connect_errors 	= 100
+table_cache 		= 512
+thread_cache_size 	= 100
+wait_timeout 		= 120
+back_log 		= 100
+
+read_buffer_size 	 = 128K
+read_rnd_buffer_size 	 = 8M
+sort_buffer_size 	 = 256K
+join_buffer_size 	 = 256M
+max_allowed_packet 	 = 64M
+thread_stack 		 = 512K
+bulk_insert_buffer_size  = 64M
+
+query_cache_size 	  = 512M
+query_cache_limit 	  = 2M
+key_buffer		  = 64M
+query_cache_min_res_unit  = 2048
+delay_key_write 	  = OFF
+myisam_sort_buffer_size   = 256M
+myisam_max_sort_file_size = 5G
+myisam_repair_threads 	  = 2
+myisam_recover
+tmp_table_size 		  = 512M
+max_heap_table_size 	  = 512M
+#max_join_size 		  = 18446744073709551615
+
+innodb_additional_mem_pool_size = 20M
+innodb_flush_log_at_trx_commit  = 1
+innodb_log_buffer_size 		= 8M
+innodb_buffer_pool_size 	= 3G
+innodb_log_file_size 		= 256M
+innodb_data_file_path 		= ibdata1:500M:autoextend
+innodb_flush_method 		= O_DIRECT
+innodb_thread_concurrency 	= 32
+
+######################### BEGIN blogs MySQL my.cnf #########################
+
+[mysqld3]
+socket                  = /var/run/mysql/prod-blogs-sa-db/mysql.sock
+port                    = 3308
+pid-file                = /var/run/mysql/prod-blogs-sa-db/mysqld.pid
+datadir                 = /var/lib/mysql/data/prod-blogs-sa-db
+log-error               = /var/lib/mysql/logs/prod-blogs-sa-db/error/mysql-errors.err
+user                    = mysql
+# slow-query-log                = 1
+# slow_query_log_file   = /var/lib/mysql/nature/logs/slow/mysql-slow.log
+# slow_launch_time      = 1
+# log_queries_not_using_indexes
+server_id = 493
+replicate_ignore_db = mysql
+
+skip-innodb
+innodb_data_home_dir       = /var/lib/mysql/data/prod-blogs-sa-db
+innodb_log_group_home_dir  = /var/lib/mysql/data/prod-blogs-sa-db
+innodb_file_io_threads     = 4
+innodb_lock_wait_timeout   = 120
+innodb_log_files_in_group  = 2
+innodb_max_dirty_pages_pct = 90
+
+skip-name-resolve
+default-storage-engine          = MyISAM
+lower_case_table_names          = 0
+read_only
+
+# log_bin_trust_function_creators = 1
+# ft_min_word_len                 = 3
+# ft_max_word_len                 = 84
+
+max_connections         = 100
+max_connect_errors      = 100
+table_cache             = 1024
+thread_cache_size       = 100
+wait_timeout            = 7200
+back_log                = 100
+
+read_buffer_size         = 128K
+read_rnd_buffer_size     = 8M
+sort_buffer_size         = 256K
+join_buffer_size         = 512M
+max_allowed_packet       = 32M
+thread_stack             = 512K
+bulk_insert_buffer_size  = 64M
+
+query_cache_size          = 512M
+query_cache_limit         = 2M
+key_buffer                = 512M
+query_cache_min_res_unit  = 2048
+delay_key_write           = OFF
+myisam_sort_buffer_size   = 256M
+myisam_max_sort_file_size = 5G
+myisam_repair_threads     = 2
+myisam_recover
+tmp_table_size            = 512M
+max_heap_table_size       = 512M
+#max_join_size            = 18446744073709551615
+
+innodb_additional_mem_pool_size = 20M
+innodb_flush_log_at_trx_commit  = 1
+innodb_log_buffer_size          = 8M
+innodb_buffer_pool_size         = 4G
+innodb_log_file_size            = 256M
+innodb_data_file_path           = ibdata1:500M:autoextend
+innodb_flush_method             = O_DIRECT
+innodb_thread_concurrency       = 32

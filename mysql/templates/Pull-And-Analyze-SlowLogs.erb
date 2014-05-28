@@ -1,0 +1,321 @@
+#!/bin/bash
+
+####
+## This file is managed by puppet, do not change it locally.
+##
+
+shout() { echo "$0: $*" >&2; }
+barf() { shout "$*"; exit 128; }
+safe() { "$@" || barf "can not $*"; }
+
+# Backup Log Name
+<% if has_variable?("pulllog") then %>PullLog="<%= pulllog %>"<% else %>PullLog="/var/lib/mysql/scripts/pull.log"<% end %>
+
+# Set location of lock file (no trailing slash)
+<% if has_variable?("lockfilelocation") then %>lock_file="<%= lockfilelocation %>/$0.lck"<% else %>lock_file="/var/lib/mysql/tmp/$0.lck"<% end %>
+
+# Max Runtime in minutes
+<% if has_variable?("maxruntime") then %>max_runtime=<%= maxruntime %><% else %>max_runtime=240 # (4 hours)<% end %>
+
+# Hostname of Originating Server. For reports and file names
+<% if has_variable?("sourcehostname") then %>SourceHostName="<%= sourcehostname %>"<% else %># SourceHostName="UNDEFINED"<% end %>
+
+#### SCP OPTIONS ####
+
+# Source IP address. COMMENT OUT to DISABLE SCP pull. Root key for 192.168.4.40 must exist on this server in /root/.ssh
+<% if has_variable?("sourceip") then %>SourceIP="<%= sourceip %>"<% else %># SourceIP="UNDEFINED"<% end %>
+
+# Source Directory & File(s) for SCP Pull
+<% if has_variable?("sourcefiles") then %>SourceFiles="<%= sourcefiles %>"<% else %># SourceFiles="UNDEFINED"<% end %>
+
+# Target Directory for SCP
+<% if has_variable?("targetdir") then %>TargetDir="<%= targetdir %>"<% else %># TargetDir="UNDEFINED"<% end %>
+
+# Remove Old Files Before Starting Run
+<% if has_variable?("targetremove") then %>TargetRemove=true<% else %># TargetRemove=false<% end %>
+
+# Gunzip All Files in Dir
+<% if has_variable?("targetgunzip") then %>TargetGunzip=true<% else %># TargetGunzip=false<% end %>
+
+# Concat All Files in Target Dir
+<% if has_variable?("targetcat") then %>TargetCat=true<% else %># TargetCat=false<% end %>
+
+# Cleanup TMP Files After Run Completes (Save Space! Enable this)
+<% if has_variable?("cleanuptargetdir") then %>CleanupTargetDir=true<% else %># CleanupTargetDir=false<% end %>
+
+# Uncomment and set location to have pt-query-digest create a TXT report
+<% if has_variable?("targetreportdest") then %>TargetReportDestination="<%= targetreportdest %>"<% else %># TargetReportDestination="UNDEFINED"<% end %>
+
+#### Slow TXT Report Options ####
+
+# Uncomment to Copy the TXT report (above) to www for easy download. Set file path
+<% if has_variable?("copytowww") then %>CopyToWWW="<%= copytowww %>"<% else %># CopyToWWW="UNDEFINED"<% end %>
+
+# Set the download path here
+<% if has_variable?("downloadurl") then %>DownloadURL="<%= downloadurl %>"<% else %># DownloadURL="UNDEFINED"<% end %>
+
+#### ANEMOMETER OPTIONS ####
+
+# Uncomment with Anemometer Hoat DB to enable Anemometer Export uting pt-query-analyzer
+<% if has_variable?("anemometerhost") then %>AnemometerHost="<%= anemometerhost %>"<% else %># AnemometerHost="UNDDEFINED"<% end %>
+
+# Anemometer Database Username
+<% if has_variable?("anemometerun") then %>AnemometerUN="<%= anemometerun %>"<% else %># AnemometerUN=""<% end %>
+
+# Anemometer Database Password
+<% if has_variable?("anemometerpwd") then %>AnemometerPWD="<%= anemometerpwd %>"<% else %># AnemometerPWD=""<% end %>
+
+# Anemometer Database
+<% if has_variable?("anemometerdb") then %>AnemometerDB="<%= anemometerdb %>"<% else %># AnemometerDB=""<% end %>
+
+# Database IP address where reports originated
+<% if has_variable?("anemometersourceip") then %>AnemometerSourceIP="<%= anemometersourceip %>"<% else %># AnemometerSourceIP=""<% end %>
+
+# Anemometer specific URL
+<% if has_variable?("anemometerlink") then %>AnemometerLink="<%= anemometerlink %>"<% else %># AnemometerLink=""<% end %>
+
+#### OTHER SETTINGS ####
+
+# Send Email Notifications to
+<% if has_variable?("emailnotify") then %>EmailNotify=( <%= emailnotify %> )<% else %>EmailNotify=( "s.adams@us.nature.com" )<% end %>
+
+# Email on Error
+<% if has_variable?("emailonerror") then %>EmailOnErr="<%= emailonerror %>"<% else %>EmailOnErr="s.adams@us.nature.com"<% end %>
+
+############################### NOTHING TO MODIFY BELOW THIS LINE #############################
+
+# Set the time so we can know how long this ran
+TIME1=`date +%s`
+TIME2=`date +%H:%M:%S`
+FileDay=`date +%b-%d-%Y`
+
+# Set some other stuff
+dateformat='%Y-%m-%d'
+hn=`hostname -s`
+today=`date +$dateformat`
+
+function WAWD() {
+
+        # W.A.W.D. = What are we doing?
+        # This function simply echos what we are doing to the screen and log. This saves lines
+
+        echo -e "`date` $0: $WAWtext" >> $PullLog
+        echo -e "`date` $0: $WAWtext"
+}
+
+function CheckLock() {
+
+	# If the lock file exists, this script is probably running
+	if [ -f $lock_file ]
+	then
+
+		# Lets do some redundancy checks to see just how long this has been running
+		# If it's been running for too long, delete the lock_file and continue
+
+		current_file=`find $lock_file -cmin -$max_runtime`
+
+		if [ -n "$current_file" ]
+		then
+
+			ErrorMessage="This script appears to already be running. Lock file Found ($lock_file)."
+			GoodBye=1; ReportError
+		else
+			# echo "Expired lock File found"
+			touch $lock_file
+		fi
+
+	else # touch the lock file and continue
+
+		touch $lock_file
+	fi
+}
+
+function ReportError() {
+
+        # Tell the BackupLog file we had a problem
+        echo "`date` $0: [ERROR] $ErrorMessage" >> $PullLog
+
+        # Dump to syslog
+        # Error_IO="$0 Error: $ErrorMessage. See $0"
+        # logger -s -p 3 $Error_IO
+
+        # Echo Problem to Screen
+        echo -e "\nError: $ErrorMessage\n"
+
+        # Email Alert
+        echo $ErrorMessage | mail -s "$0 on `hostname` has a problem" $EmailOnErr
+
+        # Remove the Lock File
+        rm -Rf $lock_File
+
+        # Exit the Script if flagged
+	if [ "$GoodBye" ] && [ "$GoodBye" -eq "1" ]
+	then
+        	exit 10
+	fi
+}
+
+# Set Lock File and Continue
+	WAWtext="Checking and setting locks at $lock_file"; WAWD
+	CheckLock
+	WAWtext="Ok"; WAWD
+	WAWtext="All checks verified ok. OK to begin."; WAWD
+
+# Remove Old Files
+if [ "$TargetRemove" ]
+then
+	WAWtext="rm $TargetDir/*.*"; WAWD
+	rm $TargetDir/*.*
+
+	# Error Handling
+	# if [ "$?" -gt "0" ]
+	# then
+	#	ErrorMessage="Couldn't rm $TargetDir/*.*";  Error=1; ReportError
+	#else
+		WAWtext="Done"; WAWD
+	#fi
+fi
+
+# Grab Files and Store Locallyi / but only if the SourceIP is set. Otherwise assume we dont want to SCP
+if [ "$SourceIP" ]
+then
+	WAWtext="PullSlowLogs.sh $SourceIP $SourceFiles $TargetDir"; WAWD
+	/var/lib/mysql/scripts/PullSlowLogs.sh $SourceIP $SourceFiles $TargetDir
+
+	# Error Handling
+        if [ "$?" -gt "0" ]
+        then
+                ErrorMessage="Couldn't PullSlowLogs.sh $SourceIP $SourceFiles $TargetDir"; GoodBye=1; ReportError
+        else
+                WAWtext="Done"; WAWD
+        fi
+fi
+
+# Gunzip
+if [ "$TargetGunzip" ]
+then
+	WAWtext="gunzip $TargetDir/*.gz"; WAWD
+        gunzip $TargetDir/*.gz
+
+	# Error Handling
+        if [ "$?" -gt "0" ]
+        then
+                ErrorMessage="Couldn't gunzip $TargetDir/*.gz"; GoodBye=1; ReportError
+        else
+                WAWtext="Done"; WAWD
+        fi
+fi
+
+# Cat All into 1 file
+if [ "$TargetCat" ]
+then
+        WAWtext="cat ls -tr $TargetDir/* > $TargetDir/$SourceHostName-SlowLogs-$FileDay.log"; WAWD
+        cat `ls -tr $TargetDir/*` > $TargetDir/$SourceHostName-SlowLogs-$FileDay.log
+
+	# Error Handling
+        if [ "$?" -gt "0" ]
+        then
+                ErrorMessage="Couldn't cat ls -tr $TargetDir/* > $TargetDir/$SourceHostName-SlowLogs-$FileDay.log"; GoodBye=1; ReportError
+        else
+                WAWtext="Done"; WAWD
+        fi
+fi
+
+# If we're not CAT'ing and we've SCP'ed a file, then we need to rename
+if [ "$SourceIP" ] && [ -z "$TargetCat" ]
+then
+	# Must be a single file so we rename it
+	WAWtext="mv $TargetDir/* $SourceHostName-SlowLogs-$FileDay.log"; WAWD
+	mv $TargetDir/* $SourceHostName-SlowLogs-$FileDay.log
+
+	# Error Handling
+        if [ "$?" -gt "0" ]
+        then
+                ErrorMessage="Couldn't mv $TargetDir/* $SourceHostName-SlowLogs-$FileDay.log"; GoodBye=1; ReportError
+        else
+                WAWtext="Done"; WAWD
+        fi
+
+fi
+
+# Create a pt-query Report
+if [ "$TargetReportDestination" ]
+then
+	WAWtext="pt-query-digest $TargetDir/$SourceHostName-SlowLogs-$FileDay.log > $TargetReportDestination/$SourceHostName-SlowQuery-Report-$FileDay.txt"; WAWD
+	pt-query-digest $TargetDir/$SourceHostName-SlowLogs-$FileDay.log > $TargetReportDestination/$SourceHostName-SlowQuery-Report-$FileDay.txt
+
+	# Error Handling
+        if [ "$?" -gt "0" ]
+        then
+                ErrorMessage="Problem with pt-query-digest"; GoodBye=1; ReportError
+        else
+                WAWtext="Done"; WAWD
+        fi
+fi
+
+# Copy to WWW
+if [ "$CopyToWWW" ]
+then
+	WAWtext="cp $TargetReportDestination/$SourceHostName-SlowQuery-Report-$FileDay.txt $CopyToWWW/$SourceHostName-SlowQuery-Report-$FileDay.txt"; WAWD
+	cp $TargetReportDestination/$SourceHostName-SlowQuery-Report-$FileDay.txt $CopyToWWW/$SourceHostName-SlowQuery-Report-$FileDay.txt
+	WAWtext="Done"; WAWD
+
+	WAWtext="chown apache.apache $CopyToWWW/$SourceHostName-SlowQuery-Report-$FileDay.txt"; WAWD
+	chown apache.apache $CopyToWWW/$SourceHostName-SlowQuery-Report-$FileDay.txt
+	WAWtext="Done"; WAWD
+fi
+
+# If we're duming to Anemometer
+if [ "$AnemometerHost" ]
+then
+	WAWtext="Truncating $AnemometerDB on $AnemometerHost"; WAWD
+	mysql -u $AnemometerUN -p$AnemometerPWD -h $AnemometerHost -Bse "USE $AnemometerDB; TRUNCATE TABLE global_query_review; TRUNCATE TABLE global_query_review_history;"
+	WAWtext="Done"; WAWD
+
+	WAWtext="Now Dumping Log to Anemometer $AnemometerDB on $AnemometerHost"; WAWD
+	pt-query-digest --user=$AnemometerUN --password=$AnemometerPWD --review h=$AnemometerHost,D=$AnemometerDB,t=global_query_review --review-history h=$AnemometerHost,D=$AnemometerDB,t=global_query_review_history --no-report --limit=0% --filter=" \$event->{Bytes} = length(\$event->{arg}) and \$event->{hostname}=\"$AnemometerSourceIP\"" $TargetDir/$SourceHostName-SlowLogs-$FileDay.log
+	WAWtext="Done"; WAWD
+fi
+
+# Cleanup Target Directory
+if [ "$CleanupTargetDir" ]
+then
+	WAWtext="rm $TargetDir/*"; WAWD
+	rm $TargetDir/*
+	WAWtext="Done"; WAWD
+fi
+
+# Remove the lock file
+WAWtext="Removing Lock File -----"; WAWD
+rm $lock_file
+
+# We're done
+TIME2=`date +%s`
+elapsed_time=$(( ( $TIME2 - $TIME1 ) / 60 ))
+elapsed_time_seconds=$(( ( $TIME2 - $TIME1 ) ))
+WAWtext="**Done. Total elapsed time: $elapsed_time minutes / $elapsed_time_seconds seconds**"; WAWD
+echo "" >> $PullLog
+
+# Email Notify ?
+for j in "${EmailNotify[@]}"
+do
+	MailMessage="\nThe latest MySQL slow query log for $SourceHostName has been pulled to $TargetDir/$SourceHostName-SlowLogs-$FileDay.log\n"
+
+	if [ "$DownloadURL" ]
+	then
+		MailMessage="$MailMessage\nThe MySQL slow query report for $SourceHostName can be downloaded from:"
+		MailMessage="$MailMessage\n$DownloadURL/$SourceHostName-SlowQuery-Report-$FileDay.txt\n"
+	fi
+
+	if [ "$AnemometerLink" ]
+	then
+		MailMessage="$MailMessage\nVisual analytics can be viewed from:"
+		MailMessage="$MailMessage\n$AnemometerLink\n"
+	fi
+
+	MailMessage="$MailMessage\nIt took $elapsed_time minutes to complete this run ($0)."
+
+	WAWtext="Mailing $j"; WAWD
+        echo -e "$MailMessage" | mail -s "$SourceHostName MySQL Slow Query Report" $j
+done
+exit 0

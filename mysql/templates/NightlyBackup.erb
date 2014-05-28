@@ -1,0 +1,1106 @@
+#!/bin/bash
+
+####
+## This file is managed by puppet, do not change it locally.
+##
+
+###### NOTES #######
+#
+# - If you're running this script for the first time, you may need to create certain directories
+#   files, and set permissions on those files and/or dirs or the script may fail (MakeMysqlDirectories.sh)
+# - If the script is currently executing, it won't run again until it completes
+# - If this script runs as root, no username and password is required is .my.cnf is in /root
+# - This script should be executed as ROOT only
+
+###### TO DO ######
+#
+# - Add logic which asks user if they want to overwrite a copy of a db if one currently exists in
+#   destination backup location OR create a new db copy, appending date to file
+#
+
+###### SHOUT BARF SAFE ######
+#
+shout() { echo "$0: $*" >&2; }
+barf() { shout "$*"; exit 128; }
+safe() { "$@" || barf "can not $*"; }
+
+######### SCRIPT CONFIGURATION ########
+#
+# Checks to see if this script is being executed as root
+<% if has_variable?("runasroot") then %>RunAsRoot=<%= runasroot %><% else %>RunAsRoot=true<% end %>
+
+# Set the primary backup directory. No trailing slash
+<% if has_variable?("backuplocation") then %>BackupLocation="<%= backuplocation %>"<% else %>BackupLocation="/var/lib/mysql/backups"<% end %>
+
+# Backup Location for Backup Files and dumps. No trailing slash
+<% if has_variable?("dir1") then %>DIR1="<%= dir1 %>"<% else %>DIR1="$BackupLocation/files"<% end %>
+
+# Backup Location for MySQL Dumps. No Trailing Slash.
+<% if has_variable?("dir2") then %>DIR2="<%= dir2 %>"<% else %>DIR2="$BackupLocation/sqldumps"<% end %>
+
+# Backup Location for binary and relay logs. No Trailing Slash.
+<% if has_variable?("dir3") then %>DIR3="<%= dir3 %>"<% else %>DIR3="$BackupLocation/logs"<% end %>
+
+# Temporary Directory
+<% if has_variable?("tmpdir") then %>TMPDIR="<%= tmpdir %>"<% else %>TMPDIR="/var/lib/mysql/tmp"<% end %>
+
+# Backup Type: (1) SQL Dump (2) File Copy (3) Both
+<% if has_variable?("backuptype") then %>BackupType=<%= backuptype %><% else %>BackupType=3<% end %>
+
+# MySQL Username
+<% if has_variable?("myusername") then %>MyUsername="<%= myusername %>"<% else %># MyUsername="NOT SET"<% end %>
+
+# MySQL Password
+<% if has_variable?("mypassword") then %>MyPassword="<%= mypassword %>"<% else %># MyPassword="NOT SET"<% end %>
+
+# MySQL Host
+<% if has_variable?("myhost") then %>MyHost="<%= myhost %>"<% else %>MyHost="127.0.0.1"<% end %>
+
+# MySQL Port
+<% if has_variable?("myport") then %>MyPort="<%= myport %>"<% else %>MyPort="3306"<% end %>
+
+# Backup Log Name
+<% if has_variable?("backuplog") then %>BackupLog="<%= backuplog %>"<% else %>BackupLog="$BackupLocation/backup.log"<% end %>
+
+# Backup Error Log Name
+<% if has_variable?("backuperrorlog") then %>BackupErrorLog="<%= backuperrorlog %>"<% else %>BackupErrorLog="$BackupLocation/backup.err"<% end %>
+
+# MySQL Dump Error Log Name (Not relative to the directory path)
+<% if has_variable?("mysqldumperrorlog") then %>MySQLDumpErrorLog="<%= mysqldumperrorlog %>"<% else %>MySQLDumpErrorLog="mysqldump.err"<% end %>
+
+# Set location of lock file
+<% if has_variable?("lockfile") then %>lock_file="<%= lockfile %>"<% else %>lock_file="$BackupLocation/BackupInProgress.lck"<% end %>
+
+# Set location of last backup txt file
+<% if has_variable?("lastbackupfile") then %>LastBackupFile="<%= lastbackupfile %>"<% else %>LastBackupFile="$BackupLocation/Last_Full_Backup.txt"<% end %>
+
+# If the last full backup is greater than this amount of hours, report and error
+<% if has_variable?("maxfullbackuphours") then %>MaxFullBackupHours="<%= maxfullbackuphours %>"<% else %>MaxFullBackupHours="2880"<% end %>
+
+# MySQL Base Directory
+<% if has_variable?("mysqlbasedir") then %>MySQLBaseDir="<%= mysqlbasedir %>"<% else %>MySQLBaseDir="/var/lib/mysql"<% end %>
+
+# What's the MySQL Startup Command  (option 2 OR 3)
+<% if has_variable?("mysqlstartupcmd") then %>MySQL_StartupCMD="<%= mysqlstartupcmd %>"<% else %># MySQL_StartupCMD="/sbin/service mysql start"<% end %>
+
+# What's the MySQL Shutdown Command  (option 2 OR 3)
+<% if has_variable?("mysqlshutdowncmd") then %>MySQL_ShutdownCMD="<%= mysqlshutdowncmd %>"<% else %># MySQL_ShutdownCMD="/sbin/service mys# MySQL_ShutdownCMD="/sbin/service mysql stop"<% end %>
+
+# Directories to Backup. No need to include base dir, data dir OR logs. (option 2 OR 3)
+# These directories are assumed to be in the MySQLBaseDir (ie/ var/lib/mysql/etc)
+<% if has_variable?("mysqlbackupthesedirs") then %>MySQLBackupTheseDirs=( <%= mysqlbackupthesedirs %> )<% else %>MySQLBackupTheseDirs=( "etc" "scripts" "logs/error" "logs/slow" )<% end %>
+
+# Uncomment this to include the MySQL Data Directory  (option 2 Or 3)
+# *** NOTE *** if checked, MySQL will stop and restart
+<% if has_variable?("includedatadir") then %>IncludeDataDir="true" # STOP's and RESTART's MYSQL<% else %># IncludeDataDir="true" # STOP's and RESTART's MYSQL<% end %>
+
+# Uncomment this to include a backup copy of binary log files
+# Specify the location of the binary log files
+<% if has_variable?("includebinlogfiles") then %>IncludeBinLogFiles="<%= includebinlogfiles %>"<% else %># IncludeBinLogFiles="/var/lib/mysql/logs/bin"<% end %>
+
+# Backup MySQL Schema as a Separate .sql. 7/26/12 - Changing to enable no matter what option
+<% if has_variable?("exportmyschema") then %>ExportMySchema=true<% else %>ExportMySchema=true<% end %>
+
+# Backup Grants as a Separate .sql
+<% if has_variable?("exportmygrants") then %>ExportMyGrants=true<% else %># ExportMyGrants=true<% end %>
+
+# Export Crontab
+<% if has_variable?("exportcrontab") then %>ExportCronTab=true<% else %># ExportCronTab=true<% end %>
+
+# Set runtime interval (in minutes). This script wont execute if
+# another backup is already running OR if it's been running longer than this
+<% if has_variable?("maxruntime") then %>max_runtime="<%= maxruntime %>"<% else %>max_runtime=360 # (6 hours)<% end %>
+
+# Days to Keep Backups
+<% if has_variable?("keepdays") then %>keepdays=<%= keepdays %><% else %>keepdays=7<% end %>
+
+# Rotate the mysql backup log on this day (0=Sun, 1=Mon, etc)
+# Otherwise all data will be lost. Uncomment to disable
+<% if has_variable?("weeklyrotate") then %>WeeklyRotate=<%= weeklyrotate %><% else %>WeeklyRotate=0<% end %>
+
+# If uncommented, the owner of the backup files will be changed to this user
+<% if has_variable?("backupowner") then %>backupowner="<%= backupowner %>"<% else %>backupowner="root.root"<% end %>
+
+# Uncomment to move backups to local partition. Only saves 1 copy. Removes older files from dir
+<% if has_variable?("movetolocal") then %>MoveToLocal="<%= movetolocal %>"<% else %># MoveToLocal="/var/lib/mysql/tmp"<% end %>
+
+# Send Email to on error
+<% if has_variable?("emailnotify") then %>EmailNotify="<%= emailnotify %>"<% else %># EmailNotify="s.adams@us.nature.com"<% end %>
+
+#### mysqldump Options #### (option 1 OR 3)
+
+# Databases to backup when performing a MySQL Dump
+# (Add logic in future to scan mysql.information_schema for all dbs and dump individually)
+<% if has_variable?("databases") then %>databases=( <%= databases %> )<% else %>databases=( "mysql" )<% end %>
+
+# Uncomment to backup every database into one file
+# ** NOTE ** If this is a MASTER server to a slave, you should also enable --master-data=2 command
+# which will allow you to easilly find the binary log position at the top of the mysqldump (commented out)
+<% if has_variable?("alldatabases") then %>AllDatabases="<%= alldatabases %>"<% else %># AllDatabases="true"<% end %>
+
+# If dumping all databases (alldatabases=true), ignore the following dbs. For default setting, make sure you're backing up mysql and routines
+# See "exportmyschema" above
+<% if has_variable?("ignoredbs") then %>ignoredbs=<%= ignoredbs %><% else %>ignoredbs="'mysql','performance_schema','information_schema'"<% end %>
+
+# Enable --opt
+# This option is enabled by default. Disable when testing or when using --complete-insert
+# Adds --add-drop-table, --add-locks, --create-options, --quick, --extended-insert, --lock-tables, --set-charset and --disable-keys
+<% if has_variable?("opt") then %>mydumpoptions="--opt "<% else %># Omitted<% end %>
+
+# Enable --complete-insert
+# Use this for complete inserts (instead of extended) to find mysqldump errors. Be sure to disable --opt
+<% if has_variable?("completeinsert") then %>mydumpoptions="$mydumpoptions --complete-insert "<% else %># Omitted<% end %>
+
+# Enable --skip-quote-names
+# Disable mysqldump from adding tick around every object. Remove if you find a problem exporting or importing your dumps
+<% if has_variable?("skipquotenames") then %>mydumpoptions="$mydumpoptions --skip-quote-names "<% else %># Omitted<% end %>
+
+# Enable --hex-blob
+# If the database contains binary data, use this to provide maximum compatibility when restoring on different systems
+<% if has_variable?("hexblob") then %>mydumpoptions="$mydumpoptions --hex-blob "<% else %># hexblob="--hex-blob"<% end %>
+
+# If BackupType is 1 or 3, uncomment to only dump the schema and NO data. Mostly used for testing
+<% if has_variable?("nodata") then %>mydumpoptions="$mydumpoptions --no-data "<% else %># Omitted<% end %>
+
+# Uncomment if this is a DB Master (1), DB Slave (2)
+<% if has_variable?("ismaster") then %>IsMaster=<%= ismaster %><% else %># Omitted<% end %>
+
+# If ALLDatabases=true, uncomment this to lock ALl TABLES (will only flush binary logs once)
+# Otherwise, it will lock just the tables it's copying and flush a binary log for each database
+<% if has_variable?("lockall") then %>LockAll="<%= lockall %>"<% else %># LockAll="true"<% end %>
+
+# This setting is useful for databases with INNODB (ie: Polopoly)
+# This option sends a START TRANSACTION SQL statement to the server before dumping data and is issued without blocking any applications.
+<% if has_variable?("singletransaction") then %>singletransaction="--single-transaction"<% else %># singletransaction="true"<% end %>
+
+
+########################################## NOTHING TO MODIFY BELOW THIS LINE ###################################
+
+# Set the time so we can know how long this ran
+TIME1=`date +%s`
+TIME2=`date +%H:%M:%S`
+FileDay=`date +%b-%d-%Y-%H%M%S`
+
+# Set some other stuff
+dateformat='%Y-%m-%d'
+hn=`hostname -s`
+today=`date +$dateformat`
+staledate=`date -d "$keepdays days ago" +$dateformat`
+stalepath1="$DIR1/$staledate/" #Files
+stalepath2="$DIR2/$staledate/" #SQL Dumps
+MySQLDumpErrorLog2="$DIR2/$today/$MySQLDumpErrorLog"
+
+# Set part of the mysql connection string to reduce redundancy
+MyAuthString="-u $MyUsername -p$MyPassword -h $MyHost -P $MyPort"
+
+# Set Master Data if this is a master
+if [ "$IsMaster" ] && [ "$IsMaster" -eq "1" ]
+then
+	MMD="--master-data=2"
+fi
+
+# Set the Lock Command if enabled
+if [ "`echo $AllDatabases | grep true`" ] && [ "`echo $LockAll | grep true`" ]
+then
+	LAT="--lock-all-tables"
+fi
+
+# We need to add this because even if the backup type is SQL Only, this directory still needs to exist
+if [ -d "$DIR1/$today" ]
+then
+        echo "Null" > /dev/null
+else
+        WAWtext="Making Dir $DIR1/$today"; WAWD
+        mkdir $DIR1/$today
+fi
+
+function CheckVariables() {
+
+	# Lets check to see if all of the important variables have been set
+	if [ -z "$BackupLocation" ]
+	then
+		ErrorMessage="The \$BackupLocation variable needs to be set."
+		GoodBye=1; ReportError
+	fi
+
+	# Set the MySQL Data Directory
+	# MySQL_Data_Dir=`mysql —u $MyUsername —p$MyPassword -Bse "SHOW VARIABLES LIKE '%datadir%'" | awk '{ print $2 }'`
+	# Just listing another way to grab... cut or awk. Pick your poisin
+	MySQL_Data_Dir=`mysql $MyAuthString -Bse "SHOW VARIABLES LIKE '%datadir%'" | cut -f2`
+	MySQL_Data_Dir_Name_Only=`echo $MySQL_Data_Dir | cut -f2 | awk -F/ '{print $(NF-1)}'`
+
+	# Now let's Check to make sure it's not NULL
+	if [ -z "$MySQL_Data_Dir" ]
+	then
+		ErrorMessage="The \$MySQL_Data_Dir variable could not be extracted."
+		GoodBye=1; ReportError
+	fi
+
+	# MySQL Startup and Shutdown Command
+	if [ -z "$MySQL_StartupCMD" ] && [ "$IncludeDataDir" ]
+	then
+		ErrorMessage="The \$MySQL_StartupCMD variable needs to be set."
+		GoodBye=1; ReportError
+	fi
+
+	if [ -z "$MySQL_ShutdownCMD" ] && [ "$IncludeDataDir" ]
+	then
+		ErrorMessage="The \$MySQL_ShutdownCMD variable needs to be set."
+		GoodBye=1; ReportError
+	fi
+
+	# MySQL Base Dir
+	if [ -z "$MySQLBaseDir" ]
+	then
+		ErrorMessage="The \$MySQLBaseDir variable needs to be set."
+		GoodBye=1; ReportError
+	fi
+}
+
+function CheckLock() {
+
+	# If the lock file exists, this script is probably running
+	if [ -f $lock_file ]
+	then
+
+		# Lets do some redundancy checks to see just how long this has been running
+		# If it's been running for too long, delete the lock_file and continue
+
+		current_file=`find $lock_file -cmin -$max_runtime`
+
+		if [ -n "$current_file" ]
+		then
+
+			ErrorMessage="This script appears to already be running. Lock file Found ($lock_file)."
+			GoodBye=1; ReportError
+		else
+			# echo "Expired lock File found"
+			touch $lock_file
+		fi
+
+	else # touch the lock file and continue
+
+		touch $lock_file
+	fi
+}
+
+function IsMySqlAlive() {
+
+	MyAlive=`mysqladmin $MyAuthString ping`
+
+	if [ "`echo $MyAlive | grep alive`" ]
+	then
+		return 1
+	else
+		ErrorMessage="MySQL isn't running or improper authentication credentials supplied"
+		GoodBye=1; ReportError
+	fi
+}
+
+function IsReplicationRunning() {
+
+	Slave_IO_Running=`mysql $MyAuthString -Bse "show slave status\G" | grep Slave_IO_Running | awk '{ print $2 }'`
+	Slave_SQL_Running=`mysql $MyAuthString -Bse "show slave status\G" | grep Slave_SQL_Running | awk '{ print $2 }'`
+
+	if [ "`echo $Slave_IO_Running | grep Yes`" ] && [ "`echo $Slave_SQL_Running | grep Yes`" ]
+	then
+		return 1;
+	else
+		ErrorMessage="Slave IO or SQL is not running"
+		GoodBye=1; ReportError
+		# if [ "$?" != "1" ] # I put this here so I can remember it when I need to get the return outside of the function
+	fi
+}
+
+function IsReplicationBehind() {
+
+	SlaveSlowness=`mysql $MyAuthString -Bse "show slave status\G" | grep Seconds_Behind_Master | awk '{ print $2 }'`
+
+	if [ "$SlaveSlowness" -gt "3600" ]
+	then
+		ErrorMessage="Slave is one (1) hour or more behind"
+		ReportError
+	fi
+}
+
+function CheckDir() {
+
+	# Does the directory exist ?
+	if [ -d "$DIR1" ]
+	then
+		echo "Null" > /dev/null
+
+	else # lets create it
+
+		if mkdir SDIR1
+		then # good
+			echo "Null" > /dev/null
+		else # bad
+			ErrorMessage="(1) Could not mkdir $DIR1. Check permissions and/or Backup Setting"
+			GoodBye=1; ReportError
+			return 1
+		fi
+	fi
+
+	# Does the other directory exist ?
+	if [ -d "$DIR2" ]
+	then
+		echo "Null" > /dev/null
+	else # lets create it
+
+		if mkdir $DIR2
+		then # good
+			echo "Null" > /dev/null
+		else # bad
+			ErrorMessage="(2) Could not mkdir $DIR2. Check permissions and/or Backup Setting"
+			GoodBye=1; ReportError
+			return 1
+		fi
+	fi
+
+	# Does the other directory exist ?
+        if [ -d "$DIR3" ]
+        then
+                echo "Null" > /dev/null
+        else # lets create it
+
+                if mkdir $DIR3
+                then # good
+                        echo "Null" > /dev/null
+                else # bad
+                        ErrorMessage="(3) Could not mkdir $DIR3. Check permissions and/or Backup Setting"
+                        GoodBye=1; ReportError
+                        return 1
+                fi
+        fi
+
+	# Check to binlog location if enabled and if so, check its location
+	if [ "$IncludeBinLogFiles" ]
+	then
+		if [ -d "$IncludeBinLogFiles" ]
+        	then
+                	echo "Null" > /dev/null
+		else
+			ErrorMessage="MySQL binary log location could not be found in $IncludeBinLogFiles"
+			GoodBye=1; GoodBye=1; ReportError
+		fi
+	fi
+
+	# Check to local copy location if enabled and if so, check its location
+        if [ "$MoveToLocal" ]
+        then
+                if [ -d "$MoveToLocal" ]
+                then
+                        # SA - 6/13/12 - Changing to delete EVERYTHING since this backup of a backup drectory should only keep 1 day's worth of files
+                	#  NTM since the files are moved AFTER the backup, it's throwing errors since the timestamp is less than 1 day
+
+                	WAWtext="Deleting all files from $MoveToLocal"; WAWD
+                	rm $MoveToLocal/*.* 2>/dev/null
+                else
+                        ErrorMessage="Could not find $MoveToLocal"
+                        GoodBye=1; ReportError
+                fi
+        fi
+}
+
+function CheckRoot() {
+
+        if [ "`whoami | grep root`" ]
+        then
+                echo "Null" > /dev/null
+        else
+                ErrorMessage="You've must execute $0 as root"
+                GoodBye=1; ReportError
+        fi
+}
+
+function AreFilesWritable() {
+
+	# In the future, you may have to use "if [ -w "$BackupLog" ] (meaning, is it writable)
+	# For now, it's assumed that we're running this as root, so we'll just ask if the file exists with -a
+
+	if [ -a "$BackupLog" ]
+	then
+		echo "Null" > /dev/null
+	else
+		# Touch and recheck
+		touch $BackupLog
+		if [ -a "$BackupLog" ]
+		then
+			echo "Null" > /dev/null
+		else
+			ErrorMessage="Could not write to $BackupLog"
+			GoodBye=1; ReportError
+		fi
+	fi
+
+	if [ -a "$BackupErrorLog" ]
+	then
+		echo "Null" > /dev/null
+	else
+		# Touch and recheck
+		touch $BackupErrorLog
+
+		if [ -a "$BackupErrorLog" ]
+		then
+			echo "Null" > /dev/null
+		else
+			ErrorMessage="Could not write to $BackupErrorLog"
+			GoodBye=1; ReportError
+			mysqladmin $MyAuthString stop-slave
+		fi
+	fi
+
+	if [ -a "$LastBackupFile" ]
+        then
+                echo "Null" > /dev/null
+        else
+                # Touch and recheck
+                touch $LastBackupFile
+                if [ -a "$LastBackupFile" ]
+                then
+                        echo "Null" > /dev/null
+                else
+                        ErrorMessage="Could not write to $LastBackupFile"
+                        GoodBye=1; ReportError
+                fi
+        fi
+
+	# Grab the last backup location and store in variable
+	LastBackup=`cat $LastBackupFile`
+
+	# As long as this variable isn't empty, grab the modified by date
+	if [ "$LastBackup" ] && [ "$AllDatabases" ]
+	then
+		LastBackupDate=`stat -c %y $LastBackup | cut -d ' ' -f1`
+
+		if [ `find $LastBackup -mmin +$MaxFullBackupHours` ]
+                then
+                        # Last Backup has reached threshhold. Send Email to dmin
+                        ErrorMessage="A Full Backup has not been performed since $LastBackupDate. The last backup is $LastBackup"
+                        ReportError
+                fi
+	fi
+}
+
+
+function BinLogFileCopy()
+{
+	# Check the tmpdir location
+	#if [ -d "$DIR3/$today" ]
+        #then
+        #        echo "Null" > /dev/null
+        #else
+	#	WAWtext="Making Dir $DIR3/$today"; WAWD
+        #        mkdir $DIR3/$today
+        # fi
+
+	# Don't Continue if we can't get the master log file
+	WAWtext="Checking mysql master status"; WAWD
+	if [ "`mysql $MyAuthString -e "show master status" | cut -f1 | grep File`" ]
+	then
+		echo "Null" > /dev/null
+	else
+		ErrorMessage="Could not get master status"
+                GoodBye=1; ReportError
+	fi
+
+	# Flush Logs
+	WAWtext="Flushing binary logs"; WAWD
+	mysql $MyAuthString -Bse "flush logs"
+
+	# Get binlog position. We won't tar this.
+	master_binlog=`mysql $MyAuthString -Bse "show master status" | cut -f1`
+	WAWtext="Current binary log is $master_binlog"; WAWD
+
+	# Change directories
+	cd $IncludeBinLogFiles
+	if [ "$?" -eq "1" ]
+        then
+                ErrorMessage="Couldn't cd to $IncludeBinLogFiles"
+                Error=1; ReportError
+	fi
+
+	# Tar everything except for the current file
+	WAWtext="Taring BinaryLogs-$FileDay.tar.gz"; WAWD
+	# tar cvfz test2.tar.gz `mysql -u root -Bse "show master logs" | cut -f1 | tr '\n' ' ' | sed 's/$master_binlog//g'` >& /dev/null
+	tar cfz BinaryLogs-$FileDay.tar.gz `mysql $MyAuthString -Bse "show master logs" | cut -f1 | tr '\n' ' ' | sed "s/$master_binlog//g"`
+
+	# Move to Backup Location
+	WAWtext="Moving BinaryLogs-$FileDay.tar.gz to $DIR3"; WAWD
+	mv BinaryLogs-$FileDay.tar.gz $DIR3
+
+	# Copy to a local partition?
+        if [ "$MoveToLocal" ]
+        then
+		# Delete Files older than 1 day
+                # WAWtext="Deleting all files from $MoveToLocal older than 1 day"; WAWD
+                # find $MoveToLocal/* -mtime +1 -exec rm {} \;
+
+                WAWtext="Copying $DIR3/*.* to $MoveToLocal"; WAWD
+                cp $DIR3/* $MoveToLocal
+
+		if [ "$?" -eq "1" ]
+        	then
+	                ErrorMessage="Error on cp $DIR3/* $MoveToLocal"
+        	        GoodBye=1; ReportError
+        	fi
+        fi
+
+	# Remove Stale Binary Logs
+	WAWtext="Removing Stale Binary Logs older than $keepdays days from $DIR3"; WAWD
+	# rm $DIR3/BinaryLogs-$staledate.tar.gz
+	find $DIR3/* -mtime +$keepdays -exec rm  2>/dev/null {} +
+
+	# Shaun's Note: Keeping this aroung because it's damn good code. It rsync's the binary logs.
+	# It's a space killer so we're going for another method (above)
+
+	# Set Copy Status
+        #copy_status=0
+
+	#for b in `mysql $MyAuthString -Bse "show master logs" | cut -f1`
+	#do
+		# Grab the name of the log
+		#if [ -z $old_log ]
+		#then
+		#	old_log=$b
+		#fi
+
+		# Continue as long as the file isn't on the current log
+		#if [ $b != $master_binlog ]
+		#then
+
+			#WAWtext="Copying binary log ${b} to $TMPDIR/binlogs"; WAWD
+			#rsync -a $IncludeBinLogFiles/$b $TMPDIR/binlogs >& /dev/null
+
+			# Make sure the last rsync copied successfully
+			#if [ $? -ne 0 ]
+			#then
+			#	ErrorMessage="Failed to rsync ${b} to $TMPDIR/binlogs $IncludeBinLogFiles cleanly"
+                        #	ReportError; copy_status=1
+			#	break
+			#fi
+		#fi
+	#done
+}
+
+
+function MySQLFileCopy()
+{
+	# To copy the file structure of the mysql directory, we'll need to stop mysql
+	# Let's Make Our Output Directory
+	# Does the directory exist ?
+	if [ -d "$DIR1/$today" ]
+        then
+               	echo "Null" > /dev/null
+	else
+		WAWtext="Making Dir $DIR1/$today"; WAWD
+		mkdir $DIR1/$today
+	fi
+
+	# We only need to do this if this is a slave AND the option to copy the data dir has been enabled
+	if [ "$IsMaster" ] && [ "$IsMaster" -eq "2" ] && [ "`echo $IncludeDataDir | grep true`" ]
+	then
+		# Stop the slave
+		WAWtext="Stopping the MySQL slave"; WAWD
+		mysqladmin $MyAuthString stop-slave
+	fi
+
+	# Only shutdown if we're grabbing the data directory
+	if [ "`echo $IncludeDataDir | grep true`" ]
+	then
+		# Shutdown MySQL
+		WAWtext="Shutting down MySQL"; WAWD
+		$MySQL_ShutdownCMD
+
+		# Now tar it
+		cd $MySQL_Data_Dir../
+		WAWtext="Taring $MySQL_Data_Dir to data-$FileDay.tar.gz"; WAWD
+                tar cfz data-$FileDay.tar.gz $MySQL_Data_Dir_Name_Only
+
+		# Move file to finel location
+		WAWtext="Moving data-$FileDay.tar.gz to $TMPDIR"; WAWD
+		mv data-$FileDay.tar.gz $DIR1/$today
+	fi
+
+	# We can restart MySQL Now that we have the data files
+	if [ "`echo $IncludeDataDir | grep true`" ]
+        then
+		WAWtext="Restarting MySQL"; WAWD
+     		$MySQL_StartupCMD
+
+		# Check to see if it failed
+		if [ "$?" -eq "1" ]
+		then
+			ErrorMessage="MySQL did not restart after file copy on `hostname`"
+			Error=1; ReportError
+		else
+			MyAlive=`mysqladmin $MyAuthString ping`
+			WAWtext="$MyAlive"; WAWD
+		fi
+	fi
+
+	# If this is a slave, restart it
+	if [ "$IsMaster" ] && [ "$IsMaster" -eq "2" ] && [ "`echo $IncludeDataDir | grep true`" ]
+	then
+		# Restart the Slave
+                WAWtext="Restarting the MySQL slave"; WAWD
+                mysqladmin $MyAuthString start-slave
+
+		# Check to see if it failed
+                if [ "$?" -eq "1" ]
+                then
+                        ErrorMessage="MySQL Slave did not start after file copy on `hostname`"
+                        Error=1; ReportError
+                fi
+	fi
+
+	# Now let's tar the Files
+	cd $MySQLBaseDir
+
+	for j in "${MySQLBackupTheseDirs[@]}"
+	do
+		# We can't create tar files with '/''s in them. So we need to make sure they are replaced
+		filename=`echo $j | sed 's/\//\-/g'`
+		WAWtext="Taring $j.tar.gz"; WAWD
+		tar cfz $filename-$FileDay.tar.gz $j
+	done
+
+	# Move .gz files to final location
+	WAWtext="Moving $MySQLBaseDir/*.gz to $DIR1/$today"; WAWD
+	mv *.gz $DIR1/$today
+
+	# Change Ownership
+        if [ "$backupowner" ]
+        then
+               	WAWtext="Changing ownership to Sbackupowner on $DIR1/$today/*.gz"; WAWD
+                chown $backupowner $DIR1/$today/*.*
+        fi
+
+	# Copy to a local partition?
+	if [ "$MoveToLocal" ]
+	then
+		# Delete Files older than 1 day
+                # WAWtext="Deleting all files from $MoveToLocal older than 1 day"; WAWD
+                # find $MoveToLocal/* -mtime +1 -exec rm {} \;
+
+		WAWtext="Copying $DIR1/$today/*.* to $MoveToLocal"; WAWD
+		cp $DIR1/$today/* $MoveToLocal
+
+		if [ "$?" -eq "1" ]
+                then
+                        ErrorMessage="Error on cp $DIR1/$today/* to $MoveToLocal"
+                        GoodBye=1; ReportError
+                fi
+	fi
+
+	# Remove Stale Dirs
+	WAWtext="Removing old stale path (if it exists) $stalepath1"; WAWD
+	rm -Rf $stalepath1 2>/dev/null
+
+	# Don't Continue if there is a problem
+	if [ "$Error" ] && [ "$Error" -eq "1" ]
+	then
+		ErrorMessage="Quitting backup due to previous errors"
+		GoodBye=1; ReportError
+	fi
+}
+
+
+function MySQLBackupDump()
+{
+	# Make output directory if it doesnt the directory exist ?
+        if [ -d "$DIR2/$today" ]
+        then
+                echo "Null" > /dev/null
+        else
+		WAWtext="Making Dir $DIR2/$today"; WAWD
+                mkdir $DIR2/$today
+        fi
+
+	# change directories
+	cd $DIR2/$today
+
+	# Are we dumping individual databases?
+	if [ "$databases" ]
+	then
+		for i in "${databases[@]}"
+		do
+			# 7/26/12 We backup mysql as a separate function so we dont need this anymore
+			# We have to use a different mysql dump for the mysql database
+			# if [ "`echo $i | grep mysql`" ]
+			# then
+			#	WAWtext="Creating MySQLDump of $i in $DIR2/$today"; WAWD
+			#	mydumpstring="--skip-lock-tables --comments --log-error=$MySQLDumpErrorLog2 --result-file=$i-schema-$FileDay.sql $i"
+			#	mydump
+			#else
+				# Are we dumpiing in single transaction mode?
+				# if [ "$singletransaction" ]
+				# then
+
+					WAWtext="Creating MySQLDump of $i in $DIR2/$today (in --single-transaction mode)"; WAWD
+					mydumpstring="$mydumpoptions $singletransaction --flush-logs --comments --log-error=$MySQLDumpErrorLog2 --result-file=$i-$FileDay.sql $i"
+					mydump
+
+					WAWtext="gzip -f $i-$FileDay.sql"; WAWD
+					gzip -f $i-$FileDay.sql
+
+				# else
+				#	WAWtext="Creating MySQLDump of $i in $DIR2/$today"; WAWD
+				#	mydumpstring="$mydumpoptions --flush-logs --routines --triggers --comments --log-error=$MySQLDumpErrorLog2  $i | gzip > $i-$FileDay.sql.gz"
+				#	mydump
+				# fi
+			# fi
+		done
+	fi
+
+	# Are we grabbing all databases into one file ?
+	if [ "$AllDatabases" ]
+	then
+		# Are we dumping in single transaction mode
+		if [ "$singletransaction" ]
+		then
+			WAWtext="Creating MySQLDump of ALL DATABASES in $DIR2/$today (in --single-transaction mode)"; WAWD
+			# mydumpstring="--all-databases $mydumpoptions $MMD $singletransaction --flush-logs --routines --triggers --comments --log-error=$MySQLDumpErrorLog2 --result-file=FullMysqlDump-$FileDay.sql"
+			mydumpstring="--databases `mysql $MyAuthString --skip-column-names -e \"SELECT GROUP_CONCAT(schema_name SEPARATOR ' ') FROM information_schema.schemata WHERE schema_name NOT IN ($ignoredbs);\"` "
+			mydumpstring="$mydumpstring $mydumpoptions $MMD $singletransaction --flush-logs --comments --log-error=$MySQLDumpErrorLog2 --result-file=FullMysqlDump-$FileDay.sql "
+			mydump
+
+			WAWtext="gzip -f gzip -f FullMysqlDump-$FileDay.sql"; WAWD
+			gzip -f FullMysqlDump-$FileDay.sql
+		else
+			WAWtext="Creating MySQLDump of ALL DATABASES in $DIR2/$today"; WAWD
+			# mydumpstring="--all-databases $mydumpoptions $MMD $LAT --flush-logs --routines --triggers --comments --log-error=$MySQLDumpErrorLog2 --result-file=FullMysqlDump-$FileDay.sql"
+			mydumpstring="--databases `mysql $MyAuthString --skip-column-names -e \"SELECT GROUP_CONCAT(schema_name SEPARATOR ' ') FROM information_schema.schemata WHERE schema_name NOT IN ($ignoredbs);\"` "
+			mydumpstring="$mydumpstring $mydumpoptions $MMD $LAT --flush-logs --routines --triggers --comments --log-error=$MySQLDumpErrorLog2 --result-file=FullMysqlDump-$FileDay.sql"
+			mydump
+
+			WAWtext="gzip -f gzip -f FullMysqlDump-$FileDay.sql"; WAWD
+			gzip -f FullMysqlDump-$FileDay.sql
+		fi
+
+		# Set Date of Last Full Dump in separate file
+		echo -e "$DIR2/$today/FullMysqlDump-$FileDay.sql.gz" > $LastBackupFile
+
+	fi
+
+	# Cat MySQL Dump Error Message to 1 file
+	echo "`date` `hostname`" >> $BackupLocation/mysqldump.err
+	cat $MySQLDumpErrorLog2 >> $BackupLocation/mysqldump.err
+
+	# Change Ownership
+        if [ "$backupowner" ]
+        then
+                WAWtext="Changing ownership to $backupowner on $DIR2/$today/*.*"; WAWD
+                chown $backupowner $DIR2/$today *.*
+        fi
+
+	# Copy to a local partition?
+        if [ "$MoveToLocal" ]
+        then
+		# Delete Files older than 1 day
+                # WAWtext="Deleting all files from $MoveToLocal older than 1 day"; WAWD
+                # find $MoveToLocal/* -mtime +1 -exec rm {} \;
+
+                WAWtext="Copying $DIR2/$today/*.* to $MoveToLocal"; WAWD
+                cp $DIR2/$today/* $MoveToLocal
+
+		if [ "$?" -eq "1" ]
+                then
+                        ErrorMessage="Error on cp $DIR2/$today/* to $MoveToLocal"
+                        GoodBye=1; ReportError
+                fi
+        fi
+
+	# Remove Stale Dirs
+	WAWtext="Removing old stale path (if it exists) $stalepath2"; WAWD
+        rm -Rf $stalepath2 2>/dev/null
+}
+
+function ExportSchemas()
+{
+	WAWtext="Dumping MySQL Schema to $DIR2/$today"; WAWD
+	mydumpstring="--all-databases --single-transaction --no-data --comments --log-error=$MySQLDumpErrorLog2 --result-file=$DIR2/$today/Schemas-$FileDay.sql"
+	mydump
+	# gzip -f $DIR2/$today/Schemas-$FileDay.sql
+
+	WAWtext="Dumping MySQL Routines & Triggers to $DIR2/$today"; WAWD
+        mydumpstring="--all-databases --single-transaction --no-data --no-create-info --routines --triggers --comments --log-error=$MySQLDumpErrorLog2 --result-file=$DIR2/$today/Routines-$FileDay.sql"
+        mydump
+
+	# gzip -f DIR2/$today/schema.sql
+
+	# Cat MySQL Dump Error Message to 1 file
+	echo "`date` `hostname`" >> $BackupLocation/mysqldump.err
+	cat $MySQLDumpErrorLog2 >> $BackupLocation/mysqldump.err
+}
+
+function ExportGrants()
+{
+	WAWtext="Dumping MySQL Grants to $DIR2/$today"; WAWD
+	mysql $MyAuthString -Bse "SELECT DISTINCT CONCAT('SHOW GRANTS FOR ''',user,'''@''',host,''';') AS query FROM user ORDER BY user,host " mysql | mysql $MyAuthString -Bs > $DIR2/$today/grants-$FileDay.sql
+	# gzip $DIR2/$today/grants.sql
+
+	# We need to add a semi colon to the end of each line for quick retores
+	sed '/^GRANT/ s/$/;/' $DIR2/$today/grants-$FileDay.sql > $DIR2/$today/Grants-$FileDay.sql
+	rm $DIR2/$today/grants-$FileDay.sql
+}
+
+function ExportCron()
+{
+	WAWtext="Exporting root Crontab to Dumping MySQL Grants to $DIR1/$today"; WAWD
+	crontab -l > $DIR1/$today/crontab-$FileDay.txt
+}
+
+function RotateLogs()
+{
+	# SA - 6/13/12. No need to rotate mysql error and slow logs because I now use logrotate: /etc/logrotate.d/mysql
+
+	# Get the location of the mysql error log
+        # MyError=`mysql $MyAuthString -Bse "SHOW VARIABLES LIKE '%log_error%'" | cut -f2`
+        # MySlow=`mysql $MyAuthString -Bse "SHOW VARIABLES LIKE '%slow_query_log_file%'" | cut -f2`
+
+        # if [ -a "$MyError" ]
+        # then
+        #         Continue=true
+        # else
+        #         ErrorMessage="Couldn't Rotate Error Logs. $MyError doesn't exist"
+        #         ReportError
+        # fi
+
+        # if [ -a "$MySlow" ]
+        # then
+        #         Continue=true
+        # else
+        #         ErrorMessage="Couldn't Rotate Slow Logs. $MySlow doesn't exist"
+        #         ReportError
+        # fi
+
+        # Only continue if checks passed
+        # if [ "$Continue" ]
+        # then
+                # WAWtext="Rotating $MyError"; WAWD
+                # cat /dev/null > $MyError
+
+                # WAWtext="Rotating $MySlow"; WAWD
+                # cat /dev/null > $MySlow
+
+		WAWtext="Rotating $BackupLog"; WAWD
+		echo "** ROTATING LOG **" >> $BackupLog
+		cp $BackupLog $DIR1/archived-backup.log
+		cp $BackupLog $DIR2/archived-backup.log
+		cat /dev/null > $BackupLog
+
+		WAWtext="Rotating $BackupErrorLog"; WAWD
+                echo "** ROTATING LOG **" >> $BackupErrorLog
+                cp $BackupErrorLog $DIR1/archived-backup.err
+                cp $BackupErrorLog $DIR2/archived-backup.err
+                cat /dev/null > $BackupErrorLog
+
+		WAWtext="Rotating $BackupLocation/mysqldump.err"; WAWD
+                echo "** ROTATING LOG **" >> $BackupLocation/mysqldump.err
+                cp $BackupLocation/mysqldump.err $DIR1/archived-mysqldump.err
+                cp $BackupLocation/mysqldump.err $DIR2/archived-mysqldump.err
+                cat /dev/null > $BackupLocation/mysqldump.err
+        # fi
+}
+
+function mydump()
+{
+	WAWtext="\n\nmysqldump [AUTH] $mydumpstring\n"; WAWD # For Debug
+	mysqldump $MyAuthString $mydumpstring
+	if [ "$?" -gt "1" ]
+	then
+		ErrorMessage="mysqldump failed. See the mysql backup logs for details. \"mysqldump [AUTH] $mydumpstring\""
+		ReportError
+	fi
+}
+
+function WAWD() {
+
+        # W.A.W.D. = What are we doing?
+        # This function simply echos what we are doing to the screen and log. This saves lines
+
+        echo -e "`date` `hostname` $WAWtext" >> $BackupLog
+        echo -e "`date` $WAWtext"
+}
+
+
+function ReportError() {
+
+        # Print Problem to Log
+        echo "`date` `hostname` Error: $ErrorMessage" >> $BackupErrorLog
+
+        # Tell the BackupLog file we had a problem
+        echo "`date` `hostname` [ERROR] See $BackupErrorLog for details" >> $BackupLog
+
+        # Dump to syslog
+        Error_IO="MySQL Backup Error:\n$ErrorMessage.\n\nSee $0"
+        # logger -s -p 3 $Error_IO
+
+        # Echo Problem to Screen
+        echo -e "\nError: $ErrorMessage\n"
+
+        # Email Alert
+	Error_IO="`date` `hostname` $Error_IO"
+        echo -e $Error_IO | mail -s "[MySQL BACKUP ALERT] - MySQL backup on `hostname` has a problem" $EmailNotify
+
+        # Remove the Lock File
+        rm $lock_File 2>/dev/null
+
+        # Exit the Script if flagged
+	if [ "$GoodBye" ] && [ "$GoodBye" -eq "1" ]
+	then
+        	exit 10
+	fi
+}
+
+######### LETS BEGIN ########
+
+
+# We're starting
+WAWtext="**START Backup Routine**"; WAWD
+
+# Begin Checks
+WAWtext="STEP 1: Begin Checks -----"; WAWD
+
+	# Run only as root?
+	if [ "$RunAsRoot" ]
+	then
+		WAWtext="Checking to see if we are root"; WAWD
+		CheckRoot
+		WAWtext="Ok"; WAWD
+	fi
+
+	# Check that all variables are set
+	WAWtext="Checking to see if variables are set"; WAWD
+	CheckVariables
+	WAWtext="Ok"; WAWD
+
+	# Check to see if log files are writable
+	WAWtext="Checking to see if necessary files are writable"; WAWD
+	AreFilesWritable
+	WAWtext="Ok"; WAWD
+
+	# Check to see if backup directories exist
+	WAWtext="Checking to see if necessary directories exist and are writable"; WAWD
+	CheckDir
+	WAWtext="Ok"; WAWD
+
+	# Is MySQL Alive?
+	WAWtext="Checking to see if MySQL is alive"; WAWD
+	IsMySqlAlive
+	WAWtext="Ok"; WAWD
+
+	if [ "$IsMaster" ] && [ "$IsMaster" -eq "2" ]
+	then
+		# Check to see if the dbdump slave is running and up to date. If not, exit
+		WAWtext="Checking to see if MySQL replication is running"; WAWD
+		IsReplicationRunning
+		WAWtext="Ok"; WAWD
+
+		# Check to see if replication is behind too Far. IF yes, exit cause nobody wants an old backup
+		WAWtext="Checking to see if MySQL replication is 1 hour or more behind"; WAWD
+		IsReplicationBehind
+		WAWtext="Ok"; WAWD
+	fi
+
+	# Set Lock File and Continue
+	WAWtext="Checking and setting locks"; WAWD
+	CheckLock
+	WAWtext="Ok"; WAWD
+	WAWtext="All checks verified ok. OK to begin."; WAWD
+
+# FILE COPY - Only do this if the $BackupType is 2 (file copy only) or 3 (sqldump)
+if [ "$BackupType" -eq "2" ] || [ "$BackupType" -eq "3" ]
+then
+	# Dump some files
+	WAWtext="STEP 2: Time to Copy and Tar some files -----"; WAWD
+	MySQLFileCopy
+	WAWtext="STEP 2: Done"; WAWD
+else
+	# Echo Skip
+        WAWtext="STEP 2: Skipping TAR and File Copy"; WAWD
+fi
+
+# MySQL Dump - Only do this if the $BackupType is 1 or 3
+if [ "$BackupType" -eq "1" ] || [ "$BackupType" -eq "3" ]
+then
+	WAWtext="STEP 3: MySQL Dump -----"; WAWD
+	MySQLBackupDump
+	WAWtext="STEP 3: Done"; WAWD
+else
+	WAWtext="STEP 3: Skipping MySQL Dump"; WAWD
+fi
+
+# Have to add this so script will delete backup files older than <%= keepdays %> days when set to 1 (sqldump)
+if [ "$BackupType" -eq "1" ]
+then
+        WAWtext="STEP 3a: Removing directories older than $keepdays days old from $stalepath1"; WAWD
+        find $DIR1/* -mtime +$keepdays -type d -exec rm -Rf 2>/dev/null {} +
+	# rm -Rf $stalepath1
+        WAWtext="STEP 3a: Done"; WAWD
+fi
+
+# Copy Binary Log Files
+if [ "$IncludeBinLogFiles" ]
+then
+	WAWtext="STEP 4: Copy and archive binlogs -----"; WAWD
+	BinLogFileCopy
+	WAWtext="STEP 4: Done"; WAWD
+else
+	WAWtext="STEP 4: Skipping binlog copy"; WAWD
+fi
+
+# Export Schemas
+if [ "$ExportMySchema" ]
+then
+	WAWtext="STEP 5: Export MySQL Schema -----"; WAWD
+	ExportSchemas
+	WAWtext="STEP 5: Done"; WAWD
+else
+	WAWtext="STEP 5: Skipping Export of MySQl Schema"; WAWD
+fi
+
+# Export Grants
+if [ "$ExportMyGrants" ]
+then
+        WAWtext="STEP 6: Export MySQL Grants -----"; WAWD
+        ExportGrants
+        WAWtext="STEP 6: Done"; WAWD
+else
+        WAWtext="STEP 6: Skipping Export of Grants"; WAWD
+fi
+
+# Export Cron Tab
+if [ "$ExportCronTab" ]
+then
+	WAWtext="STEP 7: Export Crontab -----"; WAWD
+        ExportCron
+        WAWtext="STEP 7: Done"; WAWD
+else
+        WAWtext="STEP 7: Skipping Export of Crontab"; WAWD
+fi
+
+# Weekly Log Rotation
+if [ "$WeeklyRotate" ] && [ "$WeeklyRotate" -eq `date +%w` ]
+then
+        WAWtext="STEP 8: Rotate Logs -----"; WAWD
+        RotateLogs
+        WAWtext="STEP 8: Done"; WAWD
+else
+        WAWtext="STEP 8: Skipping Rotate Logs"; WAWD
+fi
+
+# Remove the lock file
+WAWtext="STEP 9: Removing Lock File -----"; WAWD
+rm $lock_file
+
+
+# We're done
+TIME2=`date +%s`
+elapsed_time=$(( ( $TIME2 - $TIME1 ) / 60 ))
+elapsed_time_seconds=$(( ( $TIME2 - $TIME1 ) ))
+WAWtext="**FINISHED Backup Routine. Total elapsed time: $elapsed_time minutes / $elapsed_time_seconds total seconds**"; WAWD
+echo "" >> $BackupLog
+exit 0

@@ -1,0 +1,487 @@
+####
+##   ** This file is managed & drawn by puppet, do not change it locally **
+##
+## - Variables are controlled in /puppet-modules/mysql/manifests/init.pp
+## - Template is located at puppet-modules/mysql/templates/my.cnf.erb
+## - Change History:
+## - https://github.com/nature/puppet-modules/commits/master/mysql/manifests/init.pp
+##
+##   my.cnf on <%= hostname %>
+##
+##################################################################################################################
+
+[client]
+<% if has_variable?("port") then %>port = <%= port %>
+<% else %>port = 3306
+<% end -%>
+<% if has_variable?("socket") then %>socket = <%= socket %>
+<% else %>socket = /var/run/mysql/mysql.sock
+<% end -%>
+
+[mysqld]
+<% if has_variable?("port") then %>port = <%= port %>
+<% else %>port = 3306
+<% end -%>
+user = mysql
+<% if has_variable?("socket") then %>socket = <%= socket %>
+<% else %>socket = /var/run/mysql/mysql.sock
+<% end -%>
+<% if has_variable?("log_error") then %>log-error = <%= log_error %>
+<% else %>log-error = /var/lib/mysql/logs/error/mysql-errors.err
+<% end -%>
+<% if has_variable?("pid_file") then %>pid-file = <%= pid_file %>
+<% else %>pid-file = /var/run/mysql/mysqld.pid
+<% end -%>
+<% if has_variable?("datadir") then %>datadir = <%= datadir %>
+<% else %>datadir = /var/lib/mysql/data
+<% end -%>
+<% if has_variable?("basedir") then %>basedir = <%= basedir %>
+<% end -%>
+<% if has_variable?("tmpdir") then %>tmpdir = <%= tmpdir %>
+<% end -%>
+<% if has_variable?("oldpasswords") then %>old_passwords = 1
+<% end -%>
+<% if has_variable?("skip_name_resolve") then %>
+# Do not resolve host names when checking client connections. Use only IP addresses. If you use this option, all
+# Host column values in the grant tables must be IP addresses or localhost.
+skip-name-resolve
+<% end -%>
+<% if has_variable?("skip_networking") then %>
+# Do not listen for TCP/IP connections at all.
+skip-networking
+<% end -%>
+<% if has_variable?("log_bin_trust_function_creators") then %>
+# affects how MySQL enforces restrictions on stored function and trigger creation. Default is 0
+log_bin_trust_function_creators = <%= log_bin_trust_function_creators %>
+<% end -%>
+
+# ================================================== GENERAL =====================================================
+<% if has_variable?("lower_case_table_names") then %>
+# If set to 0, table names are stored as specified and comparisons are case sensitive. If set to 1, table names
+# are stored in lowercase on disk and comparisons are not case sensitive. If set to 2, table names are stored
+# as given but compared in lowercase. You should not set this variable to 0. If you are using InnoDB tables, you
+# should set this variable to 1 on all platforms to force names to be converted to lowercase.
+lower_case_table_names = 1<% end -%>
+
+<% if has_variable?("skip_bdb") then %>
+# If you don't use BDB tables, you should set this option so that MySQL does not allocate memory for BDB cache.
+skip-bdb
+<% end -%>
+<% if has_variable?("default_storage_engine") then %>
+# Set the default storage engine (InnoDB or MyISAM) for new tables created without table type specified
+default-storage-engine = <%= default_storage_engine %>
+<% else %>default-storage-engine = InnoDB<% end -%>
+
+<% if has_variable?("default_table_type") then %>
+# This option is a deprecated synonym for --default-storage-engine in mysql 5.0
+default-table-type = <%= default_table_type %>
+<% else %>default-table-type = InnoDB<% end -%>
+<% if has_variable?("ft_min_word_len") then %>
+# The minimum length of the word to be included in a FULLTEXT index.  The default is 4.  Note that you need to
+# rebuild your FULLTEXT index, after you have modified this value.
+ft_min_word_len = <%= ft_min_word_len %>
+<% end -%>
+<% if has_variable?("ft_max_word_len") then %>
+# The maximum length of the word to be included in a FULLTEXT index.  The default is 20 with a range of 0-1000
+#  Note that you need to rebuild your FULLTEXT index, after you have modified this value.
+ft_max_word_len = <%= ft_max_word_len %>
+<% end -%>
+
+# ============================================ SLOW QUERY & OTHER LOGS ===========================================
+<% if has_variable?("slow_query_log") then %>
+# Whether the slow query log is enabled. The value can be 0 (or OFF / default) to disable the log or 1 (or ON) to enable
+slow_query_log = <%= slow_query_log %>
+<% end -%>
+<% if has_variable?("slow_query_log_file") then %>
+# Should slow queries should be logged. Determined by the value of the long_query_time
+slow_query_log_file = <%= slow_query_log_file %>
+<% end -%>
+<% if has_variable?("log_slow_queries") then %>
+# Should slow queries should be logged. Determined by the value of the long_query_time
+log_slow_queries = <%= log_slow_queries %>
+<% end -%>
+<% if has_variable?("long_query_time") then %>
+# If a query takes longer than this many seconds, the query is logged
+long_query_time = <%= long_query_time %>
+<% end -%>
+<% if has_variable?("log_queries_not_using_indexes") then %>
+# Queries that are expected to retrieve all rows are logged.  This option does not necessarily mean that no index is
+# used. For example, a query that uses a full index scan uses an index but would be logged because the index would
+# not limit the number of rows.
+log_queries_not_using_indexes
+<% end -%>
+<% if has_variable?("log") then %>
+# Enable the full query log. Every query (even ones with incorrect syntax) that the server receives will be logged.
+# This is useful for debugging, it is usually disabled in production use.
+log
+<% end -%>
+<% if has_variable?("log_warnings") then %>
+# Print out warnings such as "Aborted connection" to the error log. If you use replicationm, you may get more
+# information about network failures and reconnections). This option is enabled (1) by default. To disable this
+# option, use --log-warnings=0. If the value is greater than 1, aborted connections are written to the error log.
+log_warnings = <%= log_warnings %>
+<% end -%>
+
+# ================================================== NETWORKING ==================================================
+<% if has_variable?("max_connections") then %>
+# The number of simultaneous client connections allowed. By default, this is 100. The formula to determine how much
+# memory you will need is as follows: global buffers + (thread buffers * max_connections) = RAM NEEDED
+# global buffers are: key_buffer, innodb_buffer_pool, innodb_log_buffer, innodb_additional_mem_pool, net_buffer
+# Thread buffers are: sort_buffer, myisam_sort_buffer,read_buffer, join_buffer, read_rnd_buffer
+max_connections = <%= max_connections %>
+<% end -%>
+<% if has_variable?("max_connect_errors") then %>
+# If there are more than this number of interrupted connections from a host, that host is blocked from further
+# connections. You can unblock blocked hosts with the FLUSH HOSTS statement. The Default is 10
+max_connect_errors =  <%= max_connect_errors %>
+<% end -%>
+<% if has_variable?("table_cache") then %>
+# The number of open tables for all threads. Increasing this value increases the number of file descriptors that
+# mysqld requires. You can check whether you need to increase the table cache by checking the Opened_tables variable
+# from SHOW STATUS. The default is 64
+table_cache = <%= table_cache %>
+<% end -%>
+<% if has_variable?("thread_cache_size") then %>
+# How many threads the server should cache for reuse. When a client disconnects, the client's threads are put in the
+# cache if there are fewer than thread_cache_size threads there. Requests for threads are satisfied by reusing threads
+# taken from the cache if possible, and only when the cache is empty is a new thread created. This variable can be
+# increased to improve performance if you have a lot of new connections. (Normally, this doesn't provide a notable
+# performance improvement if you have a good thread implementation.) By examining the difference between the Connections
+# and Threads_created status variables, you can see how efficient the thread cache is.
+thread_cache_size = <%= thread_cache_size %>
+<% end -%>
+<% if has_variable?("wait_timeout") then %>
+# The number of seconds the server waits for activity on a non-interactive connection before closing it. This timeout
+# applies only to TCP/IP and Unix socket file connections, not to connections made via named pipes, or shared memory.
+# Default is 28800
+wait_timeout = <%= wait_timeout %>
+interactive_timeout = <%= wait_timeout %>
+<% end -%>
+<% if has_variable?("back_log") then %>
+# The back_log value indicates how many requests can be stacked during this short time before MySQL momentarily
+# stops answering new requests. You need to increase this only if you expect a large number of connections in a
+# short period of time. Default is 50
+back_log = <%= back_log %>
+<% end -%>
+
+# ==================================================== BUFFERS ===================================================
+# (Remember, larger is not always better)
+<% if has_variable?("read_buffer_size") then %>
+# On some platforms, for some workloads, a large read_buffer_size may hurt you even on large full table scans.
+read_buffer_size = <%= read_buffer_size %>
+<% end -%>
+<% if has_variable?("read_rnd_buffer_size") then %>
+# The read_rnd_buffer_size is used after a sort, when reading rows in sorted order. If you use many queries with
+# ORDER BY, increasing this can improve performance. This buffer is allocated for each thread. If not set, it defaults
+# to the same size as the read_buffer_size. A rule-of-thumb is to allocate 1KB for each 1MB of memory on the server
+# For example 3MB on a machine with 3GB memory.
+read_rnd_buffer_size = <%= read_rnd_buffer_size %>
+<% end -%>
+<% if has_variable?("sort_buffer_size") then %>
+# Each thread that needs to do a sort allocates a buffer of this size. Increase this value for faster ORDER BY or
+# GROUP BY operations. The maximum allowable setting for sort_buffer_size is 4GB. Default 2M
+sort_buffer_size = <%= sort_buffer_size %>
+<% end -%>
+<% if has_variable?("join_buffer_size") then %>
+# The size of the buffer that is used for plain index scans, range index scans, and joins that do not use indexes and
+# thus perform full table scans. Normally, the best way to get fast joins is to add indexes. Increase the value of
+# join_buffer_size to get a faster full join when adding indexes is not possible. Default 512K
+join_buffer_size = <%= join_buffer_size %>
+<% end -%>
+<% if has_variable?("max_allowed_packet") then %>
+# You must increase this value if you are using large BLOB columns or long strings. It should be as big as the largest
+# BLOB you want to use. The value should be a multiple of 1024; non-multiples are rounded down to the nearest multiple.
+max_allowed_packet = <%= max_allowed_packet %>
+<% end -%>
+<% if has_variable?("thread_stack") then %>
+# The stack size for each thread. The default (192KB) is large enough for normal operation. If the thread stack size is
+# too small, it limits the complexity of the SQL statements that the server can handle, the recursion depth of stored
+# procedures, and other memory-consuming actions.
+thread_stack = <%= thread_stack %>
+<% end -%>
+<% if has_variable?("binlog_cache_size") then %>
+# If you often use large, multiple-statement transactions, you can increase this cache size to get more performance.
+# The default is 4KB
+binlog_cache_size = <%= binlog_cache_size %>
+<% end -%>
+<% if has_variable?("bulk_insert_buffer_size") then %>
+# MyISAM uses a special tree-like cache to make bulk inserts faster for INSERT,  SELECT, INSERT, and LOAD DATA INFILE
+# when adding data to nonempty tables. This variable limits the size of the cache tree in bytes per thread. Setting
+# it to 0 disables this optimization. The default value is 8MB.
+bulk_insert_buffer_size = <%= bulk_insert_buffer_size %>
+<% end -%>
+
+# ================================================== REPLICATION =================================================
+
+# ====== MASTER SERVER CONFIG ======
+<% if has_variable?("log_bin") then %>
+# Enable binary logging which is used for backup and replication. It is recommended that you specify a basename;
+# otherwise, MySQL uses host_name-bin as the basename.
+log_bin = <%= log_bin %>
+<% end -%>
+<% if has_variable?("binlog_format") then %>
+# STATEMENT causes logging to be statement based (DEFAULT), ROW causes logging to stored in binlog as hex reresentation)
+# MIXED causes logging to use mixed format.
+binlog_format = <%= binlog_format %>
+<% end -%>
+<% if has_variable?("binlog_ignore_db") then %>
+# Tell the server to suppress binary logging of updates for the specified database. To ignore multiple databases,
+# use this option multiple times, specifying the option once for each database to be ignored.
+<%= binlog_ignore_db %>
+<% end -%>
+<% if has_variable?("binlog_do_db") then %>
+# The only statements that will be logged to the to the binlog are those specified in here. Use this option multiple
+# times, specifying the option once for each database to be ignored.
+<%= binlog_do_db %>
+<% end -%>
+<% if has_variable?("max_binlog_size") then %>
+# If a write to the binary log causes the current log file size to exceed the value of this variable, the server
+# rotates the binary logs (closes the current file and opens the next one). You cannot set this variable to more
+# than 1GB or to less than 4096 bytes. The default value is 1GB.
+max_binlog_size = <%= max_binlog_size %>
+<% end -%>
+<% if has_variable?("expire_logs_days") then %>
+# When should the server delete binary logs from master. It does not affect Innodb and other storage engines
+# transaction logs, slow query log or general log. The default is 0, which means no automatic removal. Possible
+# removals happen at startup and at binary log rotation
+expire_logs_days = <%= expire_logs_days %>
+<% end -%>
+<% if has_variable?("sync_binlog") then %>
+# If the value of this variable is greater than 0, the MySQL server synchronizes its binary log to disk
+# (using fdatasync()) after every sync_binlog writes to the binary log. There is one write to the binary log per
+# statement if autocommit is enabled, and one write per transaction otherwise. The default value of sync_binlog is 0,
+# which does no synchronizing to disk. A value of 1 is the safest choice, because in the event of a crash you lose at
+# most one statement or transaction from the binary log. However, it is also the slowest choice (unless the disk has
+# a battery-backed cache, which makes synchronization very fast)
+sync_binlog = <%= sync_binlog %>
+<% end -%>
+
+# ====== SLAVE SERVER CONFIG ======
+<% if has_variable?("replicate_ignore_db") then %>
+# one the slave server, this option tells the slave to not replicate any statement from the specified database.
+# To ignore multiple databases, use this option multiple times, specifying the option once for each database.
+<%= replicate_ignore_db %>
+<% end -%>
+<% if has_variable?("replicate_do_db") then %>
+# On the slave server, this option tells the slave to replicate ONLY any statement from the specified database.
+# To replicate multiple databases, use this option multiple times, specifying the option once for each database.
+<%= replicate_do_db %>
+<% end -%>
+<% if has_variable?("read_only") then %>
+# Cause the slave to allow no updates except from slave threads or from users having the SUPER privilege. On a slave
+# server, this can be useful to ensure that the slave accepts updates only from its master server and not from clients
+read_only
+<% end -%>
+<% if has_variable?("relay_log") then %>
+# The basename for the relay log. The default basename is host_name-relay-bin
+relay-log = <%= relay_log %>
+<% end -%>
+<% if has_variable?("max_relay_log_size") then %>
+# The size at which the server rotates relay log files automatically
+max-relay-log-size = <%= max_relay_log_size %>
+<% end -%>
+<% if has_variable?("slave_skip_errors") then %>
+# This option tells the slave to continue replication when a statement returns any of the errors listed in the value
+slave-skip-errors = <%= slave_skip_errors %>
+<% end -%>
+<% if has_variable?("log_slave_updates") then %>
+# If you're using replication with chained slaves (A->B->C), you need to enable this option on server B. It enables
+# logging of updates done by the slave thread into the slave's binary log.
+log_slave_updates
+<% end -%>
+
+# ====== TO BE CONFIGURED ON ALL SERVERS ======
+<% if has_variable?("server_id") then %>
+# Used in replication to give each master and slave a unique identity. A good practice is to set server_id to an
+# integer based on the IP address. "mysql> select inet_aton('127.0.0.1')"
+server_id = <%= server_id %>
+<% end -%>
+
+# ==================================================== MYISAM ====================================================
+<% if has_variable?("query_cache_size") then %>
+# The amount of memory allocated for caching query results. The default value is 0, which disables the query cache.
+# The allowable values are multiples of 1024; other values are rounded down to the nearest multiple
+query_cache_size = <%= query_cache_size %>
+<% end -%>
+<% if has_variable?("query_cache_limit") then %>
+# Don't cache results that are larger than this number of bytes. The default value is 1MB.
+query_cache_limit = <%= query_cache_limit %>
+<% end -%>
+<% if has_variable?("key_buffer") then %>
+# Very important if you use MyISAM tables. Set up to 30-40% of available memory if you use MyISAM tables exclusively.
+# Right size depends on amount of indexes, data size and workload. MyISAM uses OS cache to cache the data so you need
+# to leave memory for it as well, and data can be much larger than indexes in many cases
+key_buffer = <%= key_buffer %>
+<% end -%>
+<% if has_variable?("query_cache_min_res_unit") then %>
+# If you have a lot of queries with small results, the default block size may lead to memory fragmentation, as indicated
+# by a large number of free blocks. Fragmentation can force the query cache to prune (delete) queries from the cache due
+# to lack of memory. In this case, you should decrease the value of query_cache_min_res_unit. The default is 4kb. Check
+# MonYog to ensure your query cache isn't being fragmented.
+query_cache_min_res_unit = <%= query_cache_min_res_unit %>
+<% end -%>
+<% if has_variable?("delay_key_write") then %>
+# Delayed key writing causes key buffers not to be flushed between writes for MyISAM tables. OFF  disables delayed
+# key writes. ON enables delayed key writes for those tables that were created with the DELAY_KEY_WRITE option. ALL
+# delays key writes for all MyISAM tables. If you're using MySQL with the MyISAM engine for a high-writes application,
+# delay_key_write is usually very good.
+delay_key_write = <%= delay_key_write %>
+<% end -%>
+<% if has_variable?("myisam_sort_buffer_size") then %>
+# The size of the buffer that is allocated when sorting MyISAM indexes during a REPAIR TABLE or when creating indexes
+# with CREATE INDEX or ALTER TABLE.
+myisam_sort_buffer_size = <%= myisam_sort_buffer_size %>
+<% end -%>
+<% if has_variable?("myisam_max_sort_file_size") then %>
+# The maximum size of the temporary file that MySQL is allowed to use while re-creating a MyISAM index (during REPAIR
+# TABLE, ALTER TABLE, or LOAD DATA INFILE). If the file size would be larger than this value, the index is created
+# using the key cache instead, which is slower. The value is given in bytes. The default value is 2GB. If MyISAM index
+# files exceed this size and disk space is available, increasing the value may help performance.
+myisam_max_sort_file_size = <%= myisam_max_sort_file_size %>
+<% end -%>
+<% if has_variable?("myisam_repair_threads") then %>
+# If a table has more than one index, MyISAM can use more than one thread to repair them by sorting in parallel. This
+# makes sense if you have multiple CPUs and plenty of memory. If this value is greater than 1, MyISAM table indexes
+# are created in parallel.  The default value is 1.
+myisam_repair_threads = <%= myisam_repair_threads %>
+<% end -%>
+<% if has_variable?("myisam_recover") then %>
+# Automatically check and repair not properly closed MyISAM tables.
+myisam_recover
+<% end -%>
+<% if has_variable?("tmp_table_size") then %>
+# The maximum size of internal in-memory temporary tables. If an in-memory temporary table exceeds the limit, MySQL
+# automatically converts it to an on-disk MyISAM table. Increase the value of tmp_table_size (and max_heap_table_size
+# if necessary) if you do many advanced GROUP BY  queries and you have lots of memory. This variable does not apply
+# to user-created MEMORY tables.
+tmp_table_size = <%= tmp_table_size %>
+<% end -%>
+<% if has_variable?("max_heap_table_size") then %>
+# This variable sets the maximum size to which MEMORY tables are allowed to grow. The value of the variable is used
+# to calculate MEMORY table MAX_ROWS  values. Setting this variable has no effect on any existing MEMORY table.
+max_heap_table_size = <%= max_heap_table_size %>
+<% end -%>
+<% if has_variable?("max_join_size") then %>
+# Max_join_size is utilized when MySQL calculates the Cartesian product of a join, not the actual expected records
+# back. MySQL determines whether or not a query is a 'big select' based on the value of this setting. If the query
+# is likely to have to examine more than this number of rows, it will consider it a 'big select', and will error
+# before returning results
+#max_join_size = 2048M
+max_join_size = <%= max_join_size %>
+<% end -%>
+
+# ==================================================== INNODB ====================================================
+<% if has_variable?("skip_innodb") then %>
+# Disable the InnoDB storage engine. This saves memory and disk space and might speed up some operations
+skip-innodb
+<% end -%>
+<% if has_variable?("innodb_support_xa") then %>
+# Disable this if you don't need it
+innodb_support_xa = 1
+<% else %>innodb_support_xa = 0
+<% end -%>
+<% if has_variable?("transaction_isolation") then %>
+# Sets the transaction isolation level, used for operations on InnoDB tables. Options are REPEATABLE READ (Default)
+# READ COMMITTED, READ UNCOMMITTED, SERIALIZABLE. See http://dev.mysql.com/doc/refman/5.0/en/set-transaction.html
+transaction-isolation = <%= transaction_isolation %>
+<% end -%>
+<% if has_variable?("innodb_file_per_table") then %>
+# When enabled, InnoDB stores each newly created table into its own tbl_name.ibd file in the database directory
+# where the table belongs (similar to MyISAM)
+innodb_file_per_table
+<% end -%>
+<% if has_variable?("innodb_additional_mem_pool_size") then %>
+# The size of a memory pool InnoDB uses to store data dictionary information and other internal data structures.
+# The more tables you have in your application, the more memory you need to allocate here. If InnoDB runs out of
+# memory in this pool, it starts to allocate memory from the operating system and writes warning messages to the
+# MySQL error log. If other settings are correctly configured,  this setting will not affect performance too much
+innodb_additional_mem_pool_size = <%= innodb_additional_mem_pool_size %>
+<% end -%>
+<% if has_variable?("innodb_flush_log_at_trx_commit") then %>
+# If you're not concern about ACID and can loose transactions for last second or two in case of full OS crash than
+# set this value. It can dramatic effect especially on a lot of short write transactions. 2 speeds up inserts &
+# updates dramatically by being a little bit lazy about flushing the innodb log buffer.
+innodb_flush_log_at_trx_commit = <%= innodb_flush_log_at_trx_commit %>
+<% end -%>
+<% if has_variable?("innodb_log_buffer_size") then %>
+# Default for this one is kind of OK for many workloads with medium write load and shorter transactions. If you have
+# update activity spikes however or work with blobs a lot you might want to increase it. Do not set it too high
+# however as it would be waste of memory - it is flushed every 1 sec anyway so you do not need space for more than
+# 1 sec worth of updates. 8MB-16MB are typically enough. Smaller installations should use smaller values. 4M is good
+# for most cases unless youíre piping large blobs to Innodb in this case increase it a bit.
+innodb_log_buffer_size = <%= innodb_log_buffer_size %>
+<% end -%>
+<% if has_variable?("innodb_buffer_pool_size") then %>
+# Innodb Buffer Pool is by far the most important option for Innodb Performance and it must be  set correctly. If
+# you have dedicated MySQL Box and youíre only using Innodb, set this value to 70%-80% of your total memory. This
+# setting caches both data and index pages.
+innodb_buffer_pool_size = <%= innodb_buffer_pool_size %>
+<% end -%>
+<% if has_variable?("innodb_log_file_size") then %>
+# Very important for write intensive workloads especially for large data sets. Larger sizes offer better performance
+# but increase recovery times so be careful. I normally use values 64M-512M depending on server size. This depends
+# on your recovery speed needs but 256M seems to be a good balance between reasonable recovery time and good performance
+innodb_log_file_size = <%= innodb_log_file_size %>
+<% end -%>
+<% if has_variable?("innodb_data_file_path") then %>
+# The full directory path to each data file is formed by concatenating innodb_data_home_dir to each path specified here.
+# The file sizes are specified in KB, MB, or GB (1024MB) by appending K, M, or G to the size value. The sum of the sizes
+# of the files must be at least 10MB. If you do not specify innodb_data_file_path, the default behavior is to create a
+# single 10MB auto-extending data file named ibdata1. The size limit of individual files is determined by your operating
+# system. You can set the file size to more than 4GB on those operating systems that support big files.
+innodb_data_file_path = <%= innodb_data_file_path %>
+<% end -%>
+<% if has_variable?("innodb_flush_method") then %>
+# Avoid double buffering and reduce swap pressure, in most cases this setting improves performance. Though be careful
+# if you do not have battery backed up RAID cache as when write IO may suffer. O_DIRECT can degrade performance of simple
+# SELECT statements by a factor of three.
+innodb_flush_method = <%= innodb_flush_method %>
+<% end -%>
+<% if has_variable?("innodb_thread_concurrency") then %>
+# Even with current Innodb Scalability Fixes having limited concurrency helps. The actual number may be higher or lower
+# depending on your application and default which is 8 is decent start
+innodb_thread_concurrency = <%= innodb_thread_concurrency %>
+<% end -%>
+<% if has_variable?("innodb_data_home_dir") then %>
+# The common part of the directory path for all InnoDB data files.
+innodb_data_home_dir = <%= innodb_data_home_dir %>
+<% end -%>
+<% if has_variable?("innodb_log_group_home_dir") then %>
+# The directory path to the InnoDB log files
+innodb_log_group_home_dir = <%= innodb_log_group_home_dir %>
+<% end -%>
+
+<% if has_variable?("innodb_file_io_threads") then %>innodb_file_io_threads = <%= innodb_file_io_threads %>
+<% end -%>
+<% if has_variable?("innodb_lock_wait_timeout") then %>innodb_lock_wait_timeout = <%= innodb_lock_wait_timeout %>
+<% end -%>
+<% if has_variable?("innodb_log_files_in_group") then %>innodb_log_files_in_group = <%= innodb_log_files_in_group %>
+<% end -%>
+<% if has_variable?("innodb_max_dirty_pages_pct") then %>innodb_max_dirty_pages_pct = <%= innodb_max_dirty_pages_pct %>
+<% end -%>
+
+# ===================================================== OTHER ====================================================
+
+[mysqldump]
+quick
+<% if has_variable?("mysqldump_max_allowed_packet") then %>max_allowed_packet=<%= mysqldump_max_allowed_packet %>
+<% end -%>
+
+[myisamchk]
+key_buffer = 512M
+sort_buffer = 512M
+read_buffer = 20M
+write_buffer = 20M
+
+[mysqld_safe]
+<% if has_variable?("open_files_limit") then %>open-files-limit = <%= open_files_limit %>
+<% end -%>
+<% if has_variable?("log_error") then %>log-error = <%= log_error %>
+<% else %>log-error = /var/lib/mysql/logs/error/mysql-errors.err
+<% end -%>
+<% if has_variable?("pid_file") then %>pid-file = <%= pid_file %>
+<% else %>pid-file = /var/run/mysql/mysqld.pid
+<% end -%>
+
+[mysql]
+<% if has_variable?("no_auto_rehash") then %>no-auto-rehash<% end -%>

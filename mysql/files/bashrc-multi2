@@ -1,0 +1,65 @@
+####
+## This file is managed by puppet, do not change it locally.
+##
+
+# User specific aliases and functions
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+# Paths
+PATH=$PATH:/sbin:/usr/sbin
+export PATH
+
+# Prompt
+export PS1="\e[1;31m\u\e[m@\e[0;36m\h\e[m [\[$(tput bold)\]\w\[$(tput sgr0)\]]# "
+
+# Aliases
+alias ssh='ssh -A'
+alias vi='vim'
+alias cls='clear'
+alias ll='ls -lh'
+alias lla='ls -lah'
+#alias forcepuppet='sudo su -; /usr/local/scripts/forcepuppet.sh'
+
+alias db='cd /var/lib/mysql'
+#alias db1='cd /var/lib/mysql/nature'
+#alias db2='cd /var/lib/mysql/polopoly'
+
+alias my1='mysql -h 127.0.0.1 -P 3306'
+alias my2='mysql -h 127.0.0.1 -P 3307'
+alias my3='mysql -h 127.0.0.1 -P 3308'
+
+alias mystop1='sudo mysqlmulti stop 1'
+alias mystop2='sudo mysqlmulti stop 2'
+alias mystop3='sudo mysqlmulti stop 3'
+
+alias mystart1='sudo mysqlmulti start 1'
+alias mystart2='sudo mysqlmulti start 2'
+alias mystart3='sudo mysqlmulti start 3'
+
+alias myrestart1='sudo mysqlmulti restart 1'
+alias myrestart2='sudo mysqlmulti restart 2'
+alias myrestart3='sudo mysqlmulti restart 3'
+
+alias myping='sudo mysqlmulti status'
+alias mywhich='sudo mysqlmulti which'
+
+# These don't work because my.cnf has to be in one location I think
+#alias mycnf1='vi /var/lib/mysql/nature/etc/my.cnf'
+#alias mycnf2='vi /var/lib/mysql/polopoly/etc/my.cnf'
+
+#alias myback1='cd /var/lib/mysql/nature/backups'
+#alias myback2='cd /var/lib/mysql/polopoly/backups'
+
+# alias mybackup1='/var/lib/mysql/nature/scripts/N*'
+# alias mybackup2='/var/lib/mysql/polopoly/scripts/N*'
+
+# alias vimyback1='vi /var/lib/mysql/nature/scripts/N*'
+# alias vimyback2='vi /var/lib/mysql/polopoly/scripts/N*'
+
+alias myerror1='vi /var/lib/mysql/logs/nature/error/mysql-errors.err'
+alias myerror2='vi /var/lib/mysql/logs/polopoly/error/mysql-errors.err'
+alias myerror3='vi /var/lib/mysql/logs/prod-blogs-sa-db/error/mysql-errors.err'
