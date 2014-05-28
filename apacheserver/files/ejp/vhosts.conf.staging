@@ -1,0 +1,662 @@
+###
+# DO NOT EDIT
+#	 This config file is managed by Puppet
+###
+
+#--- Pool 1
+#
+<VirtualHost *>
+  ServerName staging.mts-nrc.nature.com
+  DocumentRoot /fs/sites/nrc_www
+  ErrorLog /var/www/pool1/logs/mts-nrc-error.log
+  CustomLog /var/www/pool1/logs/mts-nrc-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nrc.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nrdd.nature.com
+  DocumentRoot /fs/sites/nrdd_www
+  ErrorLog /var/www/pool1/logs/mts-nrdd-error.log
+  CustomLog /var/www/pool1/logs/mts-nrdd-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nrdd.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nrmicro.nature.com
+  DocumentRoot /fs/sites/nrmicro_www
+  ErrorLog /var/www/pool1/logs/mts-nrmicro-error.log
+  CustomLog /var/www/pool1/logs/mts-nrmicro-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nrmicro.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nrg.nature.com
+  DocumentRoot /fs/sites/nrg_www
+  ErrorLog /var/www/pool1/logs/mts-nrg-error.log
+  CustomLog /var/www/pool1/logs/mts-nrg-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nrg.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nri.nature.com
+  DocumentRoot /fs/sites/nri_www
+  ErrorLog /var/www/pool1/logs/mts-nri-error.log
+  CustomLog /var/www/pool1/logs/mts-nri-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nri.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nrm.nature.com
+  DocumentRoot /fs/sites/nrm_www
+  ErrorLog /var/www/pool1/logs/mts-nrm-error.log
+  CustomLog /var/www/pool1/logs/mts-nrm-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nrm.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nrn.nature.com
+  DocumentRoot /fs/sites/nrn_www
+  ErrorLog /var/www/pool1/logs/mts-nrn-error.log
+  CustomLog /var/www/pool1/logs/mts-nrn-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nrn.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+#--- Pool 2  item
+#
+<VirtualHost *>
+  ServerName staging.mts-nature.nature.com
+  DocumentRoot /fs/sites/nature_www
+  ErrorLog /var/www/pool2/logs/mts-nature-error.log
+  CustomLog /var/www/pool2/logs/mts-nature-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nature.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+#--- Pool 3 sites
+#
+<VirtualHost *>
+  ServerName staging.mts-ni.nature.com
+  DocumentRoot /fs/sites2/ni_www
+  ErrorLog /var/www/pool3/logs/mts-ni-error.log
+  CustomLog /var/www/pool3/logs/mts-ni-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-ni.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nn.nature.com
+  DocumentRoot /fs/sites2/nn_www
+  ErrorLog /var/www/pool3/logs/mts-nn-error.log
+  CustomLog /var/www/pool3/logs/mts-nn-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nn.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nphys.nature.com
+  DocumentRoot /fs/sites2/nphys_www
+  ErrorLog /var/www/pool3/logs/mts-nphys-error.log
+  CustomLog /var/www/pool3/logs/mts-nphys-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nphys.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nmeth.nature.com
+  DocumentRoot /fs/sites2/nmeth_www
+  ErrorLog /var/www/pool3/logs/mts-nmeth-error.log
+  CustomLog /var/www/pool3/logs/mts-nmeth-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nmeth.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nphot.nature.com
+  DocumentRoot /fs/sites2/nphot_www
+  ErrorLog /var/www/pool3/logs/mts-nphot-error.log
+  CustomLog /var/www/pool3/logs/mts-nphot-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nphot.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nchem.nature.com
+  DocumentRoot /fs/sites/nchem_www
+  ErrorLog /var/www/pool3/logs/mts-nchem-error.log
+  CustomLog /var/www/pool3/logs/mts-nchem-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nchem.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+
+#--- Pool 4 sites
+#
+<VirtualHost *>
+	ServerName staging.mts-mt.nature.com
+	DocumentRoot /fs/sites/mt_www
+	ErrorLog /var/www/pool4/logs/mts-mt-error.log
+  CustomLog /var/www/pool4/logs/mts-mt-access.log combined
+
+	RedirectPermanent /index.html http://staging.mts-mt.nature.com/cgi-bin/main.plex
+
+	<Location /cgi-bin>
+		SetHandler perl-script
+		PerlResponseHandler ModPerl::Registry
+		PerlOptions +ParseHeaders
+		Options +ExecCGI
+	</Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-ncomms.nature.com
+  DocumentRoot /fs/sites2/ncomms_www
+  ErrorLog /var/www/pool4/logs/mts-ncomms-error.log
+  CustomLog /var/www/pool4/logs/mts-ncomms-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-ncomms.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-bjcancer.nature.com
+  DocumentRoot /fs/sites2/bjc_www
+  ErrorLog /var/www/pool4/logs/mts-bjcancer-error.log
+  CustomLog /var/www/pool4/logs/mts-bjcancer-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-bjcancer.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nmed.nature.com
+  DocumentRoot /fs/sites/nmed_www
+  ErrorLog /var/www/pool4/logs/mts-nmed-error.log
+  CustomLog /var/www/pool4/logs/mts-nmed-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nmed.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nnano.nature.com
+  DocumentRoot /fs/sites2/nnano_www
+  ErrorLog /var/www/pool4/logs/mts-nnano-error.log
+  CustomLog /var/www/pool4/logs/mts-nnano-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nnano.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-ngs.nature.com
+  DocumentRoot /fs/sites2/ngs_www
+  ErrorLog /var/www/pool4/logs/mts-ngs-error.log
+  CustomLog /var/www/pool4/logs/mts-ngs-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-ngs.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nchemb.nature.com
+  DocumentRoot /fs/sites2/nchemb_www
+  ErrorLog /var/www/pool4/logs/mts-nchemb-error.log
+  CustomLog /var/www/pool4/logs/mts-nchemb-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nchemb.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-pid.nature.com
+  DocumentRoot /fs/sites/pid_www
+  ErrorLog /var/www/pool4/logs/mts-pid-error.log
+  CustomLog /var/www/pool4/logs/mts-pid-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-pid.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+#--- Pool 5
+#
+
+<VirtualHost *>
+  ServerName staging.mts-nbt.nature.com
+  DocumentRoot /fs/sites2/nbt_www
+  ErrorLog /var/www/pool5/logs/mts-nbt-error.log
+  CustomLog /var/www/pool5/logs/mts-nbt-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nbt.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-ncb.nature.com
+  DocumentRoot /fs/sites2/ncb_www
+  ErrorLog /var/www/pool5/logs/mts-ncb-error.log
+  CustomLog /var/www/pool5/logs/mts-ncb-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-ncb.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-ng.nature.com
+  DocumentRoot /fs/sites2/ng_www
+  ErrorLog /var/www/pool5/logs/mts-ng-error.log
+  CustomLog /var/www/pool5/logs/mts-ng-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-ng.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nm.nature.com
+  DocumentRoot /fs/sites2/nm_www
+  ErrorLog /var/www/pool5/logs/mts-nm-error.log
+  CustomLog /var/www/pool5/logs/mts-nm-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nm.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-np.nature.com
+  DocumentRoot /fs/sites2/np_www
+  ErrorLog /var/www/pool5/logs/mts-np-error.log
+  CustomLog /var/www/pool5/logs/mts-np-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-np.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nsmb.nature.com
+  DocumentRoot /fs/sites2/nsb_www
+  ErrorLog /var/www/pool5/logs/mts-nsmb-error.log
+  CustomLog /var/www/pool5/logs/mts-nsmb-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nsmb.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-nclim.nature.com
+  DocumentRoot /fs/sites2/nclim_www
+  ErrorLog /var/www/pool5/logs/mts-nclim-error.log
+  CustomLog /var/www/pool5/logs/mts-nclim-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-nclim.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+#--- Pool 6
+#
+
+<VirtualHost *>
+  ServerName staging.mts-li.nature.com
+  DocumentRoot /fs/sites2/li_www
+  ErrorLog /var/www/pool6/logs/mts-li-error.log
+  CustomLog /var/www/pool6/logs/mts-li-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-li.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-mpa.nature.com
+  DocumentRoot /fs/sites2/mpa_www
+  ErrorLog /var/www/pool6/logs/mts-mpa-error.log
+  CustomLog /var/www/pool6/logs/mts-mpa-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-mpa.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-srep.nature.com
+  DocumentRoot /fs/sites2/srep_www
+  ErrorLog /var/www/pool6/logs/mts-srep-error.log
+  CustomLog /var/www/pool6/logs/mts-srep-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-srep.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-bonekey.nature.com
+  DocumentRoot /fs/sites2/bonekey_www
+  ErrorLog /var/www/pool6/logs/mts-bonekey-error.log
+  CustomLog /var/www/pool6/logs/mts-bonekey-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-bonekey.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+#--- Pool 7
+#
+
+<VirtualHost *>
+  ServerName staging.mts-embor.nature.com
+  DocumentRoot /fs/sites/embor_www
+  ErrorLog /var/www/pool7/logs/mts-embor-error.log
+  CustomLog /var/www/pool7/logs/mts-embor-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-embor.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-emboj.nature.com
+  DocumentRoot /fs/sites/emboj_www
+  ErrorLog /var/www/pool7/logs/mts-emboj-error.log
+  CustomLog /var/www/pool7/logs/mts-emboj-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-emboj.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-pr.nature.com
+  DocumentRoot /fs/sites2/pr_www
+  ErrorLog /var/www/pool7/logs/mts-pr-error.log
+  CustomLog /var/www/pool7/logs/mts-pr-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-pr.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-antibodypedia.nature.com
+  DocumentRoot /fs/sites2/abpedia_www
+  ErrorLog /var/www/pool7/logs/mts-abpedia-error.log
+  CustomLog /var/www/pool7/logs/mts-abpedia-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-antibodypedia.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-cpt.nature.com
+  DocumentRoot /fs/sites2/cpt_www
+  ErrorLog /var/www/pool7/logs/mts-cpt-error.log
+  CustomLog /var/www/pool7/logs/mts-cpt-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-cpt.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-npp.nature.com
+  DocumentRoot /fs/sites/npp_www
+  ErrorLog /var/www/pool7/logs/mts-npp-error.log
+  CustomLog /var/www/pool7/logs/mts-npp-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-npp.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
+
+<VirtualHost *>
+  ServerName staging.mts-onc.nature.com
+  DocumentRoot /fs/sites/onc_www
+  ErrorLog /var/www/pool7/logs/mts-onc-error.log
+  CustomLog /var/www/pool7/logs/mts-onc-access.log combined
+
+  RedirectPermanent /index.html http://staging.mts-onc.nature.com/cgi-bin/main.plex
+
+  <Location /cgi-bin>
+    SetHandler perl-script
+    PerlResponseHandler ModPerl::Registry
+    PerlOptions +ParseHeaders
+    Options +ExecCGI
+  </Location>
+</VirtualHost>
