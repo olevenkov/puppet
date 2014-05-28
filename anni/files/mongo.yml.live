@@ -1,0 +1,7 @@
+mongo:
+  host: localhost
+  port: 27017
+  database: curi
+
+articles_folder: /home/anniclone/apps/anniclone/shared/articles
+user: anniclone
