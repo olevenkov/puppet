@@ -1,0 +1,54 @@
+<VirtualHost *:80>
+	ServerName	test-integral.nature.com	
+	DocumentRoot	/mnt/fs/Web/NPG
+    ErrorLog /var/www/test-integral.nature.com/logs/error_log
+    LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+    TransferLog /var/www/test-integral.nature.com/logs/access_log
+    AllowEncodedSlashes on
+    ProxyPreserveHost On
+	ExpiresActive On
+	ExpiresDefault "access plus 10 years"
+
+	<Directory "/var/www/test-integral.nature.com">
+			AllowOverride All
+			Options None
+			Order allow,deny
+			Allow from all
+	</Directory>
+
+	RewriteEngine on
+ 	RewriteRule ^/contentstore_uploader/(.*) http://localhost:8181/contentstore_uploader/$1 [P,L] 
+	RewriteRule ^/references/(.*) http://localhost:8083/references/$1 [P,L]
+    	#RewriteRule ^/import-services/(.*) http://localhost:7080/import-services/$1 [P,L]
+    	#RewriteRule ^/import-references/(.*) http://localhost:7080/import-references/$1 [P,L]
+    # IT-12167 Start - Added by Haitsaadi on 14/12/2011
+        RewriteRule ^/metadata/(.*) http://localhost:8181/metadata/$1 [P,L]
+    # IT-12167  End
+        
+    # Rule added for Product Setup Tool
+       ProxyPass /pset-ui !
+       RewriteRule ^/pset-ui/(.*) http://localhost:7080/pset-ui/$1 [P,L]
+       RewriteRule ^/pset/(.*) http://localhost:8032/pset/$1 [P,L]
+       RewriteRule ^/product/data/(.*) http://localhost:8032/product/data/$1 [P,L]
+    # IT-13126 - End
+	ProxyPass /import-services http://127.0.0.1:7080/import-services
+	ProxyPassReverse /import-services http://127.0.0.1:7080/import-services
+	
+    # IT-13552  - Haitsaadi added the following line on 09/05/12
+    RewriteRule ^/system/console/(.*) http://localhost:8181/system/console/$1 [P,L]
+    # IT-13728 - Haitsaadi added the following line on 25/05/12
+    
+    # IT-14115 - Haitsaadi added the following line on 6/7/12
+    RewriteRule ^/jats/processor$ http://localhost:8888/jats/processor [P,L]
+    RewriteRule ^/jats/transformer/id/(.*) http://localhost:8890/jats/transformer?id=$1 [P,L] 
+    # IT-14235 - Haitsaadi added the following line on 19/7/12
+    RewriteRule ^/jats/transformer/roundtrip http://localhost:8890/jats/transformer/roundtrip [P,L] 
+    
+    RewriteRule ^/moria/assemble$ http://localhost:18123/triggerAll [P,L]
+    RewriteRule ^/moria/assemble/(.*)/(.*)/(.*) http://localhost:18123/triggerSingle?pcode=$1&volume=$2&number=$3 [P,L]
+    RewriteRule ^/moria/status$ http://localhost:18123/status [P,L]
+    RewriteRule ^/moria/status/(.*) http://localhost:18123/status?txn=$1 [P,L]
+    # import-references
+    ProxyPass /import-references http://127.0.0.1:7080/import-references
+    ProxyPassReverse /import-references http://127.0.0.1:7080/import-references
+</VirtualHost>
