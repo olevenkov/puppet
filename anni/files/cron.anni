@@ -1,0 +1,14 @@
+#!/bin/bash
+# set -e
+
+. ~/.bash_profile
+. /usr/local/lib/rvm
+rvm use ruby-1.9.2-p180
+export CRON=1
+
+cd /home/anni/apps/anni/current/src/lib/delete_files
+bundle exec ./delete_files
+
+echo "==================================="               >  /home/anni/apps/anni/shared/log/cron_log 2>&1
+echo "Ran 'delete_files' on $(date)"                     >> /home/anni/apps/anni/shared/log/cron_log 2>&1
+echo "-----------------------------------"               >> /home/anni/apps/anni/shared/log/cron_log 2>&1
