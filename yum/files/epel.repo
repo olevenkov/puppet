@@ -1,0 +1,10 @@
+[epel6]
+baseurl=http://download.fedora.redhat.com/pub/epel/6/$basearch/
+name=epel6
+
+[epel6-testing] 
+baseurl=http://download.fedora.redhat.com/pub/epel/testing/6/$basearch/
+name=epel6-testing
+
+
+

@@ -1,0 +1,5 @@
+[Nature]
+name=NPG Packages for RHEL 5 - $basearch
+baseurl=http://puppet.nature.com/rhel/5/$basearch/
+enabled=1
+gpgcheck=0
