@@ -1,0 +1,139 @@
+###############
+## WARNING:
+## This file is managed by puppet.  Local changes will be lost.  Modify it on hg.nature.com and npgutil (puppetmaster)
+###############
+
+
+#---------Apache rewrite file for Nature Education Scitable ------------
+#---------Release No#10--------Release date- 17-December-2009-----------
+#-------------------Author - TCS----------------------------------------
+RewriteEngine On
+RewriteRule ^/scitable/$ /scitable [R=301,L]
+RewriteRule ^/Scitable(.*) /scitable$1 [R=permanent,L]
+RewriteRule ^/scitable$  /scitable/nated/homepage [P,L]
+RewriteRule ^/scitable/$  /scitable/nated/homepage [P,L]
+#RewriteRule ^/scitable/%2Fscitable        /scitable [R,L]
+RewriteRule ^/scitable/portal(.*)$ http://localhost/portal/$1 [P,L]
+RewriteRule ^/citable/pmgr(.*)$ http://localhost/pmgr/$1 [P,L]
+RewriteRule ^/scitable/(.*)natedjs/jscripts/tiny_mce(.*)$ /usr/local/tomcat/webapps/scitable/nated/natedjs/jscripts/tiny_mce$2 [L]
+RewriteRule ^/scitable/google2b3a3600fb44a54e\.html$ /usr/local/tomcat/webapps/scitable/nated/google2b3a3600fb44a54e\.html
+RewriteRule ^/scitable/google4dc3aa144fe47e59\.html$ /usr/local/tomcat/webapps/scitable/nated/google4dc3aa144fe47e59\.html
+RewriteRule ^/scitable/y_key_d05757417b4f47b6\.html$ /usr/local/tomcat/webapps/scitable/nated/y_key_d05757417b4f47b6\.html 
+#RewriteRule ^/scitable/LiveSearchSiteAuth\.xml$ /usr/local/tomcat/webapps/scitable/nated/LiveSearchSiteAuth\.xml
+RewriteCond  %{REQUEST_URI}  !(^/scitable/nated.*)
+RewriteRule ^/scitable/[^n].*/natedcss(.*)$  /scitable/nated/natedcss$1 [R,L]
+RewriteCond  %{REQUEST_URI}  !(^/scitable/nated.*)
+RewriteRule ^/scitable/[^n].*/natedjs(.*)$  /scitable/nated/natedjs$1 [R,L]
+RewriteCond  %{REQUEST_URI}  !(^/scitable/nated.*)
+RewriteRule ^/scitable/[^n].*/natedswf(.*)$  /scitable/nated/natedswf$1 [R,L]
+RewriteCond  %{REQUEST_URI}  !(^/scitable/nated.*)
+RewriteRule ^/scitable/[^n].*/natedimages(.*)$  /scitable/nated/natedimages$1 [R,L]
+RewriteCond  %{REQUEST_URI}  !(^/scitable/nated.*)
+RewriteRule ^/scitable/[^n].*/profileimage(.*)$  /scitable/nated/profileimage$1 [R,L]
+RewriteRule ^/scitable/content/ne0000/ne0000/(.*)$ /mnt/fs/natureeducation/nated/content/ne0000/ne0000/$1 [L]
+RewriteRule ^/scitable/content/PressRoomReleases/(.*)$ /mnt/fs/natureeducation/nated/content/PressRoomReleases/$1 [L] 
+RewriteRule ^/scitable/content/([^/]+-[0-9]+)$  http://localhost/scitable/nated/resource/content/$1 [P,L]
+RewriteRule ^/scitable/content/([^/]+-[0-9]+)/learningPath$  http://localhost/scitable/nated/resource/content/$1?lPathFlag=true [P,L]
+RewriteRule ^/scitable/nated/profileimage(.*)$  /mnt/fs/natureeducation/nated/profileimage$1 [L]
+RewriteRule ^/scitable/profileimage(.*)$  /mnt/fs/natureeducation/nated/profileimage$1 [L]
+RewriteRule ^/scitable/invoice-data/(.*)/(.*)$  /mnt/fs/natureeducation/nated/profileimage/orderinvoice/$1/$2 [L]
+#RewriteRule ^/scitable/portal(.*)$ http://localhost/portal/$1 [P,L]
+#RewriteRule ^/scitable/pmgr(.*)$ http://localhost/pmgr/$1 [P,L]
+
+#----Add for 25-Jan-2010 Release------------------------
+#IT-8570 RewriteRule ^/scitable/view-group-profile/(.*)$ /scitable/groups/$1 [R=permanent,L]
+#IT-8570 RewriteRule ^/scitable/group-discussions/(.*)$ /scitable/groups/$1/discussions [R=permanent,L]
+#IT-8570 RewriteRule ^/scitable/discussion/group/([^/]+-[0-9]+)/showForumPage/(.*)$ /scitable/groups/$1/discussions [R=permanent,L]
+#IT-8570 RewriteRule ^/scitable/group-discussion/([^/]+-[0-9]+)/([0-9]+)$ /scitable/groups/$1/discussions/$2 [R=permanent,L]
+#IT-8570 RewriteRule ^/scitable/create-group-discussion/([^/]+-[0-9]+) /scitable/groups/$1/discussions/create [R=permanent,L]
+#----Add for 25-Jan-2010 Release------------------------
+
+#----Add for 12-May-2010 Release------------------------
+#IT-8570 RewriteRule ^/scitable/classGroup$  /scitable/aboutclassrooms [R=permanent,L]
+#IT-8570 RewriteRule ^/scitable/create-classGroup$  /scitable/buildclassroom [R=permanent,L]
+#----Add for 12-May-2010 Release------------------------
+
+# IT-6857
+RewriteRule ^/scitable/sitemap\.xml$ /mnt/fs/natureeducation/nated/nated-properties/properties/sitemap\.xml 
+
+# IT-7328
+#IT-8570 RewriteRule ^/scitable/knowledge/ecology$ /scitable/knowledge/ecology-102 [R=permanent,L]
+
+
+## Rule to be added AUGUST 17 
+#IT-8570 RewriteRule ^/scitable/landing/knowledgeproject$ /scitable/knowledge [R=permanent,L]
+#IT-8570 RewriteRule ^/scitable/course-cover/(.*)$ /scitable/ebooks/$1 [R=permanent,L]
+#IT-8570RewriteRule ^/scitable/course-content/(.*)/([0-9]*)$ /scitable/ebooks/$1/$2 [R=permanent,L]
+
+# IT-7955
+RewriteRule ^/scitable/BingSiteAuth\.xml$ /mnt/fs/natureeducation/nated/nated-properties/properties/BingSiteAuth\.xml
+
+# IT-8577---------------------------------------------------------------
+RewriteRule ^/scitable/learning-path/([^/]+)-795216$ /scitable/ebooks/$1-16549786 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-721970$ /scitable/ebooks/$1-16549951 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-702176$ /scitable/ebooks/$1-16550193 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-701886$ /scitable/ebooks/$1-16553173 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-699419$ /scitable/ebooks/$1-16553637 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-687397$ /scitable/ebooks/$1-16553748 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-686691$ /scitable/ebooks/$1-16553838 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-686260$ /scitable/ebooks/$1-16554012 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-551787$ /scitable/ebooks/$1-16569473 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-546667$ /scitable/ebooks/$1-16570291 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-546306$ /scitable/ebooks/$1-16570294 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-146997$ /scitable/ebooks/$1-16570302 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-145966$ /scitable/ebooks/$1-16570311 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-131804$ /scitable/ebooks/$1-16570315 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-108736$ /scitable/ebooks/$1-16570320 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/([^/]+)-69873$ /scitable/ebooks/$1-16570330 [R=permanent,L]
+RewriteRule ^/scitable/learning-path/(.*)$ /scitable/learning-paths [R=permanent,L]
+RewriteRule ^/scitable/knowledge/ecology$ /scitable/knowledge/ecology-102 [R=permanent,L]
+RewriteRule ^/scitable/topic-discussion/([^/]+-[0-9]+)/(.*)$ /scitable/topic/$1 [R=permanent,L]
+RewriteRule ^/scitable/topic-discussions/([^/]+-[0-9]+)/([0-9]+)$ /scitable/topic/$1 [R=permanent,L]
+RewriteRule ^/scitable/topic-discussions/(.*)$ /scitable/topic/$1 [R=permanent,L]
+RewriteRule ^/scitable/blogs/scitable-blog/([0-9]+)$ /scitable/blog/student-voices/$1 [R=permanent,L]
+RewriteRule ^/scitable/blogs/scitable-blog$ /scitable/blog/student-voices [R=permanent,L]
+RewriteRule ^/scitable/roller/5/entry/(.*)$ /scitable/blog/student-voices/$1 [R=permanent,L]
+RewriteRule ^/scitable/view-group-profile/(.*)$ /scitable/groups/$1 [R=permanent,L]
+RewriteRule ^/scitable/group-discussions/(.*)$ /scitable/groups/$1 [R=permanent,L]
+RewriteRule ^/scitable/discussion/group/([^/]+-[0-9]+)/showForumPage/(.*)$ /scitable/groups/$1/discussions [R=permanent,L]
+RewriteRule ^/scitable/group-discussion/([^/]+-[0-9]+)/([0-9]+)$ /scitable/groups/$1/discussions/$2 [R=permanent,L]
+RewriteRule ^/scitable/create-group-discussion/([^/]+-[0-9]+)$ /scitable/groups/$1/discussions/create [R=permanent,L]
+RewriteRule ^/scitable/classGroup$ /scitable/aboutclassrooms [R=permanent,L]
+RewriteRule ^/scitable/create-classGroup$ /scitable/buildclassroom [R=permanent,L]
+RewriteRule ^/scitable/course-cover/(.*)$ /scitable/ebooks/$1 [R=permanent,L]
+RewriteRule ^/scitable/course-content/(.*)/([0-9]*)$ /scitable/ebooks/$1/$2 [R=permanent,L]
+
+#DEPLOY-506
+RewriteRule ^/scitable/topicpage/([^/]+)-52291$ /scitable/topic/$1-5 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-56822$ /scitable/topic/$1-23 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-28455$ /scitable/topic/$1-15 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-37647$ /scitable/topic/$1-9 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-56653$ /scitable/topic/$1-7 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-37491$ /scitable/topic/$1-13 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-37494$ /scitable/topic/$1-21 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-37620$ /scitable/topic/$1-19 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-37475$ /scitable/topic/$1-17 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-33606$ /scitable/topic/$1-11 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-14552355$ /scitable/topic/$1-13906536 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-14552410$ /scitable/topic/$1-14122694 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-14552308$ /scitable/topic/$1-14122688 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-14552252$ /scitable/topic/$1-14122679 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-14551875$ /scitable/topic/$1-14122659 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-14551797$ /scitable/topic/$1-14122649 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-14603040$ /scitable/topic/$1-14121566 [R=permanent,L]
+RewriteRule ^/scitable/topicpage/([^/]+)-14603160$ /scitable/topic/$1-14121550 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13348525$ /scitable/knowledge/$1-102 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13787977$ /scitable/knowledge/$1-13228138 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13787908$ /scitable/knowledge/$1-13228212 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13788190$ /scitable/knowledge/$1-13228161 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13788382$ /scitable/knowledge/$1-13228167 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13788439$ /scitable/knowledge/$1-13228209 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13788569$ /scitable/knowledge/$1-13228222 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13788675$ /scitable/knowledge/$1-13228126 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13788751$ /scitable/knowledge/$1-13228230 [R=permanent,L]
+RewriteRule ^/scitable/knowledge/library/([^/]+)-13785890$ /scitable/knowledge/$1-13816889 [R=permanent,L]
+
+#DEPLOY-869
+RewriteRule ^/scitable/learning-paths$ /scitable/ebooks [R=permanent,L]
+#IT-14294
+RewriteRule ^/scitable/(.*)/$ /scitable/$1 [R=permanent,L]

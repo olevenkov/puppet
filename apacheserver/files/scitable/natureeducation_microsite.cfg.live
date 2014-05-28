@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteRule ^/natureeducation(.*)$ /nature_education$1 [R=301,L]
+RewriteRule ^/nature_education$ /mnt/fs/natureeducation/nated/natureeducation/index.html [L]
+RewriteRule ^/nature_education/index(.*) /nature_education [R=301,L]
+RewriteRule ^/nature_education/biology.html /nature_education/interactive_textbooks [R=301,L]
+RewriteRule ^/nature_education/instructors.html /nature_education/open_education [R=301,L]
+RewriteRule ^/nature_education/([^/]+).html$  /nature_education [R=301,L]
+RewriteRule ^/nature_education/([^/]+)$ /mnt/fs/natureeducation/nated/natureeducation/$1.html [L]
+RewriteRule ^/nature_education(.*)$ /mnt/fs/natureeducation/nated/natureeducation$1 [L]

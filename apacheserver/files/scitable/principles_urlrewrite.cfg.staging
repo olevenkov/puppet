@@ -1,0 +1,40 @@
+######################
+#
+#  Managed by Puppet
+#
+######################
+
+RewriteEngine On
+RewriteRule ^/principles/$ /principles [R=301,L]
+RewriteRule ^/Principles(.*) /principles$1 [R=permanent,L]
+RewriteRule ^/principles$  /principles/nated/homepage [P,L]
+RewriteRule ^/principles/$  /principles/nated/homepage [P,L]
+RewriteRule ^/principles/%2Fprinciples        /principles [R,L]
+RewriteRule ^/principles/(.*)natedjs/jscripts/tiny_mce(.*)$ /usr/local/tomcat-nls6/webapps/principles/nated/natedjs/jscripts/tiny_mce$2 [L]
+RewriteCond  %{REQUEST_URI}  !(^/principles/nated.*)
+RewriteRule ^/principles/[^n].*/natedcss(.*)$  /principles/nated/natedcss$1 [R,L]
+RewriteCond  %{REQUEST_URI}  !(^/principles/nated.*)
+RewriteRule ^/principles/[^n].*/natedjs(.*)$  /principles/nated/natedjs$1 [R,L]
+RewriteCond  %{REQUEST_URI}  !(^/principles/nated.*)
+RewriteRule ^/principles/[^n].*/natedswf(.*)$  /principles/nated/natedswf$1 [R,L]
+RewriteCond  %{REQUEST_URI}  !(^/principles/nated.*)
+RewriteRule ^/principles/[^n].*/natedimages(.*)$  /principles/nated/natedimages$1 [R,L]
+RewriteCond  %{REQUEST_URI}  !(^/principles/nated.*)
+RewriteRule ^/principles/[^n].*/profileimage(.*)$  /principles/nated/profileimage$1 [R,L]
+RewriteRule ^/principles/content/class-help/(.*)$ /mnt/fs/vnls/nated/content/class-help/$1 [L]
+RewriteRule ^/principles/content/ticket-data/(.*)$ /mnt/fs/vnls/nated/content/ticket-data/$1 [L]
+RewriteRule ^/principles/content/faq-data/(.*)$ /mnt/fs/vnls/nated/content/faq-data/$1 [L]
+RewriteRule ^/principles/content/ne0000/ne0000/(.*)$ /mnt/fs/vnls/nated/content/ne0000/ne0000/$1 [L]
+RewriteRule ^/principles/content/help/(.*)$ /mnt/fs/vnls/nated/content/help/$1 [L]
+RewriteRule ^/principles/content/module_doc/(.*)$ /mnt/fs/vnls/nated/content/module_doc/$1 [L]
+RewriteRule ^/principles/content/desktop-app/(.*)$ /mnt/fs/vnls/nated/content/desktop-app/$1 [L]
+RewriteRule ^/principles/content/PressRoomReleases/(.*)$ /mnt/fs/vnls/nated/content/PressRoomReleases/$1 [L] 
+RewriteRule ^/principles/content/([^/]+-[0-9]+)$  http://localhost/principles/nated/resource/content/$1 [P,L]
+RewriteRule ^/principles/content/([^/]+-[0-9]+)/learningPath$  http://localhost/principles/nated/resource/content/$1?lPathFlag=true [P,L]
+RewriteRule ^/principles/nated/profileimage(.*)$  /mnt/fs/vnls/nated/profileimage$1 [L]
+RewriteRule ^/principles/profileimage(.*)$  /mnt/fs/vnls/nated/profileimage$1 [L]
+RewriteRule ^/principles/invoice-data/(.*)/(.*)$  /mnt/fs/vnls/nated/profileimage/orderinvoice/$1/$2 [L]
+RewriteRule ^/principles/user-package-download/(.*)/(.*)/(.*)$ /mnt/fs/vnls/desktop-packager/$1/$2/$3 [L]
+RewriteCond %{HTTP_COOKIE} subscrs=([^;]+) [NC]
+RewriteRule ^/principles/book-pdf-download/pdf-web-path/(.*)$ /mnt/fs/vnls/nated/profileimage/course-unit-content/%1/$1 [L,T=application/octet-stream] 
+RewriteRule ^/principles/customerservice$ /principles/customer-service [R=permanent,L]
