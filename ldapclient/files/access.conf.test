@@ -1,0 +1,4 @@
+#Permit all valid LDAP users to test servers
++ : root : ALL
+#+ : @staging: ALL
++ : ALL : ALL

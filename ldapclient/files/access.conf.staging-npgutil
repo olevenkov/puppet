@@ -1,0 +1,27 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : journals: ALL
++ : natureevents: ALL
++ : naturejobs: ALL
++ : natureblogs: ALL
++ : natureprecedings: ALL
++ : network: ALL
++ : mynature: ALL
++ : protocolexchange: ALL
++ : salarysurvey: ALL
++ : draper: ALL
++ : bdje: ALL
++ : bdjjobs: ALL
++ : curi: ALL
++ : loakley: ALL
++ : rlingofe: ALL
++ : nsiddiqui: ALL
++ : nshah: ALL
++ : silles: ALL
++ : cmosalikanti: ALL
++ : semanticotemp1: ALL
++ : gradsurvey: ALL
++ : cmay: ALL
++ : journals: ALL
+- : ALL : ALL

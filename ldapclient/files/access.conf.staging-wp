@@ -1,0 +1,11 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : @developers: ALL
++ : staffblogs: ALL
++ : staffblogs_rss_poller: ALL
++ : bonekey: ALL
++ : encode: ALL
++ : spoton: ALL
++ : marketplace: ALL
+- : ALL : ALL

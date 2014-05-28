@@ -1,0 +1,4 @@
+# Permit only root and the webistrano user to log in.
++ : root : ALL
++ : webistrano : ALL
+- : ALL : ALL

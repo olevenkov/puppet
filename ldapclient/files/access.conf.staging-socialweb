@@ -1,0 +1,18 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : blogs: ALL
++ : naturecatalog-staging: ALL
++ : network: ALL
++ : precedings: ALL
++ : spotlight: ALL
++ : cflammang: ALL
++ : nshah: ALL
++ : mjankowski: ALL
++ : imulvany: ALL
++ : lclancy: ALL
++ : ttravis: ALL
++ : gbell: ALL
++ : jwong: ALL
++ : anugupta: ALL
+- : ALL : ALL

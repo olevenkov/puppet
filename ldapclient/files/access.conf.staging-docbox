@@ -1,0 +1,6 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : misc-docbox: ALL
++ : nshah: ALL
+- : ALL : ALL

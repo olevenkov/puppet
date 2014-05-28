@@ -1,0 +1,18 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : xb3: ALL
++ : misc-zenoss: ALL
++ : grapevine-staging: ALL
++ : pubadmin-staging: ALL
++ : pubadmin-spss: ALL
++ : pubadmin-tes: ALL
++ : dia: ALL
++ : ehidalgo: ALL
++ : volteanu: ALL
++ : rmedalla: ALL
++ : azhou: ALL
++ : glupulescu: ALL
++ : mgardellini: ALL
++ : kowusu: ALL
+- : ALL : ALL

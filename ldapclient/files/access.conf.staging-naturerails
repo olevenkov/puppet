@@ -1,0 +1,11 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : blogs: ALL
++ : isn: ALL
++ : isn_network: ALL
++ : isn_network_staging: ALL
++ : naturejobs: ALL
++ : nrg: ALL
++ : nshah: ALL
+- : ALL : ALL

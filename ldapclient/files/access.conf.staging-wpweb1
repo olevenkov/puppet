@@ -1,0 +1,7 @@
+#Permit all valid LDAP users
++ : root : ALL
++ : @staging: ALL
++ : changetheequation: ALL
++ : staffblogs: ALL
++ : staffblogs_rss_poller: ALL
++ : ALL : ALL

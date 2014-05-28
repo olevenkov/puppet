@@ -1,0 +1,5 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : xb3 : ALL
+- : ALL : ALL

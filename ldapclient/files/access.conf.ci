@@ -1,0 +1,4 @@
+#Managed by Puppet
++ : root : ALL
++ : @staging: ALL
++ : ALL : ALL

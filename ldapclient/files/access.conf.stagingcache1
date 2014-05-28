@@ -1,0 +1,19 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : natureevents: ALL
++ : naturejobs: ALL
++ : natureblogs: ALL
++ : natureprecedings: ALL
++ : network: ALL
++ : mynature: ALL
++ : protocolexchange: ALL
++ : salarysurvey: ALL
++ : draper: ALL
++ : bdje: ALL
++ : skumar: ALL
++ : jollier: ALL
++ : speddisetty: ALL
++ : itandon: ALL
++ : kdhulipala: ALL
+- : ALL : ALL

@@ -1,0 +1,12 @@
+#Permit only root and @staging members for staging servers
++ : root : ALL
++ : @staging: ALL
++ : itandon: ALL
++ : skumar: ALL
++ : jollier: ALL
++ : speddisetty: ALL
++ : twrobel: ALL
++ : cmay: ALL
++ : akhettar: ALL
++ : kdhulipala: ALL
+- : ALL : ALL

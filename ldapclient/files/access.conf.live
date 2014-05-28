@@ -1,0 +1,5 @@
+#Permit only root and @live members for live servers
++ : root : ALL
++ : @live: ALL
++ : zenoss : ALL
+- : ALL : ALL
