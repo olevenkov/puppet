@@ -1,0 +1,202 @@
+## 
+## Managed by Puppet
+##
+
+##
+# Barebones config proxied to by varnish.  
+# Our responsibility is just to intercept some requests (robots.txt, etc) and 
+# proxy the rest to Tomcat
+##
+
+NameVirtualHost *:81
+
+<VirtualHost *:81>
+	ServerName test-www.nature.com
+	DocumentRoot /var/www/test-www.nature.com
+	ErrorLog /var/www/test-www.nature.com/logs/error.log
+	CustomLog /var/www/test-www.nature.com/logs/access.log varnishcombined
+	LogFormat "%{X-Forwarded-For}i %{X-Forwarded-Host}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+	RewriteEngine On
+	ProxyPreserveHost on
+
+	RewriteRule ^/robots.txt    - [L]
+	RewriteRule ^/favicon.ico   - [L]
+	RewriteRule (.*) http://localhost:8080$1 [P,L]	
+
+	#Security Block
+	Include conf/authblock.conf
+
+	<Location />
+        AuthType Basic
+        AuthName "NPG Test Sites on Polopoly"
+        AuthUserFile /etc/httpd/conf/npg.passwd
+        order deny,allow
+        Options Includes Indexes
+        Deny from all
+        Allow from env=internal-hosts
+        Allow from env=npg-offices
+        # ----- Internal hosts by client.ip check
+        Allow from 127.0.0.1
+        Allow from 192.168.88
+        Allow from 172.26
+        Allow from 172.25
+        Allow from 172.17
+        # ----- Offices by client.ip check
+        Allow from 63.64.195.2          # SF VPN
+        Allow from 195.138.194          # Macmillan UK
+        Allow from 195.138.194.7        # Macmillan UK
+        Allow from 194.129.50.164       # Macmillan UK
+        Allow from 203.101.103.162      # Macmillan India
+        Allow from 210.151.240.82       # NPG Japan
+        Allow from 210.169.171.2        # NPG Japan
+        Allow from 210.169.171.32       # NPG Japan
+        Allow from 122.160.227.17       # MPS India
+        Allow from 122.184.53.192       # ATT Team - IT-10246
+        Allow from 202.54.243.228       # ATT Team
+        Allow from 202.144.44.115       # Bangalore Web Production
+        Allow from 61.246.62.130        # Bangalore Web Production - New
+        Require valid-user
+        Satisfy Any
+  </Location>
+</VirtualHost>
+
+
+<VirtualHost *:81>
+        ServerName test-www.scientificamerican.com
+        DocumentRoot /var/www/test-www.scientificamerican.com
+        ErrorLog /var/www/test-www.scientificamerican.com/logs/error.log
+        CustomLog /var/www/test-www.scientificamerican.com/logs/access.log varnishcombined
+        LogFormat "%{X-Forwarded-For}i %{X-Forwarded-Host}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+
+        RewriteEngine On
+        ProxyPreserveHost on
+
+        RewriteRule ^/robots.txt    - [L]
+        RewriteRule ^/favicon.ico   - [L]
+
+        RewriteRule (.*) http://localhost:8080$1 [P,L]
+
+        #Security Block
+        Include conf/authblock.conf
+
+        <Location />
+                AuthType Basic
+                AuthName "SciAm Test on Polopoly"
+                AuthUserFile /etc/httpd/conf/sciam.passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                Allow from env=internal-hosts
+                Allow from env=npg-offices
+		Allow from env=debug-hosts
+        Allow from 192.168.88
+            Allow from 172.26
+            Allow from 172.25
+            Allow from 172.17
+                        # ----- Offices
+                        Allow from 63.64.195.2          # SF VPN
+                    Allow from 195.138.194        # Macmillan UK
+            Allow from 195.138.194.7        # Macmillan UK
+                        Allow from 194.129.50.164       # Macmillan UK
+                        Allow from 203.101.103.162      # Macmillan India
+                        Allow from 210.151.240.82       # NPG Japan
+                        Allow from 210.169.171.2        # NPG Japan
+                        Allow from 210.169.171.32       # NPG Japan
+                        Allow from 122.160.227.17       # MPS India
+                        Allow from 122.184.53.192       # ATT Team - IT-10246
+                        Allow from 202.54.243.228       # ATT Team
+                        Allow from 202.144.44.115       # Bangalore Web Production
+                        Allow from 61.246.62.130        # Bangalore Web Production - New
+
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>
+
+
+<VirtualHost *:81>
+        ServerName test-poly-web1.nature.com
+        DocumentRoot /var/www/test-poly-web1
+        ErrorLog /var/www/test-poly-web1/logs/error.log
+        CustomLog /var/www/test-poly-web1/logs/access.log varnishcombined
+        LogFormat "%{X-Forwarded-For}i %{X-Forwarded-Host}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+
+        RewriteEngine On
+        ProxyPreserveHost on
+
+        RewriteRule ^/robots.txt    - [L]
+        RewriteLogLevel 2
+        RewriteLog /var/www/test-poly-web1/logs/rw.log
+
+        RewriteRule ^/foxtrot/svc/login http://test-www.nature.com/foxtrot/svc/login [R]
+        RewriteRule ^/foxtrot/svc/logout http://test-www.nature.com/foxtrot/svc/logout [R]
+        RewriteRule ^/news-new(.*) http://localhost:8080/news-new$1 [P,L]
+        RewriteRule ^/polopoly_fs/(.*) http://localhost:8080/polopoly_fs/$1 [P,L]
+        RewriteRule ^/versioninfo(.*) http://localhost:8080/versioninfo$1 [P,L]
+        RewriteRule ^/css(.*) http://localhost:8080/css$1 [P,L]
+        RewriteRule ^/js(.*) http://localhost:8080/js$1 [P,L]
+        RewriteRule ^/img(.*) http://localhost:8080/img$1 [P,L]
+        RewriteRule ^/homepagexml(.*) http://localhost:8080/homepagexml$1 [P,L]
+        #RewriteRule ^/cmlink(.*) http://localhost:8080/cmlink$1 [P,L]
+        RewriteRule ^/favicon.ico   - [L]
+
+	      RewriteRule ^/nphys(.*) http://localhost:8080/nphys$1 [P,L]
+	      RewriteRule ^/sciam(.*) http://localhost:8080/sciam$1 [P,L]
+        RewriteRule ^/polopoly_servlet/(.*) http://localhost:8080/polopoly_servlet/$1 [P,L]
+
+	      #Security Block
+        Include conf/authblock.conf
+
+	      <Location /nphys>
+                AuthType Basic
+                AuthName "NPG Test Sites on Test Polopoly"
+                AuthUserFile /etc/httpd/conf/npg.passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                Allow from env=internal-hosts
+                Allow from env=npg-offices
+		            Allow from env=debug-hosts
+                Allow from 192.168.88
+                Allow from 172.26
+                Allow from 172.25
+                Allow from 172.17
+
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 195.138.194        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 210.169.171.2        # NPG Japan
+                Allow from 210.169.171.32       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 122.184.53.192       # ATT Team - IT-10246
+                Allow from 202.54.243.228       # ATT Team
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Require valid-user
+                Satisfy Any
+        </Location>
+
+	      <Location /sciam>
+                AuthType Basic
+                AuthName "SciAm Test on Test Polopoly"
+                AuthUserFile /etc/httpd/conf/sciam.passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                Allow from env=internal-hosts
+                Allow from env=npg-offices
+		            Allow from env=debug-hosts
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>

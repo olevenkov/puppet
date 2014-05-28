@@ -1,0 +1,46 @@
+## 
+## Managed by Puppet
+##
+
+##
+# Barebones config proxied to by varnish.  
+# Our responsibility is just to intercept some requests (robots.txt, etc) and 
+# proxy the rest to Tomcat
+##
+NameVirtualHost *:81
+
+<VirtualHost *:81>
+    ServerName staging-poly-web1.nature.com
+    DocumentRoot /var/www/html
+    ErrorLog logs/staging-poly-web1-error_log
+    CustomLog logs/staging-poly-web1-access_log varnishcombined
+    LogFormat "%{X-Forwarded-For}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+
+    RewriteEngine On
+    ProxyPreserveHost on
+
+    RewriteRule ^/robots.txt    - [L]
+    RewriteRule ^/favicon.ico   - [L]
+
+    RewriteRule (.*) http://localhost:8080$1 [P,L]	
+
+    #Security Block
+    Include conf/authblock.conf
+
+    <Location />
+            AuthType Basic
+            AuthName "NPG Staging Polopoly"
+            AuthUserFile /etc/httpd/conf/web.passwd
+            order deny,allow
+            Options Includes Indexes
+            Deny from all
+            Allow from env=internal-hosts
+            Allow from env=npg-offices
+	    Allow from 127.0.0.1
+	    Allow from 192.168.88
+            Allow from 172.26
+            Allow from 172.25
+            Require valid-user
+            Satisfy Any
+    </Location>
+</VirtualHost>

@@ -1,0 +1,152 @@
+##
+## Managed by Puppet
+##
+
+##
+# Barebones config proxied to by varnish.  
+# Our responsibility is just to intercept some requests (robots.txt, etc) and # proxy the rest to Tomcat
+##
+
+NameVirtualHost *:80
+
+<VirtualHost *:80>
+        ServerName test-poly-admin.nature.com
+        ServerAlias test-poly-admin1.nature.com
+        DocumentRoot /var/www/html
+        ErrorLog /var/log/httpd/test-poly-admin-error_log
+        CustomLog /var/log/httpd/test-poly-admin-access_log varnishcombined
+        LogFormat "%{X-Forwarded-For}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+
+        LogLevel debug
+
+        RewriteEngine on
+        #RewriteLog /tmp/rw.log
+        #RewriteLogLevel 3
+        ProxyPreserveHost on
+
+        RewriteRule ^/robots.txt    - [L]
+        RewriteRule ^/favicon.ico   - [L]
+
+        # SOLR Proxy for IT-11499
+        RewriteRule ^/solr(.*)   http://test-poly-search1:8080/solr$1   [P,L]
+
+	####Send to SSL
+        Redirect / https://test-poly-admin1.nature.com/ [R=302,L]
+	
+	###OLD RULES
+        #RewriteRule ^/polopoly/polopoly_fs/(.*) http://localhost:8080/polopoly_fs/$1 [P,L]
+        #RewriteRule ^/preview/polopoly_fs/(.*) http://localhost:8080/polopoly_fs/$1 [P,L]
+        #RewriteRule ^/$ /polopoly/ [R,L]
+	#RewriteRule ^/(.*) http://localhost:8080/$1 [P,L]
+	#RewriteCond %{HTTPS} !=on
+        #RewriteRule (.*) https://test-poly-admin1.nature.com$1 [R,L]
+
+        #Security Block
+        #Include conf/authblock.conf
+
+        <Location />
+                AuthType Basic
+                AuthName "NPG Test Polopoly Admin"
+                AuthUserFile /etc/httpd/conf/admin.passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                #Allow from env=internal-hosts
+                #Allow from env=npg-offices
+                Allow from 127.0.0.1
+                Allow from 192.168.88
+                Allow from 172.26
+                Allow from 172.25
+                Allow from 172.17
+                # ----- Offices
+                Allow from 63.64.195.2          # SF VPN
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 210.169.171.2        # NPG Japan
+                Allow from 210.169.171.32       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 87.139.143.58    # Macmillan Munich
+			          Allow from 127.0.0.1        # Localhost
+			          Allow from 172.26           # NY IT internal
+			          Allow from 172.25           # UK internal over VPN
+			          Allow from 172.17           # UK internal over VPN
+			          Allow from 10.1.1           # Reston internal
+			          Allow from 192.168.4        # Reston internal
+			          Allow from 192.168.6        # Reston internal
+			          Allow from 192.168.10       # Reston internal
+			          Allow from 192.168.12       # Reston internal
+			          Allow from 192.168.88       # NY DMZ
+			          Allow from 192.168.89       # NY DR
+			          Allow from 65.199.186       # NY public
+			          Allow from 65.242.181       # NY - MCI Verizon Business
+			          Allow from 65.201.138.2     # NY - MCI Verizon Business
+			          Allow from 199.168.13       # Reston public
+			          Allow from 210.151.240.82      # Nature Japan
+		            Allow from 195.138.194.1       # Macmillan UK
+		            Allow from 31.221.45.4       # Macmillan UK
+			          Allow from 195.138.194.7       # Macmillan UK
+			          Allow from 195.138.194       # Macmillan UK
+			          Allow from 194.129.50.164      # Macmillan UK
+			          Allow from 203.101.103.162     # Macmillan India
+			          Allow from 122.160.227.17      # MPS India
+			          Allow from 202.144.44.115      # Bangalore Web Production - Old
+			          Allow from 61.246.62.130       # Bangalore Web Production - New
+			          Allow from 202.54.243.228       # Bangalore Web Production - New
+			          Allow from 122.184.53.192      # ATT Team - IT-10442
+			          Allow from 202.54.243.228      # ATT Team
+			          Allow from 81.134.0.250      # ATex Team
+                Require valid-user
+                Satisfy Any
+        </Location>
+
+        <Location /solr>
+                AuthType Basic
+                AuthName "NPG Solr on Test Polopoly"
+                AuthUserFile /etc/httpd/conf/admin.passwd
+                order deny,allow
+                Options Includes Indexes
+                Deny from all
+                Allow from 192.168.88
+                Allow from 172.26
+                Allow from 172.25
+                Allow from 172.17
+                # ----- Internal
+                Allow from 127.0.0.1        # Localhost
+                Allow from 172.26           # NY IT internal
+                Allow from 172.25           # UK internal over VPN
+                Allow from 172.17           # UK internal over VPN
+                Allow from 10.1.1           # Reston internal
+                Allow from 192.168.4        # Reston internal
+                Allow from 192.168.6        # Reston internal
+                Allow from 192.168.10       # Reston internal
+                Allow from 192.168.12       # Reston internal
+                Allow from 192.168.88       # NY DMZ
+                Allow from 192.168.89       # NY DR
+                Allow from 65.199.186       # NY public
+                Allow from 65.242.181       # NY - MCI Verizon Business
+                Allow from 65.201.138.2     # NY - MCI Verizon Business
+                # ----- Offices
+                Allow from 63.64.195.2      # SF VPN
+                Allow from 210.151.240.82   # NPG Japan
+                Allow from 210.169.171.2    # NPG Japan
+                Allow from 210.169.171.32   # NPG Japan
+                Allow from 122.160.227.17   # MPS India
+                Allow from 199.168.13       # Reston public
+                Allow from 210.151.240.82   # Nature Japan
+                Allow from 195.138.194.1    # Macmillan UK
+                Allow from 31.221.45.4    # Macmillan UK
+                Allow from 195.138.194.7    # Macmillan UK
+                Allow from 195.138.194      # Macmillan UK
+                Allow from 194.129.50.164   # Macmillan UK
+                Allow from 203.101.103.162  # Macmillan India
+                Allow from 122.160.227.17   # MPS India
+                Allow from 202.144.44.115   # Bangalore Web Production - Old
+                Allow from 61.246.62.130    # Bangalore Web Production - New
+                Allow from 202.54.243.228   # Bangalore Web Production - New
+                Allow from 122.184.53.192   # ATT Team - IT-10442
+                Allow from 202.54.243.228   # ATT Team
+                Allow from 81.134.0.250   # ATex Team
+
+                Require valid-user
+                Satisfy Any
+        </Location>
+</VirtualHost>

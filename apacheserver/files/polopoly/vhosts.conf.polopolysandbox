@@ -1,0 +1,24 @@
+## 
+## Managed by Puppet
+##
+
+##
+# Barebones config proxied to by varnish.  
+# Our responsibility is just to intercept some requests (robots.txt, etc) and 
+# proxy the rest to Tomcat
+##
+NameVirtualHost *:81
+
+<VirtualHost *:81>
+	ServerName polopolysandbox.nature.com
+	ErrorLog logs/polopolysandbox-error_log
+	LogFormat "%{X-Forwarded-For}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+	CustomLog logs/polopolysandbox-access_log varnishcombined
+
+	DocumentRoot /var/www/html
+	RewriteEngine On
+    ProxyPreserveHost on
+
+	RewriteRule ^/robots.txt - [L]
+	RewriteRule (.*) http://localhost:8080$1 [P,L]	
+</VirtualHost>

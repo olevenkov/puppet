@@ -1,0 +1,109 @@
+## 
+## Managed by Puppet
+##
+
+##
+# Barebones config proxied to by varnish.  
+# Our responsibility is just to intercept some requests (robots.txt, etc) and 
+# proxy the rest to Tomcat
+##
+NameVirtualHost *:81
+
+<VirtualHost *:81>
+    ServerName www.nature.com
+    ServerAlias poly-web.nature.com 192.168.10.96
+    DocumentRoot /var/www/html
+    ErrorLog /var/www/nature.com/logs/error_log
+    CustomLog /var/www/nature.com/logs/access_log varnishcombined
+    LogFormat "%{X-Forwarded-For}i \"%{NPG_SRC_ADDR}i\" %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+        CookieTracking on
+        CookieName SaneID
+        CookieExpires "1 day"
+        CookieDomain .nature.com
+
+    RewriteEngine On
+    ProxyPreserveHost on
+
+    RewriteRule ^/robots.txt    - [L]
+    RewriteRule ^/favicon.ico   - [L]
+    RewriteRule ^/server-status     - [L]
+
+	RewriteRule ^/foxtrot/svc/login http://www.nature.com/foxtrot/svc/login [R]
+	RewriteRule ^/foxtrot/svc/logout http://www.nature.com/foxtrot/svc/logout [R]
+	#Rewrite rule for search application Polopoly env
+	RewriteRule ^/search(.*) http://www.nature.com/search$1 [P,L]
+    RewriteRule ^/news/index_new.html http://localhost:8080/news/ [P,L]
+    RewriteRule ^/news/index.html http://localhost:8080/news/ [P,L]
+	RewriteRule ^/news-new(.*) http://localhost:8080/news-new$1 [P,L]
+    RewriteRule ^/news(.*) http://localhost:8080/news$1 [P,L]
+	RewriteRule ^/polopoly_(.*) http://localhost:8080/polopoly_$1 [P,L]
+	RewriteRule ^/versioninfo(.*) http://localhost:8080/versioninfo$1 [P,L] 
+
+	#RewriteRule ^/news-new(.*) http://localhost:8080/news-new$1 [P,L]
+	#RewriteRule ^/css(.*) http://localhost:8080/css$1 [P,L]
+	#RewriteRule ^/js(.*) http://localhost:8080/js$1 [P,L]
+	#RewriteRule ^/img(.*) http://localhost:8080/img$1 [P,L]
+
+	RewriteRule ^/homepagexml(.*) http://localhost:8080/homepagexml$1 [P,L]
+	#RewriteRule ^/cmlink(.*) http://localhost:8080/cmlink$1 [P,L]
+	RewriteRule ^/polopoly_servlet/(.*) http://localhost:8080/polopoly_servlet/$1 [P,L]
+	RewriteRule (.*) http://localhost:8080$1 [P,L]	
+
+    #Security Block
+    Include conf/authblock.conf
+</VirtualHost>
+
+
+<VirtualHost *:81>
+        ServerName logs.nature.com
+        ServerAlias logs.nature.com
+        DocumentRoot /var/www/logs.nature.com/html
+        AccessFileName .htaccess
+        Setenv VLOG /var/www/logs.nature.com/logs
+        ErrorLog /var/www/logs.nature.com/logs/error_log
+        LogFormat "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\" \"%{cookie}i\""
+        TransferLog /var/www/logs.nature.com/logs/access_log
+        AllowEncodedSlashes on
+        AddDefaultCharset       UTF-8
+        AddCharset              UTF-8   .html
+        DirectoryIndex  index.shtml
+
+        <Location />
+                AddHandler server-parsed .shtml
+                AddType text/html .shtml
+                Options +Includes +Indexes
+                IndexOptions FancyIndexing SuppressDescription SuppressColumnSorting
+                IndexOrderDefault Descending Date
+                AuthType Basic
+                AuthName "NPG Logs Site"
+                AuthUserFile /etc/httpd/conf/logspasswd
+                order deny,allow
+                Options Includes Indexes
+                #Deny from all
+                # ----- Internal
+                Allow from 127.0.0.1
+                Allow from 172.26               # IT Internal
+                Allow from 2.2.2               # IT Internal
+                Allow from 172.25               # UK VPN
+                Allow from 172.17               # UK VPN
+                Allow from 192.168.4            # Reston subnet 4
+                Allow from 192.168.88           # DMZ
+                Allow from 65.199.186           # NPG - MCI Verizon Business
+                # ----- Offices
+                Allow from 195.138.194.1        # Macmillan UK
+                Allow from 31.221.45.4        # Macmillan UK
+                Allow from 195.138.194.7        # Macmillan UK
+                Allow from 194.129.50.164       # Macmillan UK
+                Allow from 203.101.103.162      # Macmillan India
+                Allow from 210.151.240.82       # NPG Japan
+                Allow from 122.160.227.17       # MPS India
+                Allow from 122.184.53.192       # MPS India
+                Allow from 202.144.44.115       # Bangalore Web Production
+                Allow from 61.246.62.130        # Bangalore Web Production - New
+                Allow from 68.39.154.79        # Comcast Cable MikeB
+                Allow from 96.57.111.85         # Scott Home IP
+                Require valid-user
+                Satisfy all
+        </Location>
+
+</VirtualHost>

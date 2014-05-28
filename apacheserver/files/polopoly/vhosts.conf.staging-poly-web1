@@ -1,0 +1,70 @@
+## 
+## Managed by Puppet
+##
+
+##
+# Barebones config proxied to by varnish.  
+# Our responsibility is just to intercept some requests (robots.txt, etc) and 
+# proxy the rest to Tomcat
+##
+NameVirtualHost *:81
+
+<VirtualHost *:81>
+    ServerName staging-poly-web1.nature.com
+    DocumentRoot /var/www/html
+    ErrorLog logs/staging-poly-web1-error_log
+    CustomLog logs/staging-poly-web1-access_log varnishcombined
+    LogFormat "%{X-Forwarded-For}i %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" varnishcombined
+
+    CookieTracking on
+    CookieName SaneID
+    CookieExpires "1 day"
+    CookieDomain .nature.com
+
+    RewriteEngine On
+    ProxyPreserveHost on
+    RewriteLogLevel 3
+    RewriteLog /tmp/rw.log
+    RewriteRule ^/robots.txt    - [L]
+    RewriteRule ^/favicon.ico   - [L]
+
+    RewriteRule ^/foxtrot/svc/login http://staging-www.nature.com/foxtrot/svc/login [R,L]
+    RewriteRule ^/foxtrot/svc/logout http://staging-www.nature.com/foxtrot/svc/logout [R,L]
+    #Rewrite rule for search application Polopoly env
+    RewriteRule ^/search(.*) http://staging-www.nature.com/search$1 [P,L]
+    RewriteRule ^/news-new(.*) http://localhost:8080/news-new$1 [P,L]
+    RewriteRule ^/news/index_new.html http://localhost:8080/news/ [P,L]
+    RewriteRule ^/news(.*) http://localhost:8080/news$1 [P,L]
+    RewriteRule ^/polopoly_(.*) http://localhost:8080/polopoly_$1 [P,L]
+    RewriteRule ^/versioninfo(.*) http://localhost:8080/versioninfo$1 [P,L]
+    #RewriteRule ^/css(.*) http://localhost:8080/css$1 [P,L]
+    #RewriteRule ^/js(.*) http://localhost:8080/js$1 [P,L]
+    #RewriteRule ^/img(.*) http://localhost:8080/img$1 [P,L] 
+    RewriteRule ^/polopoly_servlet/(.*) http://localhost:8080/polopoly_servlet/$1 [P,L] 
+    RewriteRule ^/homepagexml(.*) http://localhost:8080/homepagexml$1 [P,L]
+    #RewriteRule ^/cmlink(.*) http://localhost:8080/cmlink$1 [P,L]
+    RewriteRule ^/news/index.html http://localhost:8080/news/ [P,L] 
+    RewriteRule (.*) http://localhost:8080$1 [P,L]	
+
+    #Security Block
+    Include conf/authblock.conf
+
+    <Location />
+            AuthType Basic
+            AuthName "NPG Staging Polopoly"
+            AuthUserFile /etc/httpd/conf/web.passwd
+            order deny,allow
+            Options Includes Indexes
+            Deny from all
+            Allow from env=internal-hosts
+            Allow from env=npg-offices
+	          Allow from 127.0.0.1
+	          Allow from 192.168.88
+	          Allow from 192.168.89
+	          Allow from 192.168.92
+            Allow from 172.26
+            Allow from 172.25
+            Require valid-user
+            Satisfy Any
+    </Location>
+</VirtualHost>
